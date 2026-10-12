@@ -464,7 +464,7 @@
         <div class="residentOptions">
           <label class="choice">
             <input type="radio" name="residentMethod" value="upload" onchange="residentMethodChanged()">
-            <span class="choiceText"><strong>画像・PDFで提出する</strong><br>スマホ内の画像またはPDFを選択</span>
+            <span class="choiceText"><strong>コンビニでスキャンしたPDFを提出する</strong><br>住民票をコンビニで紙発行し、マルチコピー機でPDFスキャンしたデータを選択</span>
           </label>
 
           <label class="choice">
@@ -474,9 +474,10 @@
         </div>
 
         <div class="subPanel" id="residentUploadPanel">
+          <div class="docHelp">① マイナンバーカードで住民票を紙で発行<br>② コンビニのマルチコピー機でPDFスキャン<br>③ PDFをスマホに保存して選択してください。<br>※ 写真・画像ファイルは提出できません。</div>
           <label class="uploadButton">
-            📎 住民票を選択
-            <input id="residentFile" type="file" accept="image/*,application/pdf"
+            📎 住民票のPDFを選択
+            <input id="residentFile" type="file" accept=".pdf,application/pdf"
                    onchange="residentFileChanged(this)" style="display:none">
           </label>
           <div class="docStatus" id="residentFileStatus">ファイル未選択</div>
@@ -743,11 +744,17 @@
 
   function residentFileChanged(input) {
     const file = input.files && input.files[0] ? input.files[0] : null;
-    residentFileName = file ? file.name : '';
+    if (file && !(file.type === 'application/pdf' || /\.pdf$/i.test(file.name))) {
+      alert('住民票はPDFファイルのみ選択できます。');
+      input.value = '';
+      residentFileName = '';
+    } else {
+      residentFileName = file ? file.name : '';
+    }
 
     const status = document.getElementById('residentFileStatus');
-    if (file) {
-      status.textContent = '✅ 選択済み：' + file.name;
+    if (residentFileName) {
+      status.textContent = '✅ 選択済み：' + residentFileName;
       status.classList.add('okText');
     } else {
       status.textContent = 'ファイル未選択';
@@ -769,7 +776,7 @@
       return;
     }
     if (residentMethod === 'upload' && !residentFileName) {
-      alert('住民票の画像またはPDFを選択してください。');
+      alert('住民票のPDFを選択してください。');
       return;
     }
     showPage(4);
@@ -793,7 +800,7 @@
       ['免許証 裏', licenseBackData ? '撮影済み' : '未撮影'],
       ['住民票',
         residentMethod === 'upload'
-          ? 'データ提出：' + residentFileName
+          ? 'コンビニスキャンPDF：' + residentFileName
           : residentMethod === 'mail'
             ? '原本を郵送'
             : '未選択'
