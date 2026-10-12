@@ -503,7 +503,7 @@
 
       <div class="buttons">
         <button class="secondary" type="button" onclick="showPage(3)">戻る</button>
-        <button class="primary" type="button" onclick="demoSubmit()">登録する</button>
+        <button class="primary" type="button" onclick="demoSubmit()">接続テストを実行する</button>
       </div>
     </section>
   </div>
@@ -538,6 +538,9 @@
 
 <script>
   const APP_ENV = 'DEMO';
+  // GASをWebアプリとしてデプロイした後、/exec URLをここに貼る。
+  // 【重要】フォームの個人情報・画像・PDFは送信しません。
+  const TEST_GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzlOVklAOKPYYj6524KgWSBZT0IXl2Y6P6BXXfifP3U_TgrmvcXoQCl4g4BwGzYAh1XDQ/exec';
 
   let licenseFrontData = '';
   let licenseBackData = '';
@@ -823,11 +826,31 @@
   }
 
   function demoSubmit() {
+    const url = TEST_GAS_WEB_APP_URL.trim();
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(url)) {
+      alert('まだ接続先が未設定です。GASのWebアプリURL（/exec）を設定してください。');
+      return;
+    }
+    const ok = confirm(
+      '接続テストを実行します。\\n' +
+      'フォームに入力した氏名・電話番号・免許証・住民票などは一切送信しません。\\n' +
+      '固定の架空データを1件だけテスト用シートに保存します。よろしいですか？'
+    );
+    if (!ok) return;
+    // クロスオリジンのため、GASの結果は新しいタブで表示します。
+    // POSTにフィールドを付けないことで、入力内容や書類は送信されません。
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+    form.target = '_blank';
+    form.style.display = 'none';
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
     document.getElementById('summary').innerHTML =
-      '<div class="successBox">' +
-      '<strong>✅ デモ入力完了</strong><br><br>' +
-      '次の工程で、この内容と写真をGASへ送って受付・Driveへ保存します。' +
-      '</div>';
+      '<div class="successBox"><strong>接続テストを送信しました。</strong><br>' +
+      '別タブの結果画面を確認してください。<br>' +
+      '※フォームの入力情報や書類は送信していません。</div>';
   }
 
   window.addEventListener('pagehide', stopCamera);
