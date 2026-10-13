@@ -54,7 +54,7 @@
 
     .steps {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 6px;
       margin-bottom: 24px;
     }
@@ -65,7 +65,7 @@
       border-radius: 10px;
       background: #eef0f3;
       text-align: center;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -347,6 +347,36 @@
       cursor: pointer;
     }
 
+    .contractPaper {
+      padding: 18px 15px;
+      border: 1px solid #dfe2e6;
+      border-radius: 12px;
+      background: #fff;
+      line-height: 1.85;
+      font-size: 14px;
+      max-height: 52vh;
+      overflow-y: auto;
+    }
+    .contractPaper h3 { margin: 0 0 12px; font-size: 18px; }
+    .contractPaper p { margin: 0 0 14px; }
+    .contractAgree {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-top: 18px;
+      padding: 16px 12px;
+      border: 2px solid #dfe2e6;
+      border-radius: 12px;
+      font-weight: 700;
+      line-height: 1.6;
+      cursor: pointer;
+    }
+    .contractAgree input {
+      flex: 0 0 23px;
+      width: 23px;
+      height: 23px;
+      margin-top: 2px;
+    }
     .successBox {
       padding: 18px;
       border-radius: 14px;
@@ -370,7 +400,8 @@
       <div class="step on" id="step1">1 基本</div>
       <div class="step" id="step2">2 契約</div>
       <div class="step" id="step3">3 書類</div>
-      <div class="step" id="step4">4 確認</div>
+      <div class="step" id="step4">4 事前確認</div>
+      <div class="step" id="step5">5 完了確認</div>
     </div>
 
     <section class="page on" id="page1">
@@ -493,16 +524,50 @@
 
       <div class="buttons">
         <button class="secondary" type="button" onclick="showPage(2)">戻る</button>
-        <button class="primary" type="button" onclick="goDocumentConfirm()">確認へ</button>
+        <button class="primary" type="button" onclick="goDocumentConfirm()">契約書の確認へ</button>
       </div>
     </section>
 
     <section class="page" id="page4">
+      <h2>契約書の事前確認</h2>
+      <div class="note" style="margin-bottom:16px">
+        <strong>【デモ・仮の契約内容】</strong><br>
+        こちらは動作確認用の仮文書です。正式な契約書ではありません。
+        実際の契約条件は後日GOLDFIRSTから案内します。
+      </div>
+      <div class="contractPaper" id="contractPaper">
+        <h3>車両利用に関するご案内（デモ）</h3>
+        <p><strong>第1項　お申し込みについて</strong><br>
+          車両依頼は利用申し込みであり、この画面で契約が成立するものではありません。</p>
+        <p><strong>第2項　車両・利用条件について</strong><br>
+          車両の種類、車両番号、料金、利用開始日、その他の条件は、
+          車両の準備後に提示する正式な契約書で確認します。</p>
+        <p><strong>第3項　正式な契約手続きについて</strong><br>
+          車両の準備ができた後、電子契約サービス等を利用して
+          正式な契約書をご案内します。契約成立はその正式な手続きによります。</p>
+        <p><strong>第4項　事前確認の記録について</strong><br>
+          この画面の確認操作は、契約内容の事前説明を確認したことを示すためのものです。
+          正式な電子署名ではありません。</p>
+        <p><strong>※</strong> 上記はデモ専用の仮文面です。
+          本番ではGOLDFIRSTから受領した正式な文書に差し替えます。</p>
+      </div>
+      <label class="contractAgree">
+        <input id="contractConfirmed" type="checkbox" onchange="contractConfirmationChanged()">
+        <span>上記の仮の案内を確認しました。正式な契約は後日別途行うことを理解しています。</span>
+      </label>
+      <div class="docStatus" id="contractConfirmStatus">未確認（デモ）</div>
+      <div class="buttons">
+        <button class="secondary" type="button" onclick="showPage(3)">戻る</button>
+        <button class="primary" type="button" onclick="goFinalConfirm()">入力内容の確認へ</button>
+      </div>
+    </section>
+
+    <section class="page" id="page5">
       <h2>入力内容の確認</h2>
       <div class="note" id="summary"></div>
 
       <div class="buttons">
-        <button class="secondary" type="button" onclick="showPage(3)">戻る</button>
+        <button class="secondary" type="button" onclick="showPage(4)">戻る</button>
         <button class="primary" type="button" onclick="demoSubmit()">接続テストを実行する</button>
       </div>
     </section>
@@ -548,6 +613,8 @@
   let cameraStream = null;
   let residentMethod = '';
   let residentFileName = '';
+  const CONTRACT_DEMO_VERSION = 'DEMO-20261013-01';
+  let contractConfirmedAt = '';
 
   function value(id) {
     return document.getElementById(id).value.trim();
@@ -558,7 +625,7 @@
     document.querySelectorAll('.step').forEach(el => el.classList.remove('on'));
     document.getElementById('page' + n).classList.add('on');
     document.getElementById('step' + n).classList.add('on');
-    if (n === 4) makeSummary();
+    if (n === 5) makeSummary();
     window.scrollTo({top: 0, behavior: 'smooth'});
   }
 
@@ -785,6 +852,22 @@
     showPage(4);
   }
 
+  function contractConfirmationChanged() {
+    const checked = document.getElementById('contractConfirmed').checked;
+    contractConfirmedAt = checked ? new Date().toISOString() : '';
+    const status = document.getElementById('contractConfirmStatus');
+    status.textContent = checked ? '✅ 事前確認済み（この端末内のデモ表示）' : '未確認（デモ）';
+    status.classList.toggle('okText', checked);
+  }
+
+  function goFinalConfirm() {
+    if (!document.getElementById('contractConfirmed').checked || !contractConfirmedAt) {
+      alert('契約内容の事前確認欄にチェックしてください。');
+      return;
+    }
+    showPage(5);
+  }
+
   function makeSummary() {
     const rows = [
       ['お名前', value('name')],
@@ -801,6 +884,8 @@
       ['稼働開始日', value('startDate')],
       ['免許証 表', licenseFrontData ? '撮影済み' : '未撮影'],
       ['免許証 裏', licenseBackData ? '撮影済み' : '未撮影'],
+      ['契約書の事前確認', contractConfirmedAt ? '確認済み（デモ）' : '未確認'],
+      ['事前確認文書の版', CONTRACT_DEMO_VERSION],
       ['住民票',
         residentMethod === 'upload'
           ? 'コンビニスキャンPDF：' + residentFileName
@@ -826,6 +911,11 @@
   }
 
   function demoSubmit() {
+    if (!document.getElementById('contractConfirmed').checked || !contractConfirmedAt) {
+      alert('契約書の事前確認が完了していません。');
+      showPage(4);
+      return;
+    }
     const url = TEST_GAS_WEB_APP_URL.trim();
     if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(url)) {
       alert('まだ接続先が未設定です。GASのWebアプリURL（/exec）を設定してください。');
