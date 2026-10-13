@@ -50,7 +50,7 @@ import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/11.10.
 // 既存の動作確認済みFirebaseテスト設定。秘密鍵ではありません。
 const app=initializeApp({apiKey:'AIzaSyBkwuHDs1XRq8WXhDOeSIgK7X7WcYLnrCM',authDomain:'goldfirst-auth-test.firebaseapp.com',projectId:'goldfirst-auth-test',appId:'1:1079109139578:web:4c400be3aab323d7b0cfc3'});
 const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
-const ledgerUrl='./車両管理-test.html';
+const ledgerUrl='https://sachikasato-coder.github.io/gf-ledger/%E8%BB%8A%E4%B8%A1%E7%AE%A1%E7%90%86-test.html';
 let sequence=0;
 $('ledger').onclick=()=>{location.href=ledgerUrl};
 $('emailLogin').onclick=async()=>{try{$('loginMessage').textContent='';await signInWithEmailAndPassword(auth,$('email').value.trim(),$('password').value)}catch(e){$('loginMessage').textContent='ログインできませんでした：'+(e.code||'エラー')}};
