@@ -1,0 +1,431 @@
+<!DOCTYPE html><html><head><base target="_top"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+.homeHead{margin-bottom:28px}.homeTitle{font-size:26px;font-weight:900;margin:0 0 8px}.homeSub{color:#64748b;font-size:15px;line-height:1.6}.homeMenu{display:grid;gap:14px}.homeBtn{width:100%;text-align:left;border:1px solid #cbd5e1;background:#fff;border-radius:18px;padding:22px 20px;font-size:19px;font-weight:800;color:#1683e6;box-shadow:0 2px 8px rgba(0,0,0,.03)}.backBtn{border:0;background:transparent;color:#256f3a;font-weight:800;font-size:15px;padding:0 0 14px}.sectionTitle{font-size:25px;font-weight:900;margin:0 0 18px}.appSection{display:none}.appSection.on{display:block}
+*{box-sizing:border-box}body{margin:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:#1f2937}.wrap{max-width:650px;margin:auto;padding:22px 14px 50px}.title{font-size:25px;font-weight:800;margin-bottom:18px}.menu{display:flex;gap:7px;margin-bottom:16px}.tab{flex:1;border:1px solid #cbd5e1;background:#fff;color:#334155;padding:11px 5px;border-radius:12px;font-size:13px;font-weight:700}.tab.on{background:#256f3a;color:#fff;border-color:#256f3a}.card{background:#fff;border-radius:18px;padding:20px;box-shadow:0 3px 14px rgba(0,0,0,.06)}.page{display:none}.page.on{display:block}h2{margin:0 0 18px;font-size:21px}label{display:block;font-weight:700;margin:17px 0 8px}.search{position:relative}.search input{width:100%;height:55px;border:1px solid #cbd5e1;border-radius:13px;padding:0 52px 0 14px;font-size:17px}.arrow{position:absolute;right:0;top:0;width:50px;height:55px;display:flex;align-items:center;justify-content:center}.list{display:none;position:absolute;z-index:100;left:0;right:0;top:59px;max-height:290px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.14)}.list.show{display:block}.row{padding:13px 14px;border-bottom:1px solid #eef2f7}.main{font-size:17px;font-weight:800}.sub,.note{font-size:13px;color:#64748b;margin-top:4px}.none{padding:15px;color:#64748b}input[type=file]{width:100%;padding:12px;border:1px dashed #b8c2cf;border-radius:12px;background:#fafbfc}select,input[type=date]{width:100%;height:55px;border:1px solid #cbd5e1;border-radius:13px;padding:0 14px;font-size:17px;background:#fff;color:#1f2937}.submit,.undo{width:100%;margin-top:22px;border:0;border-radius:13px;padding:16px;font-size:16px;font-weight:800}.submit{background:#256f3a;color:#fff}.undo{background:#fff;color:#b42318;border:1px solid #f0b4ae;margin-top:10px}.submit:disabled,.undo:disabled{opacity:.45}.result{display:none;margin-top:16px;padding:14px;border-radius:11px;line-height:1.65}.ok{display:block;background:#eef8f0}.err{display:block;background:#fff0f0}.wait{display:block;background:#f2f4f7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:430px){.grid{grid-template-columns:1fr}.menu{gap:4px}.tab{font-size:12px;padding:10px 3px}}
+.vehicleField input,.vehicleField select,.vehicleField textarea{width:100%;border:1px solid #cbd5e1;border-radius:13px;padding:0 14px;font-size:17px;background:#fff;color:#1f2937}
+.vehicleField input,.vehicleField select{height:55px}
+.vehicleField textarea{min-height:100px;padding-top:13px;resize:vertical}
+.requiredMark{color:#b42318;font-size:13px;margin-left:5px}
+.scheduleMonthBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+#scheduleMonthTitle{
+  font-size:18px;
+  font-weight:900;
+}
+.scheduleFilter{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:18px;
+}
+.scheduleFilterBtn{
+  border:1px solid #cbd5e1;
+  background:#fff;
+  border-radius:999px;
+  padding:9px 14px;
+  font-weight:800;
+  color:#475569;
+}
+.scheduleFilterBtn.on{
+  background:#1683e6;
+  color:#fff;
+  border-color:#1683e6;
+}
+.scheduleDay{
+  margin:18px 0;
+}
+.scheduleDayTitle{
+  font-size:17px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+.scheduleItem{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  padding:13px 14px;
+  margin-bottom:8px;
+}
+.scheduleType{
+  font-weight:900;
+  margin-bottom:4px;
+}
+.scheduleSub{
+  font-size:14px;
+  color:#64748b;
+  line-height:1.5;
+}
+.scheduleEmpty{
+  text-align:center;
+  padding:35px 10px;
+  color:#64748b;
+}
+
+/* 選択文字を1タップで消す。▼と44pxずつの押しやすい領域を確保。 */
+.search input{padding-right:100px}
+.searchClear{position:absolute;right:50px;top:0;width:44px;height:55px;margin:0;padding:0;border:0;background:transparent;color:#64748b;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.searchClear:focus-visible{outline:2px solid #256f3a;border-radius:10px}
+/* 車両予定：画面幅いっぱいの月カレンダー */
+body.scheduleOpen .wrap{max-width:none;padding:12px 8px 24px}
+#scheduleArea{max-width:1100px;margin:auto}#scheduleArea .sectionTitle{font-size:22px;margin:0 0 10px}#scheduleArea .backBtn{padding-bottom:10px}
+.scheduleToolbar{background:#fff;border-radius:16px;padding:12px;margin-bottom:8px}.scheduleModes{display:flex;gap:6px;margin-bottom:10px}.scheduleMode{flex:1;border:1px solid #dbe4df;background:#f7faf8;color:#496154;border-radius:10px;padding:11px;font-size:15px;font-weight:800}.scheduleMode.on{background:#256f3a;border-color:#256f3a;color:white}.scheduleNav{border:0;background:#f1f5f3;color:#256f3a;border-radius:10px;min-width:44px;height:42px;font-size:22px}.scheduleActions{display:flex;gap:6px}.scheduleSmallBtn{border:1px solid #dce5df;background:white;border-radius:8px;padding:7px 10px;color:#476454;font-size:13px}
+#scheduleLoading{font-size:13px;padding:4px 8px;color:#64748b;min-height:24px}#scheduleMonthTitle{font-size:18px;white-space:nowrap}
+#scheduleCalendar{flex-direction:column;background:white;border:1px solid #dce5df;border-radius:14px;overflow:hidden;height:clamp(340px,58dvh,620px)}.scheduleWeekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:13px;font-weight:700;color:#718078;padding:9px 0;background:#f8faf9}.scheduleWeekdays span:first-child{color:#c24c4c}.scheduleWeekdays span:last-child{color:#467bb9}#scheduleGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:1;min-height:0}.scheduleCell,.scheduleBlank{border:0;border-top:1px solid #e5ebe7;border-right:1px solid #e5ebe7;background:#fff;min-width:0;overflow:hidden}.scheduleCell{display:flex;flex-direction:column;align-items:stretch;padding:5px 2px;text-align:left;color:#33463a;cursor:pointer}.scheduleBlank{background:#f7faf8}.scheduleCell.selected{background:#eaf5ee;box-shadow:inset 0 0 0 2px #287c49}.scheduleDateNum{align-self:center;font-size:14px;font-weight:700;line-height:25px;width:25px;text-align:center;border-radius:50%}.sunday .scheduleDateNum{color:#c24c4c}.saturday .scheduleDateNum{color:#467bb9}.today .scheduleDateNum{background:#287c49;color:#fff}.scheduleCellEvents{display:flex;flex-direction:column;gap:3px;margin-top:3px;min-width:0}.scheduleChip{display:block;border-radius:3px;padding:3px 2px;background:#dfede3;color:#225c38;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}.scheduleChip.expiry{background:#fff0dc;color:#925b10}.scheduleMore{font-size:10px;color:#64748b;padding-left:2px}.scheduleCount{font-size:12px;font-weight:500;color:#718078}#scheduleDayDetail{margin-top:10px;background:#fff;border-radius:14px;padding:14px;max-height:34dvh;overflow-y:auto}.scheduleDayEmpty{font-size:14px;color:#64748b;padding:12px 0}.scheduleItem{border-left:4px solid #549e6a}.scheduleDayTitle{font-size:17px}#scheduleArea button:focus-visible{outline:3px solid #1683e6;outline-offset:-3px}
+@media(min-width:700px){#scheduleCalendar{height:62dvh}.scheduleChip{font-size:12px;padding:4px}.scheduleDateNum{font-size:16px}#scheduleDayDetail{max-height:26dvh}}
+
+/* 月別は縦の空き領域をすべてカレンダーに使う。詳細は手前のパネル。 */
+body.scheduleMonthly .wrap{height:100vh;height:100dvh;box-sizing:border-box;padding:8px 0 0}
+body.scheduleMonthly #scheduleArea.on{display:flex;flex-direction:column;height:100%;min-height:0}
+body.scheduleMonthly #scheduleArea>.backBtn,body.scheduleMonthly #scheduleArea>.sectionTitle,body.scheduleMonthly .scheduleToolbar,body.scheduleMonthly #scheduleLoading{flex-shrink:0}
+body.scheduleMonthly #scheduleCalendar{height:auto;flex:1;min-height:240px;border-radius:0;border-left:0;border-right:0}
+body.scheduleMonthly .scheduleToolbar{border-radius:0;padding:8px}
+body.scheduleMonthly #scheduleArea>.sectionTitle,body.scheduleMonthly #scheduleArea>.backBtn{margin-left:8px}
+body.scheduleMonthly #scheduleArea>.backBtn{align-self:flex-start}
+#scheduleDetailOverlay{position:fixed;inset:0;z-index:10000;background:rgba(20,30,40,.50);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:12px 12px calc(12px + env(safe-area-inset-bottom));box-sizing:border-box}
+#scheduleDetailOverlay[hidden]{display:none}
+#scheduleDetailPanel{width:100%;max-width:900px;max-height:75vh;max-height:75dvh;background:#fff;border-radius:24px;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;box-shadow:0 12px 50px #0003}
+.scheduleDetailHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf1f5;padding-bottom:12px}
+#scheduleDetailTitle{font-size:22px;font-weight:800;margin:0}
+#scheduleDetailClose{flex-shrink:0;width:48px;height:48px;border:0;border-radius:50%;background:#f1f5f9;font-size:30px;color:#334155}
+#scheduleDayDetail{display:block;margin:0;padding:12px 0 0;max-height:none;overflow-y:auto;min-height:0}
+body.scheduleDetailOpen{overflow:hidden}
+
+</style><style id="gf-preview-auth-style">#gf-auth-wall{position:fixed;inset:0;z-index:2147483647;background:#fffdf8;display:flex;align-items:center;justify-content:center;padding:20px;font-family:system-ui,sans-serif}#gf-auth-wall .gf-panel{width:min(440px,100%);background:white;border:1px solid #eadbb6;border-radius:20px;box-shadow:0 12px 30px #0002;padding:28px;text-align:center}#gf-auth-wall a{display:inline-block;margin-top:16px;background:#ae862c;color:white;border-radius:12px;padding:13px 18px;text-decoration:none}#gf-preview-tag{position:sticky;top:0;z-index:1000;background:#fff0c5;border-bottom:1px solid #d7bd72;padding:10px 14px;text-align:center;font-size:13px;font-weight:700}</style></head><body><div id="gf-auth-wall"><div class="gf-panel"><h2>GOLD FIRST 車両管理</h2><p id="gf-auth-status">スタッフのログインと権限を確認しています…</p><a href="./login-test.html">ログイン画面に戻る</a></div></div><div id="gf-preview-tag">🔒 権限確認済みスタッフ用・画面確認版（登録／更新はできません）　<a href="./login-test.html">トップへ戻る</a></div><div style="position:sticky;top:0;z-index:99999;background:#fff1ce;color:#754b00;padding:12px 16px;font-weight:800;text-align:center;border-bottom:2px solid #e7b952">GitHub移行・画面確認版（保存・登録・読込はできません）</div><div class="wrap">
+<div id="home" class="appSection on">
+  <div class="homeHead">
+    <div class="homeTitle">GOLD FIRST 管理画面</div>
+    <div class="homeSub">やることを選んで、見たまま入力してください。</div>
+  </div>
+  <div class="homeMenu">
+    <button class="homeBtn" onclick="画面を開く('driverNewArea')">👤 ドライバーを登録する</button>
+    <button class="homeBtn" onclick="画面を開く('vehicleNewArea')">🚙 車両台帳に入力する</button>
+    <button class="homeBtn" onclick="画面を開く('dateArea')">📅 日付を登録する</button>
+    <button class="homeBtn" onclick="画面を開く('actualArea')">🚗 実績を登録する</button>
+    <button class="homeBtn" onclick="予定一覧画面を開く()">
+  🗓️ 予定を見る
+</button>
+    <button class="homeBtn" onclick="画面を開く('savedDocumentsArea')">📂 書類・写真を見る</button>
+    <button class="homeBtn" onclick="画面を開く('mediaArea')">📷 写真・書類</button>
+  </div>
+</div>
+<div id="scheduleArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">🗓️ 車両の予定を見る</div>
+  <div class="scheduleToolbar">
+    <div class="scheduleModes" role="group" aria-label="予定の表示期間">
+      <button class="scheduleMode on" data-schedule-mode="今日" onclick="予定表示切替('今日')">今日</button>
+      <button class="scheduleMode" data-schedule-mode="今週" onclick="予定表示切替('今週')">今週</button>
+      <button class="scheduleMode" data-schedule-mode="月別" onclick="予定表示切替('月別')">月別</button>
+    </div>
+    <div class="scheduleMonthBar">
+      <button class="scheduleNav" onclick="予定月移動(-1)" aria-label="前の期間">‹</button>
+      <strong id="scheduleMonthTitle"></strong>
+      <button class="scheduleNav" onclick="予定月移動(1)" aria-label="次の期間">›</button>
+    </div>
+    <div class="scheduleActions"><button class="scheduleSmallBtn" onclick="予定今日へ()">今日へ</button><button class="scheduleSmallBtn" onclick="予定一覧を読み込む()">↻ 更新</button></div>
+  </div>
+  <div id="scheduleLoading" role="status" aria-live="polite"></div>
+  <div id="scheduleCalendar" style="display:none">
+    <div class="scheduleWeekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+    <div id="scheduleGrid"></div>
+  </div>
+  <div id="scheduleDetailOverlay" hidden onclick="if(event.target===this)予定詳細を閉じる()">
+    <section id="scheduleDetailPanel" role="dialog" aria-modal="true" aria-labelledby="scheduleDetailTitle">
+      <div class="scheduleDetailHeader"><h2 id="scheduleDetailTitle"></h2><button id="scheduleDetailClose" type="button" aria-label="予定詳細を閉じる" onclick="予定詳細を閉じる()">×</button></div>
+      <div id="scheduleDayDetail"></div>
+    </section>
+  </div>
+  <div id="scheduleList"></div>
+</div>
+<div id="driverNewArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">👤 ドライバー管理</div>
+  <div id="driverModeMenu" class="card">
+    <h2>何をしますか？</h2>
+    <button class="homeBtn" type="button" onclick="新規ドライバー画面を開く()">➕ 新しいドライバーを登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="ドライバー編集画面を開く()">✏️ 登録済みドライバーを編集</button>
+  </div>
+  <div id="driverCreateArea" class="card" style="display:none">
+    <button class="backBtn" type="button" onclick="ドライバー管理メニューへ戻る()">← ドライバー管理へ戻る</button>
+    <h2>➕ 新しいドライバーを登録</h2>
+    <div class="note">免許証がまだ無くても登録できます。登録方法を選んでください。</div>
+    <button class="homeBtn" type="button" style="margin-top:16px" onclick="新規登録方法を選ぶ('license')">🪪 免許証から登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="新規登録方法を選ぶ('manual')">⌨️ 手入力で登録</button>
+    <div id="driverLicenseMode" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2>🪪 免許証から登録</h2>
+      <div class="note">表・裏2枚から氏名を読み取り、DriverID・個人フォルダ・免許証PDFまで登録します。</div>
+      <label>免許証（表・裏）</label>
+      <input id="newDriverLicenseFiles" type="file" accept="image/*" multiple>
+      <div id="newDriverLicenseCount" class="note">2枚まとめて選択してください</div>
+      <p class="note">読み取りだけでは登録されません。氏名と追加情報を確認してから登録してください。</p>
+      <button id="newDriverReadBtn" class="submit" type="button" onclick="新規ドライバー免許証から氏名を読む()">免許証から氏名を読み取る</button>
+      <div id="newDriverReadResult" class="result"></div>
+      <button id="driverLicenseNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次のドライバーを登録する('license')">➕ 次のドライバーを登録する</button>
+      <button id="continueDriverInfoBtn" class="submit" type="button" style="display:none" onclick="免許証登録後の追加情報を開く()">続けて追加情報を登録する</button>
+      <div id="licenseAfterInfoArea" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid #e2e8f0">
+        <h2>追加情報</h2>
+        <div id="driverNewForm"></div>
+        <div id="driverNewCarSearch"></div>
+        <div class="note">車両を割り当てない場合は未選択のままでOKです。</div>
+        <button id="driverNewBtn" class="submit" type="button" onclick="新規ドライバーを登録する()">ドライバーと免許証を登録</button>
+        <div id="driverNewResult" class="result"></div>
+      <button id="driverInfoNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次のドライバーを登録する('license')">➕ 次のドライバーを登録する</button>
+        <button id="driverToVehicleBtn" class="submit" style="display:none" onclick="続けてこの人の車両を登録する()">🚙 続けてこの人の車両を登録する</button>
+      </div>
+    </div>
+    <div id="driverManualMode" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2>⌨️ 手入力で登録</h2>
+      <div class="note">氏名だけ必須です。免許証はあとから「登録済みドライバーを編集」から追加できます。</div>
+      <div id="driverManualForm"></div>
+      <div id="driverManualCarSearch"></div>
+      <div class="note">車両を割り当てない場合は未選択のままでOKです。</div>
+      <button id="driverManualSaveBtn" class="submit" type="button" onclick="手入力で新規ドライバーを登録する()">手入力で登録</button>
+      <div id="driverManualResult" class="result"></div>
+      <button id="driverManualNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次のドライバーを登録する('manual')">➕ 次のドライバーを登録する</button>
+    </div>
+  </div>
+  <div id="driverEditArea" class="card" style="display:none">
+    <button class="backBtn" type="button" onclick="ドライバー管理メニューへ戻る()">← ドライバー管理へ戻る</button>
+    <h2>✏️ 登録済みドライバーを編集</h2>
+    <div class="note">氏名・フリガナ・電話番号・DriverIDで検索できます。</div>
+    <label>ドライバーを選択</label>
+    <div class="search">
+      <input id="driverEditQ" type="text" placeholder="氏名・電話番号など" autocomplete="off">
+      <button class="searchClear" type="button" aria-label="ドライバーの選択を解除" onpointerdown="event.preventDefault()" onclick="選択欄を空にする('driverEditQ','driverEditList')">×</button>
+      <div class="arrow" onclick="編集ドライバー候補を描画する()">▼</div>
+      <div id="driverEditList" class="list"></div>
+    </div>
+    <div id="driverEditSelected" class="note"></div>
+    <div id="driverEditResult" class="result" role="status" aria-live="polite"></div>
+    <button id="driverEditRetry" class="backBtn" style="display:none" onclick="編集ドライバーを読み込む(編集中DriverID)">もう一度読み込む</button>
+    <div id="driverEditBody" style="display:none">
+      <div id="driverEditForm"></div>
+      <button id="driverEditSaveBtn" class="submit" type="button" onclick="既存ドライバー情報を保存する()">変更を保存</button>
+      <div style="margin-top:24px;padding-top:18px;border-top:1px solid #e2e8f0">
+        <h2>🪪 免許証を登録・更新</h2>
+        <div class="note">免許証が後から届いた場合も、更新した場合もここから同じDriverIDへ登録できます。</div>
+        <input id="driverEditLicenseFiles" type="file" accept="image/*" multiple>
+        <div id="driverEditLicenseCount" class="note">表・裏2枚をまとめて選択してください</div>
+        <button id="driverEditLicenseBtn" class="submit" type="button" onclick="既存ドライバー免許証を登録する()">免許証を登録・更新</button>
+        <div id="driverEditLicenseResult" class="result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="vehicleNewArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">🚙 車両台帳に入力する</div>
+  <div class="card">
+    <button class="homeBtn" type="button" onclick="新規車両メニューを開く()">➕ 新しい車両を登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="既存車両編集を開く()">✏️ 登録済み車両を編集</button>
+  </div>
+  <div id="vehicleNewMenuArea" class="card" style="display:none;margin-top:16px">
+    <h2>➕ 新しい車両を登録</h2>
+    <div class="note">登録方法を選んでください。車検証から読み取った内容も、登録前に修正できます。</div>
+    <button class="homeBtn" type="button" style="margin-top:16px" onclick="新規車両登録方法を選ぶ('ai')">📄 車両書類から登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="新規車両登録方法を選ぶ('manual')">⌨️ 手入力で登録</button>
+    <div id="vehicleAiArea" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2>📄 車両書類から登録</h2>
+      <div class="note">車両書類3枚を選択してください。</div>
+      <label>車両書類 3枚</label>
+      <input id="vehicleAiFiles" type="file" accept="image/*" multiple>
+      <div id="vehicleAiCount" class="note"></div>
+      <button id="vehicleAiReadBtn" class="submit" type="button" onclick="新規車両書類をAIで読む()">記録事項から読み取る</button>
+      <div id="vehicleAiResult" class="result"></div>
+    </div>
+    <div id="vehicleFormArea" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2 id="vehicleFormTitle">確認・修正</h2>
+      <div class="note">内容を確認して、違うところがあればここで直してから登録してください。</div>
+      <div id="vehicleNewForm"></div>
+      <button id="vehicleNewBtn" class="submit" type="button" onclick="新規車両を登録する()">車両台帳へ登録</button>
+
+      <div id="vehicleNewResult" class="result"></div>
+      <button id="vehicleNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次の車両を登録する()">➕ 次の車両を登録する</button>
+    </div>
+  </div>
+  <div id="vehicleEditArea" class="card" style="display:none;margin-top:16px">
+    <h2>✏️ 登録済み車両を編集</h2>
+    <div class="note">車両台帳の最新内容を読み込みます。車番・管轄・現在使用者で検索できます。</div>
+    <div id="vehicleEditSearch" style="margin-top:14px"></div>
+    <div id="vehicleEditResult" class="result" role="status" aria-live="polite"></div>
+    <button id="vehicleEditRetry" class="backBtn" style="display:none" onclick="既存車両を読み込む(selVehicleEdit)">もう一度読み込む</button>
+    <div id="vehicleEditFormArea" style="display:none;margin-top:18px">
+      <div id="vehicleEditForm"></div>
+      <div class="vehicleField">
+        <label>現在使用者（ドライバー） <span class="note">任意</span></label>
+        <div id="vehicleEditDriverSearch"></div>
+        <div class="note">変更しない場合はそのまま。空欄にすると現在使用者を解除します。</div>
+      </div>
+      <button id="vehicleEditSaveBtn" class="submit" type="button" onclick="既存車両を保存する()">変更を保存</button>
+      <div id="vehicleEditFixedNotice" style="display:none;margin-top:14px;padding:14px;border-radius:12px;background:#fff1f0;color:#b42318;font-size:14px;font-weight:800;line-height:1.7"></div>
+      <div id="vehicleEditNotice" style="display:none;margin-top:14px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;line-height:1.7"></div>
+    </div>
+  </div>
+</div>
+<div id="mediaArea" class="appSection">
+<button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+<div class="sectionTitle">📷 写真・書類</div>
+<div class="menu"><button class="tab on" id="tPhoto" onclick="切替('photo')">📷 車両写真</button><button class="tab" id="tLic" onclick="切替('lic')">🪪 免許証</button><button class="tab" id="tDocs" onclick="切替('docs')">📄 車両書類</button></div>
+<div class="card">
+<div id="photo" class="page on">
+  <h2>📷 車両状態写真</h2>
+  <div id="carSearch1"></div>
+  <label>撮影日</label>
+  <input id="photoDate" type="date">
+  <div class="note">
+    この日付で車両状態画像フォルダを作成します
+  </div>
+  <label>写真</label>
+  <input id="photos" type="file" accept="image/*" multiple>
+  <div id="photoCount" class="note">
+    最大40枚までまとめて選択できます
+  </div>
+  <button
+    id="photoBtn"
+    class="submit"
+    onclick="写真登録()"
+  >
+    まとめて登録
+  </button>
+  <div id="photoResult" class="result"></div>
+  <button
+    id="photoUndo"
+    class="undo"
+    style="display:none"
+    onclick="取消('photo')"
+  >
+    ↩️ 今の登録を取り消す
+  </button>
+</div>
+<div id="lic" class="page">
+  <h2>🪪 免許証</h2>
+  <div id="driverSearch"></div>
+  <label>免許証（表・裏）</label>
+<input id="licenseFiles" type="file" accept="image/*" multiple>
+<div id="licenseCount" class="note">表・裏2枚を選択してください</div>
+  <button id="licBtn" class="submit" onclick="免許登録()">2枚をまとめて登録</button>
+  <div id="licResult" class="result"></div>
+  <button id="licUndo" class="undo" style="display:none" onclick="取消('lic')">↩️ 今の登録を取り消す</button>
+</div>
+<div id="docs" class="page">
+  <h2>📄 車両書類</h2>
+  <div id="carSearch2"></div>
+  <label>車両書類（記録事項・車検証・自賠責）</label>
+  <input id="documentFiles" type="file" accept="image/*" multiple>
+  <div id="documentCount" class="note">3枚まとめて選択、または「写真を撮る」で1枚ずつ追加できます。</div>
+  <button type="button" class="backBtn" onclick="GF_車両書類選択をクリアする_80()">選択した写真をクリア</button>
+  <button id="docsBtn" class="submit" onclick="書類登録()">3枚をまとめて登録</button>
+  <div class="note" style="margin-top:18px">登録時の書類を送り直す場合は、上で登録済み車両を選び、書類3枚を選択して下のボタンを押してください。</div>
+  <button id="docsRepairBtn" type="button" class="backBtn" onclick="GF_登録時の書類を送り直す_80()">登録時の書類3枚を送り直す</button>
+  <div id="docsResult" class="result"></div>
+  <button id="docsUndo" class="undo" style="display:none" onclick="取消('docs')">↩️ 今の登録を取り消す</button>
+</div>
+</div></div>
+</div>
+<div id="savedDocumentsArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">📂 書類・写真を見る</div>
+  <div class="card">
+    <h2>車両の書類・写真</h2>
+    <div class="note">車両を選ぶと、保存済みの書類や写真を開けます。</div>
+    <div id="savedVehicleSearch"></div><div id="savedLoanView" class="note" style="display:none;white-space:pre-line;background:#f3f8f4;padding:12px;border-radius:12px;margin-top:12px" aria-live="polite"></div>
+    <div id="savedVehicleCandidateStatus" class="note" role="status"></div>
+    <button class="backBtn" type="button" style="margin-top:10px" onclick="GF_閲覧候補を読み込む_80('車両')">車両候補を更新</button>
+    <button class="backBtn" type="button" style="margin-top:12px" onclick="GF_保存書類を再読込する_80('車両')">表示を更新</button>
+    <div id="savedVehicleResult" role="status" aria-live="polite" style="margin-top:16px">車両を選択してください。</div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h2>ドライバーから免許証を探す</h2>
+    <div id="savedDriverSearch"></div>
+    <div id="savedDriverCandidateStatus" class="note" role="status"></div>
+    <button class="backBtn" type="button" style="margin-top:10px" onclick="GF_閲覧候補を読み込む_80('ドライバー')">ドライバー候補を更新</button>
+    <button class="backBtn" type="button" style="margin-top:12px" onclick="GF_保存書類を再読込する_80('ドライバー')">表示を更新</button>
+    <div id="savedDriverResult" role="status" aria-live="polite" style="margin-top:16px">ドライバーを選択してください。</div>
+  </div>
+</div>
+<div id="actualArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">🚗 実績を登録する</div>
+  <!-- 実績画面：使用者選択なし・日付変更対応 20261006-1630 -->
+  <div class="card">
+    <h2>実際に行った日をワンタッチ登録</h2>
+    <div class="note">確認画面で実施日を変更できます。車両に登録された現在使用者で受付し、裏で反映します。</div>
+    <label>車両</label>
+    <div id="actualVehicleSearch"></div><button class="backBtn" type="button" style="margin-top:12px" onclick="GF_貸出情報を読む_80(selActualVehicle,'actualLoanView')">代車貸出情報を更新</button><div id="actualLoanView" class="note" style="display:none;white-space:pre-line;background:#f3f8f4;padding:12px;border-radius:12px;margin-top:12px" aria-live="polite"></div><div id="actualVehicleUndoBox" style="display:none;margin-top:12px"><button id="actualVehicleUndoButton" class="backBtn" type="button" style="width:100%;border:1px solid #bb4b4b;color:#a32e2e" onclick="GF_選択車両の実績を取り消す_80()">↩️ この車両の実績を取り消す</button><div id="actualVehicleUndoMessage" class="note" role="status" aria-live="polite" style="margin-top:8px"></div></div>
+    <div style="height:14px"></div>
+    <button class="submit" onclick="実績登録('貸出開始')">🚗 貸出開始</button>
+    <button class="submit" onclick="実績登録('返却完了')">↩️ 返却完了</button>
+    <button class="submit" onclick="実績登録('代車開始')">🚙 代車開始</button>
+    <button class="submit" onclick="実績登録('代車返却')">↩️ 代車返却</button>
+    <div id="actualResult" class="result" role="status" aria-live="polite"></div>
+    <dialog id="actualConfirm" style="border:0;border-radius:18px;padding:24px;width:90%;max-width:440px;max-height:85vh;max-height:85dvh;overflow-y:auto">
+      <h2 id="actualConfirmTitle"></h2>
+      <div id="actualConfirmCar" class="note"></div>
+      <label for="actualDate">実施日（変更できます）</label>
+      <input id="actualDate" type="date" onchange="実績確認文を更新する()">
+      <div id="actualMemoArea" style="display:none">
+        <label for="actualBorrower">代車貸出先（任意）</label><input id="actualBorrower" type="text" maxlength="100" placeholder="例：山田 太郎" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px"><label for="actualAreaInput">代車貸出エリア（任意）</label><input id="actualAreaInput" type="text" maxlength="100" placeholder="例：八王子" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px"><label for="actualMemo">代車貸出備考（任意）</label>
+        <textarea id="actualMemo" maxlength="1000" rows="3" placeholder="貸出先のドライバー名・エリアなど" style="width:100%;border:1px solid #cbd5e1;border-radius:13px;padding:12px;font:inherit;resize:vertical"></textarea>
+        <div class="note">例：山田 太郎／八王子エリア</div>
+      </div>
+      <div id="actualConfirmQuestion" style="margin-top:16px" aria-live="polite"></div>
+      <div id="actualConfirmStatus" class="result" role="status" aria-live="polite"></div>
+      <button id="actualConfirmSend" class="submit" type="button" onclick="実績をキューへ送信する()">この日付で登録する</button>
+      <button id="actualUndo" class="backBtn" type="button" style="display:none;margin-top:12px" onclick="GF_今の実績を取り消す_80()">今の登録を取り消す</button>
+      <button id="actualConfirmClose" class="backBtn" type="button" style="margin-top:16px" onclick="if(!実績送信中)GF_実績確認を閉じる_80()">キャンセル</button>
+    </dialog>
+  </div>
+</div>
+<div id="dateArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">📅 日付を登録する</div>
+  <div class="card">
+    <h2>車両予定</h2>
+    <div id="carSearch3"></div><button class="backBtn" type="button" style="margin-top:12px" onclick="GF_貸出情報を読む_80(selCar3,'planLoanView')">代車貸出情報を更新</button><div id="planLoanView" class="note" style="display:none;white-space:pre-line;background:#f3f8f4;padding:12px;border-radius:12px;margin-top:12px" aria-live="polite"></div>
+    <label>予定種類</label>
+    <select id="planType" disabled onchange="GF_予定貸出入力を切り替える_80()">
+      <option value="">予定種類を読み込み中…</option>
+    </select>
+    <div id="planTypeNote" class="note">予定種類マスターから読み込みます</div>
+    <label>予定日</label>
+    <input id="planDate" type="date">
+    <div id="planLoanFields" style="display:none">
+      <label>代車貸出先（任意）</label><input id="planBorrower" type="text" maxlength="100" placeholder="例：山田 太郎" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px">
+      <label>代車貸出エリア（任意）</label><input id="planArea" type="text" maxlength="100" placeholder="例：八王子" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px">
+      <label>代車貸出備考（任意）</label><textarea id="planMemo" rows="3" maxlength="1000" placeholder="貸出に関するメモ" style="width:100%;padding:12px;font:inherit;border:1px solid #cbd5e1;border-radius:13px"></textarea>
+    </div>
+    <button id="planBtn" class="submit" onclick="予定登録()">予定を登録</button>
+    <div id="planResult" class="result"></div>
+    <button id="planUndo" class="undo" style="display:none" onclick="予定取消()">↩️ この予定を取り消す</button>
+      <div style="height:18px"></div>
+      <h2 style="margin-top:8px">この車両の予定</h2>
+      <div id="activePlans" class="note">車両を選択すると予定を表示します</div>
+  </div>
+</div>
+<script>
+function 画面を開く(id){document.querySelectorAll('.appSection').forEach(x=>x.classList.remove('on')); const el=document.getElementById(id);if(el)el.classList.add('on');window.scrollTo(0,0)}
+function ホームへ(){画面を開く('home')}
+function 予定一覧画面を開く(){画面を開く('scheduleArea')}
+function 切替(n){['photo','lic','docs'].forEach(x=>document.getElementById(x)?.classList.toggle('on',x===n));}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const action=b.getAttribute('onclick')||'';if(!/^(画面を開く|ホームへ|予定一覧画面を開く|切替)\(/.test(action)){e.preventDefault();e.stopImmediatePropagation();alert('画面確認版です。データの登録・更新はまだ接続していません。')}} ,true);
+</script><script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+const app=initializeApp({apiKey:'AIzaSyBkwuHDs1XRq8WXhDOeSIgK7X7WcYLnrCM',authDomain:'goldfirst-auth-test.firebaseapp.com',projectId:'goldfirst-auth-test',appId:'1:1079109139578:web:4c400be3aab323d7b0cfc3'});
+const status=document.getElementById('gf-auth-status'),wall=document.getElementById('gf-auth-wall');
+onAuthStateChanged(getAuth(app),async user=>{
+ if(!user){status.textContent='ログインが必要です。';return;}
+ if(!user.emailVerified){status.textContent='メールアドレスの確認が必要です。';return;}
+ try{
+  const snap=await getDoc(doc(getFirestore(app),'staffAccess',user.uid));
+  const a=snap.exists()?snap.data():null;
+  if(!a||a.enabled!==true||a.status!=='active'||!['admin','staff','accounting'].includes(a.role)){status.textContent='この画面を利用する権限がありません。';return;}
+  wall.remove();
+ }catch(e){status.textContent='権限確認に失敗しました。通信状況を確認してください。';}
+},()=>{status.textContent='ログイン状態を確認できませんでした。';});
+</script></body></html>
