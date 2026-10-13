@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOLDFIRST | スタッフ招待テスト</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fffaf0;color:#222;font-family:system-ui,-apple-system,sans-serif}main{max-width:540px;margin:24px auto;padding:20px}.panel{background:white;border:1px solid #eadfc9;border-radius:18px;padding:22px;box-shadow:0 8px 25px #0000000b}h1{font-size:24px}label{display:block;margin:14px 0 5px;font-weight:bold}input,select{width:100%;padding:12px;border:1px solid #bbb;border-radius:8px;font-size:16px}button{padding:13px;border:0;border-radius:9px;background:#222;color:white;font-weight:bold;cursor:pointer;margin-top:15px;width:100%}button:disabled{opacity:.5}button.secondary{background:white;color:#222;border:1px solid #bbb}.hint{font-size:13px;color:#777;line-height:1.7}.ok{color:#216e42}.bad{color:#a32929}iframe{width:100%;height:180px;border:1px solid #ddd;border-radius:10px;margin-top:12px;background:white}#formPanel,#resultPanel{display:none}
+</style></head><body><main><div class="panel"><h1>GOLDFIRST スタッフ招待</h1>
+<p class="hint">テスト環境：招待待ち情報だけを保存します。招待メールは送りません。</p>
+<div id="loginPanel"><label for="loginEmail">メールアドレス</label><input id="loginEmail" type="email" autocomplete="email"><label for="loginPass">パスワード</label><input id="loginPass" type="password" autocomplete="current-password"><button id="emailLogin">メールでログイン</button><button id="googleLogin" class="secondary">Googleでログイン</button><p id="loginMessage" class="bad"></p></div>
+<div id="formPanel"><p id="who" class="hint"></p><p id="status" class="hint">管理者権限を確認しています…</p>
+<div id="inputs" style="display:none"><label for="staffName">スタッフ名</label><input id="staffName" maxlength="80" autocomplete="off"><label for="staffEmail">招待先メールアドレス（テスト用のみ）</label><input id="staffEmail" type="email" maxlength="254" autocomplete="off"><label for="staffRole">役割</label><select id="staffRole"><option value="staff">スタッフ</option><option value="accounting">経理</option><option value="admin">管理者</option></select><button id="submitInvite">招待待ち情報を登録（メール送信なし）</button></div>
+<button id="logout" class="secondary">ログアウト</button></div>
+<div id="resultPanel"><h2>GASからの結果</h2><p class="hint">送信後は下の枠に登録結果が表示されます。結果を確認するまで再送信しないでください。</p><iframe id="resultFrame" name="gf_invite_result" title="GAS登録結果"></iframe></div>
+<p class="hint">※ この画面の権限表示だけでは登録を許可しません。GAS側で毎回IDトークンと管理者権限を再検証します。</p></div></main>
+<form id="postForm" method="POST" target="gf_invite_result" action="https://script.google.com/macros/s/AKfycbyiQj1xzTDk5JHmtjfThfVp7PLPBymuG-kWHu0fRzaEgsv3X6WbDSBPq8NUZmOxPACM3w/exec" style="display:none">
+<input name="action"><input name="idToken"><input name="name"><input name="email"><input name="role">
+</form>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,signOut} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+const app=initializeApp({apiKey:'AIzaSyBkwuHDs1XRq8WXhDOeSIgK7X7WcYLnrCM',authDomain:'goldfirst-auth-test.firebaseapp.com',projectId:'goldfirst-auth-test',appId:'1:1079109139578:web:4c400be3aab323d7b0cfc3'});
+const auth=getAuth(app),db=getFirestore(app),provider=new GoogleAuthProvider(),$=id=>document.getElementById(id);
+let admin=false,seq=0,submitted=false;
+const show=(id,yes)=>$(id).style.display=yes?'block':'none';
+$('emailLogin').onclick=async()=>{try{await signInWithEmailAndPassword(auth,$('loginEmail').value.trim(),$('loginPass').value)}catch(e){$('loginMessage').textContent='ログインできませんでした（'+(e.code||'error')+'）'}};
+$('googleLogin').onclick=async()=>{try{await signInWithPopup(auth,provider)}catch(e){$('loginMessage').textContent='ログインできませんでした（'+(e.code||'error')+'）'}};
+$('logout').onclick=()=>signOut(auth);
+onAuthStateChanged(auth,async user=>{const n=++seq;admin=false;show('loginPanel',!user);show('formPanel',!!user);show('inputs',false);show('resultPanel',false);submitted=false;if(!user)return;$('who').textContent='ログイン中：'+(user.email||'メール不明');$('status').textContent='管理者権限を確認中…';try{const snap=await getDoc(doc(db,'staffAccess',user.uid));if(n!==seq)return;const a=snap.exists()?snap.data():null;admin=a?.role==='admin'&&a?.status==='active'&&a?.enabled===true&&user.emailVerified===true;if(!admin){$('status').textContent='管理者権限またはメール認証を確認できません。';return}$('status').textContent='✓ 管理者確認OK。テスト用メールアドレスで登録できます。';show('inputs',true)}catch(e){if(n===seq)$('status').textContent='管理者確認に失敗しました（'+(e.code||'error')+'）'}});
+$('submitInvite').onclick=async()=>{if(!admin||submitted)return;const user=auth.currentUser;if(!user)return;const name=$('staffName').value.trim(),email=$('staffEmail').value.trim(),role=$('staffRole').value;if(!name||!/^\S+@\S+\.\S+$/.test(email)){alert('スタッフ名とメールアドレスを確認してください。');return}if(!confirm('テスト環境に招待待ち情報を1件登録します。メール送信はありません。\n'+email+'\n続けますか？'))return;try{const token=await user.getIdToken(true);if(!admin||auth.currentUser?.uid!==user.uid)return;const f=$('postForm');f.elements.namedItem('action').value='invite_pending_v1';f.elements.namedItem('idToken').value=token;f.elements.namedItem('name').value=name;f.elements.namedItem('email').value=email;f.elements.namedItem('role').value=role;submitted=true;$('submitInvite').disabled=true;show('resultPanel',true);f.submit();f.elements.namedItem('idToken').value='';$('status').textContent='送信しました。下のGAS結果を確認してください。';}catch(e){alert('送信準備に失敗しました。')}};
+</script></body></html>
