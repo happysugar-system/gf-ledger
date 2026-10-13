@@ -1,10 +1,16 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GOLDFIRST | Firebaseログインテスト</title>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLDFIRST | Firebase 管理者確認テスト</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans JP',sans-serif;color:#1d1d1d;background:radial-gradient(circle at 10% 5%,#f4ead0,transparent 35%),#fffdf9}main{max-width:480px;margin:0 auto;min-height:100vh;padding:32px 20px 50px;text-align:center}.logo{width:140px;height:140px;object-fit:contain}.line{height:2px;width:62px;background:#bd9232;margin:12px auto 22px}h1{font-size:27px;margin:0 0 8px}.sub{color:#777;font-size:14px;line-height:1.6}.panel{text-align:left;background:white;border:1px solid #eee;border-radius:22px;padding:24px;box-shadow:0 12px 32px #0000000c;margin-top:24px}label{font-weight:700;font-size:14px;display:block;margin:16px 0 7px}input{width:100%;padding:14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}button{cursor:pointer;border:0;border-radius:11px;padding:14px 12px;font-weight:700;font-size:15px;width:100%;margin-top:14px}button:disabled{opacity:.6;cursor:wait}.primary{background:#222;color:#fff}.google{background:#fff;border:1px solid #d5d5d5;color:#222}.link{background:transparent;color:#8c681d;font-size:13px;padding:7px}.note{margin-top:22px;background:#fff8e6;border-radius:12px;padding:14px;color:#765a20;font-size:12px;line-height:1.8}.message{font-size:13px;min-height:22px;margin-top:12px;line-height:1.6}.error{color:#ad2727}.success{color:#216e42}.profile{word-break:break-word;line-height:1.8}hr{border:0;border-top:1px solid #eee;margin:22px 0}small{color:#777}#signedIn,#checking{display:none}.state{font-weight:700;margin-bottom:12px}.denied{color:#a32929}.allowed{color:#216e42}
-</style></head><body><main>
-<img class="logo" src="https://sachikasato-coder.github.io/gf-ledger/icon.png" alt="GOLDFIRST" onerror="this.style.display='none'">
-<div class="line"></div><h1>業務システム</h1><p class="sub">GOLDFIRST 共通ログイン<br>Firebase 接続テスト</p>
+</style>
+</head>
+<body><main>
+<img class="logo" src="./icon.png" alt="GOLDFIRST" onerror="this.style.display='none'">
+<div class="line"></div><h1>業務システム</h1><p class="sub">GOLDFIRST 共通ログイン<br>Firebase 管理者確認テスト</p>
 <section class="panel" id="signedOut"><h2 style="margin:0">スタッフログイン</h2>
 <label for="email">メールアドレス</label><input id="email" type="email" autocomplete="email" placeholder="example@gmail.com">
 <label for="password">パスワード</label><input id="password" type="password" autocomplete="current-password" placeholder="パスワード">
@@ -13,56 +19,27 @@
 <button class="link" id="resetPassword">パスワードを忘れた方</button>
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </section>
-<section class="panel" id="checking"><h2 style="margin:0 0 12px">利用権限を確認中…</h2><p class="sub">Firestoreの登録情報を照合しています。</p></section>
-<section class="panel" id="signedIn"><h2 style="margin:0 0 12px">ログイン確認</h2><p id="accessState" class="state" role="status"></p><div class="profile" id="profile"></div><hr><button class="primary" id="logout">ログアウト</button></section>
-<div class="note">🔒 認証接続だけを確認する独立テスト画面です。車両・シフト・契約管理へのアクセスは許可しません。<br>本人の権限を照合するテストです。スタッフ招待・業務アプリの権限保護・パスキーは未実装です。実スタッフの個人情報は入力しないでください。</div>
+<section class="panel" id="checking"><h2 style="margin:0 0 12px">管理者権限を確認中…</h2><p class="sub">Firestoreの登録情報を照合しています。</p></section>
+<section class="panel" id="signedIn"><h2 style="margin:0 0 12px">管理者確認テスト</h2><p id="accessState" class="state" role="status"></p><div class="profile" id="profile"></div><hr><button class="primary" id="logout">ログアウト</button></section>
+<div class="note">🔒 これはGitHub Pages上の独立した<strong>画面表示テスト</strong>です。Firestoreから本人の権限情報を読み取りますが、GAS側の本人確認はまだ接続していません。招待送信・権限変更・車両・シフト・契約管理へのアクセスはできません。実スタッフの個人情報は入力しないでください。</div>
 </main>
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
-import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,sendPasswordResetEmail,signOut} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const firebaseConfig={apiKey:'AIzaSyBkwuHDs1XRq8WXhDOeSIgK7X7WcYLnrCM',authDomain:'goldfirst-auth-test.firebaseapp.com',projectId:'goldfirst-auth-test',storageBucket:'goldfirst-auth-test.firebasestorage.app',messagingSenderId:'1079109139578',appId:'1:1079109139578:web:4c400be3aab323d7b0cfc3',measurementId:'G-V19ZKK82P6'};
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),provider=new GoogleAuthProvider();
-let authCheckSequence=0;
 const $=id=>document.getElementById(id);
+let checkSeq=0;
 const controls=['emailLogin','googleLogin','resetPassword'];
-function busy(value){controls.forEach(id=>$(id).disabled=value)}
-function msg(text,success=false){$('message').textContent=text;$('message').className='message '+(success?'success':'error')}
-function errorText(e){const code=e?.code||'';if(code==='auth/unauthorized-domain')return 'このサイトのドメインがFirebaseで許可されていません。';if(code==='auth/invalid-credential'||code==='auth/wrong-password'||code==='auth/user-not-found')return 'メールアドレスまたはパスワードを確認してください。';if(code==='auth/popup-blocked')return 'ポップアップがブロックされました。ブラウザの設定を確認してください。';if(code==='auth/popup-closed-by-user')return 'Googleログイン画面が閉じられました。';if(code==='auth/operation-not-allowed')return 'Firebase側でこのログイン方式が有効になっていません。';if(code==='auth/too-many-requests')return '試行回数が多いため、しばらく待ってください。';return 'ログイン処理を完了できませんでした（'+(code||'通信エラー')+'）。'}
-$('emailLogin').addEventListener('click',async()=>{const email=$('email').value.trim(),password=$('password').value;if(!email||!password){msg('メールアドレスとパスワードを入力してください。');return}busy(true);msg('');try{await signInWithEmailAndPassword(auth,email,password)}catch(e){msg(errorText(e))}finally{busy(false)}});
-$('googleLogin').addEventListener('click',async()=>{busy(true);msg('');try{await signInWithPopup(auth,provider)}catch(e){if(e.code==='auth/popup-blocked'){msg('ポップアップがブロックされました。設定を変更して再度お試しください。')}else{msg(errorText(e))}}finally{busy(false)}});
-$('resetPassword').addEventListener('click',async()=>{const email=$('email').value.trim();if(!email){msg('上の欄にメールアドレスを入力してください。');return}busy(true);try{await sendPasswordResetEmail(auth,email);msg('登録済みのアドレスであれば、再設定メールが届きます。',true)}catch(e){msg(errorText(e))}finally{busy(false)}});
+function busy(v){controls.forEach(id=>$(id).disabled=v)}
+function msg(t,ok=false){$('message').textContent=t;$('message').className='message '+(ok?'success':'error')}
+function err(e){const c=e?.code||'';if(c==='auth/unauthorized-domain')return 'このサイトのドメインがFirebaseで許可されていません。';if(['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(c))return 'メールアドレスまたはパスワードを確認してください。';if(c==='auth/popup-blocked')return 'ポップアップがブロックされました。';if(c==='auth/popup-closed-by-user')return 'Googleログイン画面が閉じられました。';if(c==='auth/operation-not-allowed')return 'Firebaseでこのログイン方法が無効です。';if(c==='auth/too-many-requests')return '試行回数が多いため、しばらく待ってください。';return '処理できませんでした（'+(c||'通信エラー')+'）。'}
+$('emailLogin').addEventListener('click',async()=>{const email=$('email').value.trim(),pass=$('password').value;if(!email||!pass){msg('メールアドレスとパスワードを入力してください。');return}busy(true);msg('');try{await signInWithEmailAndPassword(auth,email,pass)}catch(e){msg(err(e))}finally{busy(false)}});
+$('googleLogin').addEventListener('click',async()=>{busy(true);msg('');try{await signInWithPopup(auth,provider)}catch(e){msg(err(e))}finally{busy(false)}});
+$('resetPassword').addEventListener('click',async()=>{const email=$('email').value.trim();if(!email){msg('上の欄にメールアドレスを入力してください。');return}busy(true);try{await sendPasswordResetEmail(auth,email);msg('登録済みのアドレスであれば、再設定メールが届きます。',true)}catch(e){msg(err(e))}finally{busy(false)}});
 $('logout').addEventListener('click',async()=>{try{await signOut(auth)}catch(e){alert('ログアウトできませんでした。')}});
-function showPanel(panel){
-  $('signedOut').style.display=panel==='signedOut'?'block':'none';
-  $('signedIn').style.display=panel==='signedIn'?'block':'none';
-  $('checking').style.display=panel==='checking'?'block':'none';
-}
-function showAccess(user,allowed,detail){
-  showPanel('signedIn');
-  $('accessState').textContent=allowed?'✓ 利用権限を確認できました（管理者デモ）':'利用権限がありません';
-  $('accessState').className='state '+(allowed?'allowed':'denied');
-  $('profile').replaceChildren();
-  const p=document.createElement('p');
-  p.textContent='ログイン中：'+(user.email||'メール未登録');
-  const q=document.createElement('small');
-  q.textContent=detail;
-  $('profile').append(p,q);
-  $('password').value='';
-}
-onAuthStateChanged(auth,async user=>{
-  const seq=++authCheckSequence;
-  if(!user){showPanel('signedOut');return}
-  showPanel('checking');
-  try{
-    const snapshot=await getDoc(doc(db,'staffAccess',user.uid));
-    if(seq!==authCheckSequence||auth.currentUser?.uid!==user.uid)return;
-    const access=snapshot.exists()?snapshot.data():null;
-    const allowed=access?.role==='admin' && access?.status==='active' && access?.enabled===true;
-    showAccess(user,allowed,allowed?'UIDに紐づく管理者権限をFirestoreで確認しました。': '管理者権限が登録されていないか、無効になっています。');
-  }catch(e){
-    if(seq!==authCheckSequence||auth.currentUser?.uid!==user.uid)return;
-    showAccess(user,false,'権限の確認に失敗しました。Firestoreのルールと通信状態を確認してください。（'+(e?.code||'error')+'）');
-  }
-});
+function showPanel(p){for(const id of ['signedOut','signedIn','checking'])$(id).style.display=id===p?'block':'none'}
+function showAccess(user,allowed,detail){showPanel('signedIn');$('accessState').textContent=allowed?'✓ 管理者確認OK（画面テスト）':'利用権限がありません';$('accessState').className='state '+(allowed?'allowed':'denied');$('profile').replaceChildren();const p=document.createElement('p');p.textContent='ログイン中：'+(user.email||'メール未登録');const q=document.createElement('small');q.textContent=detail;$('profile').append(p,q);$('password').value=''}
+onAuthStateChanged(auth,async user=>{const seq=++checkSeq;if(!user){showPanel('signedOut');return}showPanel('checking');try{const snap=await getDoc(doc(db,'staffAccess',user.uid));if(seq!==checkSeq||auth.currentUser?.uid!==user.uid)return;const a=snap.exists()?snap.data():null;const allowed=a?.role==='admin'&&a?.status==='active'&&a?.enabled===true;showAccess(user,allowed,allowed?'Firestoreの本人UIDに紐づく管理者権限を確認しました。GAS側の確認は未接続です。':'本人の管理者権限が登録されていないか、無効になっています。')}catch(e){if(seq!==checkSeq||auth.currentUser?.uid!==user.uid)return;showAccess(user,false,'権限確認に失敗しました。Firestoreルールまたは通信状態を確認してください。（'+(e?.code||'error')+'）')}});
 </script></body></html>
