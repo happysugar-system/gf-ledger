@@ -51,6 +51,7 @@ import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/11.10.
 const app=initializeApp({apiKey:'AIzaSyBkwuHDs1XRq8WXhDOeSIgK7X7WcYLnrCM',authDomain:'goldfirst-auth-test.firebaseapp.com',projectId:'goldfirst-auth-test',appId:'1:1079109139578:web:4c400be3aab323d7b0cfc3'});
 const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const ledgerUrl='./車両管理-test.html';
+  const GAS_VERIFY_URL = 'ここにGASの/execのURLを貼る';
 let sequence=0;
 $('ledger').onclick=()=>{
   window.location.href='https://sachikasato-coder.github.io/gf-ledger/%E8%BB%8A%E4%B8%A1%E7%AE%A1%E7%90%86-test.html';
@@ -75,6 +76,51 @@ onAuthStateChanged(auth,async user=>{
 
 $('menus').classList.remove('hidden');
   if(access.role==='admin')$('invite').classList.remove('hidden');
+   if (!$('gasVerify')) {
+  const btn = document.createElement('button');
+  btn.id = 'gasVerify';
+  btn.type = 'button';
+  btn.className = 'action secondary';
+  btn.textContent = 'GAS側の認証を確認';
+
+  $('menus').appendChild(btn);
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.textContent = '認証確認中…';
+
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('ログインが必要です');
+
+      const token = await currentUser.getIdToken(true);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = GAS_VERIFY_URL;
+      form.target = '_blank';
+      form.style.display = 'none';
+
+      const field = document.createElement('input');
+      field.type = 'hidden';
+      field.name = 'idToken';
+      field.value = token;
+
+      form.appendChild(field);
+      document.body.appendChild(form);
+      form.submit();
+      form.remove();
+
+      btn.textContent = 'GAS認証結果を別画面で確認';
+    } catch (e) {
+      $('accessMessage').textContent =
+        'GAS認証テスト失敗：' + e.message;
+      btn.textContent = 'GAS側の認証を確認';
+    } finally {
+      btn.disabled = false;
+    }
+  };
+}
  }catch(e){if(n===sequence)$('accessMessage').textContent='権限を確認できませんでした。再度お試しください。'}
 });
 </script>
