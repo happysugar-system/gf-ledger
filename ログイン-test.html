@@ -67,7 +67,13 @@ onAuthStateChanged(auth,async user=>{
   const access=snap.exists()?snap.data():null;
   const valid=access?.enabled===true&&access?.status==='active'&&['admin','staff','accounting'].includes(access?.role)&&user.emailVerified===true;
   if(!valid){$('accessMessage').textContent='利用権限がありません。管理者に確認してください。';return}
-  $('accessMessage').textContent='ログイン中';$('menus').classList.remove('hidden');
+  $('accessMessage').textContent =
+  'Firebase認証成功！\n' +
+  'メール認証：OK\n' +
+  'スタッフ権限：' + access.role + '\n' +
+  'GAS側の認証：未確認';
+
+$('menus').classList.remove('hidden');
   if(access.role==='admin')$('invite').classList.remove('hidden');
  }catch(e){if(n===sequence)$('accessMessage').textContent='権限を確認できませんでした。再度お試しください。'}
 });
