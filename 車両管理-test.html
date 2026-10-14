@@ -102,6 +102,7 @@ body.scheduleDetailOpen{overflow:hidden}
   </div>
   <div class="homeMenu">
     <button class="homeBtn" onclick="画面を開く('driverNewArea')">👤 ドライバーを登録する</button>
+    <button class="homeBtn" onclick="画面を開く('vehicleListArea')">🔎 車両一覧を見る（読み取り専用）</button>
     <button class="homeBtn" onclick="画面を開く('vehicleNewArea')">🚙 車両台帳に入力する</button>
     <button class="homeBtn" onclick="画面を開く('dateArea')">📅 日付を登録する</button>
     <button class="homeBtn" onclick="画面を開く('actualArea')">🚗 実績を登録する</button>
@@ -110,6 +111,15 @@ body.scheduleDetailOpen{overflow:hidden}
 </button>
     <button class="homeBtn" onclick="画面を開く('savedDocumentsArea')">📂 書類・写真を見る</button>
     <button class="homeBtn" onclick="画面を開く('mediaArea')">📷 写真・書類</button>
+  </div>
+</div>
+<div id="vehicleListArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">🔎 車両一覧（読み取り専用）</div>
+  <div class="card">
+    <p class="note">認証済みスタッフだけがテスト用台帳を閲覧できます。車両一覧と車番検索は別画面で開きます。登録・更新はできません。</p>
+    <button class="submit" id="gfVehicleListOpen" type="button" onclick="画面を開く('vehicleListArea')">177台の一覧を開く</button>
+    <p class="note" id="gfVehicleListStatus" role="status"></p>
   </div>
 </div>
 <div id="scheduleArea" class="appSection">
@@ -415,6 +425,29 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 </script><script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+const GF_GAS_URL='https://script.google.com/macros/s/AKfycbyXRqHz6bTXx7CRn0VTNaG9EYubwpZPzO3c_lXxoHymEYlYW0-flFFrGt2E9DzrUqrN/exec';
+document.getElementById('gfVehicleListOpen').addEventListener('click',async()=>{
+ const btn=document.getElementById('gfVehicleListOpen');
+ const msg=document.getElementById('gfVehicleListStatus');
+ // Open a window immediately to avoid popup blocking after async token refresh.
+ const win=window.open('about:blank','gf_vehicle_list_test');
+ if(!win){msg.textContent='ポップアップを許可して、もう一度押してください。';return;}
+ btn.disabled=true;msg.textContent='認証を確認して車両一覧を開いています…';
+ try{
+  const user=getAuth(app).currentUser;
+  if(!user||!user.emailVerified)throw Error('ログインまたはメール認証が必要です');
+  const token=await user.getIdToken(true);
+  const form=document.createElement('form');
+  form.method='POST';form.action=GF_GAS_URL;form.target=win.name;form.style.display='none';
+  for(const [name,value] of Object.entries({idToken:token,mode:'vehicles'})){
+   const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);
+  }
+  document.body.appendChild(form);form.submit();form.remove();
+  msg.textContent='別画面で車両一覧を開きました。';
+ }catch(err){win.close();msg.textContent='読み込み失敗：'+err.message;}
+ finally{btn.disabled=false;}
+});
+
 import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 const app=initializeApp({apiKey:'AIzaSyBkwuHDs1XRq8WXhDOeSIgK7X7WcYLnrCM',authDomain:'goldfirst-auth-test.firebaseapp.com',projectId:'goldfirst-auth-test',appId:'1:1079109139578:web:4c400be3aab323d7b0cfc3'});
 const status=document.getElementById('gf-auth-status'),wall=document.getElementById('gf-auth-wall');
