@@ -51,7 +51,7 @@ import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/11.10.
 const app=initializeApp({apiKey:'AIzaSyBkwuHDs1XRq8WXhDOeSIgK7X7WcYLnrCM',authDomain:'goldfirst-auth-test.firebaseapp.com',projectId:'goldfirst-auth-test',appId:'1:1079109139578:web:4c400be3aab323d7b0cfc3'});
 const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const ledgerUrl='./車両管理-test.html';
-  const GAS_VERIFY_URL = 'ここにGASの/execのURLを貼る';
+  const GAS_VERIFY_URL = 'https://script.google.com/macros/s/AKfycbyXRqHz6bTXx7CRn0VTNaG9EYubwpZPzO3c_lXxoHymEYlYW0-flFFrGt2E9DzrUqrN/exec';
 let sequence=0;
 $('ledger').onclick=()=>{
   window.location.href='https://sachikasato-coder.github.io/gf-ledger/%E8%BB%8A%E4%B8%A1%E7%AE%A1%E7%90%86-test.html';
