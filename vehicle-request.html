@@ -430,7 +430,10 @@
 
     <section class="page" id="page2">
       <label class="fieldLabel">契約者メールアドレス<span class="required">必須</span></label>
-      <input id="email" type="email" autocomplete="email">
+      <input id="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false">
+      <div class="docHelp">電子契約のご案内に使用します。入力間違いがないかご確認ください。</div>
+      <label class="fieldLabel" for="emailConfirm">契約者メールアドレス（確認用）<span class="required">必須</span></label>
+      <input id="emailConfirm" type="email" autocomplete="off" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="もう一度入力してください">
 
       <label class="fieldLabel">連帯保証人 氏名<span class="required">必須</span></label>
       <input id="guarantorName" type="text">
@@ -439,7 +442,10 @@
       <input id="guarantorPhone" type="tel" inputmode="tel">
 
       <label class="fieldLabel">連帯保証人 メールアドレス<span class="required">必須</span></label>
-      <input id="guarantorEmail" type="email">
+      <input id="guarantorEmail" type="email" inputmode="email" autocapitalize="off" spellcheck="false">
+      <div class="docHelp">連帯保証人へのご連絡に使用します。ご本人に確認したアドレスを入力してください。</div>
+      <label class="fieldLabel" for="guarantorEmailConfirm">連帯保証人 メールアドレス（確認用）<span class="required">必須</span></label>
+      <input id="guarantorEmailConfirm" type="email" autocomplete="off" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="もう一度入力してください">
 
       <label class="fieldLabel">納車希望日<span class="required">必須</span></label>
       <div class="residentOptions">
@@ -533,6 +539,7 @@
           〒337-0043<br>
           埼玉県さいたま市見沼区中川302<br>
           株式会社 GOLDFIRST 宛
+          <div class="note" style="margin-top:12px">📷 郵送先を忘れないよう、この画面をスクリーンショットで保存しておくと便利です。<br>封筒には郵便番号・住所・宛名を正確にご記入ください。</div>
         </div>
       </div>
 
@@ -657,7 +664,11 @@
       if (!checkRequired([
         ['email','契約者メールアドレス'], ['guarantorName','連帯保証人 氏名'],
         ['guarantorPhone','連帯保証人 電話番号'], ['guarantorEmail','連帯保証人 メールアドレス'],
+        ['emailConfirm','契約者メールアドレス（確認用）'],
+        ['guarantorEmailConfirm','連帯保証人 メールアドレス（確認用）'],
       ])) return;
+      if (!checkEmailConfirmation('email', 'emailConfirm', '契約者')) return;
+      if (!checkEmailConfirmation('guarantorEmail', 'guarantorEmailConfirm', '連帯保証人')) return;
       if (document.querySelector('input[name="deliveryChoice"]:checked').value === 'date' && !value('deliveryDate')) {
         alert('納車希望日を選択してください。');
         document.getElementById('deliveryDate').focus();
@@ -670,6 +681,22 @@
       }
       showPage(3);
     }
+  }
+
+  function checkEmailConfirmation(emailId, confirmId, label) {
+    const email = document.getElementById(emailId);
+    const confirmation = document.getElementById(confirmId);
+    if (!email.checkValidity() || !confirmation.checkValidity()) {
+      alert(label + 'メールアドレスの形式を確認してください。');
+      email.focus();
+      return false;
+    }
+    if (email.value.trim() !== confirmation.value.trim()) {
+      alert(label + 'メールアドレスが確認用と一致しません。もう一度ご確認ください。');
+      confirmation.focus();
+      return false;
+    }
+    return true;
   }
 
   function deliveryChoiceChanged() {
