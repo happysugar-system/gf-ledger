@@ -396,6 +396,11 @@
       入力内容は最後に確認できます。
     </p>
 
+    <div class="note" id="liffStatus" role="status" aria-live="polite" style="margin-bottom:16px">
+      LINE連携を確認しています…（デモ：個人情報は送信しません）
+    </div>
+    <button type="button" id="liffLoginButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="startLiffLogin()">LINEでログインする</button>
+
     <div class="steps">
       <div class="step on" id="step1">1 基本</div>
       <div class="step" id="step2">2 契約</div>
@@ -622,7 +627,48 @@
 
 <canvas id="captureCanvas" style="display:none"></canvas>
 
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
+  const LIFF_ID = '2012019621-Gu0mOfuK';
+  let liffReady = false;
+
+  function setLiffStatus(message) {
+    const el = document.getElementById('liffStatus');
+    if (el) el.textContent = message;
+  }
+
+  async function initializeLiff() {
+    if (!window.liff) {
+      setLiffStatus('LINE連携ライブラリを読み込めませんでした。通信環境をご確認ください。（デモ入力は可能です）');
+      return;
+    }
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      liffReady = true;
+      if (liff.isLoggedIn()) {
+        // ここでは画面上のログイン状態だけを確認します。
+        // 本人確認として保存・利用する場合は、サーバー側でIDトークンの検証が必須です。
+        setLiffStatus('✅ LINEログイン状態を確認できました（デモ）。本人確認・申込情報の送信はまだ行いません。');
+      } else {
+        setLiffStatus('LINEログインはまだ確認できていません。ログインせずにデモ画面を試すこともできます。');
+        document.getElementById('liffLoginButton').style.display = 'block';
+      }
+    } catch (err) {
+      console.error('LIFF初期化エラー:', err && err.message ? err.message : 'unknown');
+      setLiffStatus('LINE連携を確認できませんでした。LIFF URLから開き直してください。（デモ入力は可能です）');
+    }
+  }
+
+  function startLiffLogin() {
+    if (!liffReady || !window.liff) {
+      alert('LINE連携の準備ができていません。');
+      return;
+    }
+    if (!liff.isLoggedIn()) liff.login();
+  }
+
+  window.addEventListener('DOMContentLoaded', initializeLiff);
+
   const APP_ENV = 'DEMO';
   // GASをWebアプリとしてデプロイした後、/exec URLをここに貼る。
   // 【重要】フォームの個人情報・画像・PDFは送信しません。
