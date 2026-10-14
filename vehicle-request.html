@@ -399,6 +399,8 @@
     <div class="note" id="liffStatus" role="status" aria-live="polite" style="margin-bottom:16px">
       LINE連携を確認しています…（デモ：個人情報は送信しません）
     </div>
+    <button type="button" id="serverVerifyButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="verifyLineIdentityOnServer()">LINE本人識別をサーバーでテスト</button>
+    <div class="note" id="serverVerifyHelp" style="display:none;margin-bottom:16px">これは認証テストです。氏名・免許証・住民票などは送信しません。</div>
     <button type="button" id="liffLoginButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="startLiffLogin()">LINEでログインする</button>
 
     <div class="steps">
@@ -630,6 +632,8 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
   const LIFF_ID = '2012019621-Gu0mOfuK';
+  // 別GASプロジェクトの「認証テスト専用」URL。/exec を貼るまでテストボタンは出しません。
+  const LINE_VERIFY_TEST_URL = 'https://script.google.com/macros/s/AKfycbztpbpy0mCDl0Ev8nVTnEz4fFK6gp5qlJyt6dQGcTiZpohozJT-Wz5yT81RzVZgAN1EPA/exec';
   let liffReady = false;
 
   function setLiffStatus(message) {
@@ -646,6 +650,10 @@
       await liff.init({ liffId: LIFF_ID });
       liffReady = true;
       if (liff.isLoggedIn()) {
+        if (LINE_VERIFY_TEST_URL.startsWith('https://script.google.com/macros/s/')) {
+          document.getElementById('serverVerifyButton').style.display = 'block';
+          document.getElementById('serverVerifyHelp').style.display = 'block';
+        }
         // ここでは画面上のログイン状態だけを確認します。
         // 本人確認として保存・利用する場合は、サーバー側でIDトークンの検証が必須です。
         setLiffStatus('✅ LINEログイン状態を確認できました（デモ）。本人確認・申込情報の送信はまだ行いません。');
@@ -672,6 +680,32 @@
   const APP_ENV = 'DEMO';
   // GASをWebアプリとしてデプロイした後、/exec URLをここに貼る。
   // 【重要】フォームの個人情報・画像・PDFは送信しません。
+  function verifyLineIdentityOnServer() {
+    if (!liffReady || !window.liff || !liff.isLoggedIn()) {
+      alert('LINEにログインしてから試してください。');
+      return;
+    }
+    const token = liff.getIDToken();
+    if (!token) { alert('IDトークンを取得できませんでした。LIFF URLから開き直してください。'); return; }
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(LINE_VERIFY_TEST_URL)) {
+      alert('認証テストGASのURLが未設定です。'); return;
+    }
+    if (!confirm('LINE本人識別のテストを行います。フォーム入力情報や書類は送信しません。')) return;
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = LINE_VERIFY_TEST_URL;
+    form.target = '_blank';
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'id_token';
+    input.value = token;
+    form.appendChild(input);
+    form.style.display = 'none';
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  }
+
   const TEST_GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzlOVklAOKPYYj6524KgWSBZT0IXl2Y6P6BXXfifP3U_TgrmvcXoQCl4g4BwGzYAh1XDQ/exec';
 
   let licenseFrontData = '';
