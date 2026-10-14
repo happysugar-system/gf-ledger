@@ -442,10 +442,24 @@
       <input id="guarantorEmail" type="email">
 
       <label class="fieldLabel">納車希望日<span class="required">必須</span></label>
-      <input id="deliveryDate" type="date">
+      <div class="residentOptions">
+        <label class="choice"><input type="radio" name="deliveryChoice" value="asap" checked onchange="deliveryChoiceChanged()"><span class="choiceText">最短での納車を希望する</span></label>
+        <label class="choice"><input type="radio" name="deliveryChoice" value="date" onchange="deliveryChoiceChanged()"><span class="choiceText">希望日を指定する</span></label>
+      </div>
+      <div class="subPanel" id="deliveryDatePanel">
+        <label class="fieldLabel" for="deliveryDate">納車希望日を選択</label>
+        <input id="deliveryDate" type="date">
+      </div>
 
-      <label class="fieldLabel">稼働開始日<span class="required">必須</span></label>
-      <input id="startDate" type="date">
+      <label class="fieldLabel">稼働開始日（任意）</label>
+      <div class="residentOptions">
+        <label class="choice"><input type="radio" name="startChoice" value="undecided" checked onchange="startChoiceChanged()"><span class="choiceText">未定</span></label>
+        <label class="choice"><input type="radio" name="startChoice" value="date" onchange="startChoiceChanged()"><span class="choiceText">日付を指定する</span></label>
+      </div>
+      <div class="subPanel" id="startDatePanel">
+        <label class="fieldLabel" for="startDate">稼働開始日を選択</label>
+        <input id="startDate" type="date">
+      </div>
 
       <div class="buttons">
         <button class="secondary" type="button" onclick="showPage(1)">戻る</button>
@@ -643,10 +657,31 @@
       if (!checkRequired([
         ['email','契約者メールアドレス'], ['guarantorName','連帯保証人 氏名'],
         ['guarantorPhone','連帯保証人 電話番号'], ['guarantorEmail','連帯保証人 メールアドレス'],
-        ['deliveryDate','納車希望日'], ['startDate','稼働開始日']
       ])) return;
+      if (document.querySelector('input[name="deliveryChoice"]:checked').value === 'date' && !value('deliveryDate')) {
+        alert('納車希望日を選択してください。');
+        document.getElementById('deliveryDate').focus();
+        return;
+      }
+      if (document.querySelector('input[name="startChoice"]:checked').value === 'date' && !value('startDate')) {
+        alert('稼働開始日を選択してください。');
+        document.getElementById('startDate').focus();
+        return;
+      }
       showPage(3);
     }
+  }
+
+  function deliveryChoiceChanged() {
+    const isDate = document.querySelector('input[name="deliveryChoice"]:checked').value === 'date';
+    document.getElementById('deliveryDatePanel').classList.toggle('on', isDate);
+    if (!isDate) document.getElementById('deliveryDate').value = '';
+  }
+
+  function startChoiceChanged() {
+    const isDate = document.querySelector('input[name="startChoice"]:checked').value === 'date';
+    document.getElementById('startDatePanel').classList.toggle('on', isDate);
+    if (!isDate) document.getElementById('startDate').value = '';
   }
 
   function checkRequired(items) {
@@ -880,8 +915,8 @@
       ['連帯保証人 氏名', value('guarantorName')],
       ['連帯保証人 電話', value('guarantorPhone')],
       ['連帯保証人 メール', value('guarantorEmail')],
-      ['納車希望日', value('deliveryDate')],
-      ['稼働開始日', value('startDate')],
+      ['納車希望日', document.querySelector('input[name="deliveryChoice"]:checked').value === 'asap' ? '最短希望' : value('deliveryDate')],
+      ['稼働開始日', document.querySelector('input[name="startChoice"]:checked').value === 'undecided' ? '未定' : value('startDate')],
       ['免許証 表', licenseFrontData ? '撮影済み' : '未撮影'],
       ['免許証 裏', licenseBackData ? '撮影済み' : '未撮影'],
       ['契約書の事前確認', contractConfirmedAt ? '確認済み（デモ）' : '未確認'],
