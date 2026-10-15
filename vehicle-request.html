@@ -638,6 +638,7 @@
 <canvas id="captureCanvas" style="display:none"></canvas>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script>
   const LIFF_ID = '2012019621-Gu0mOfuK';
   // 別GASプロジェクトの「認証テスト専用」URL。/exec を貼るまでテストボタンは出しません。
@@ -742,6 +743,35 @@
     form.style.display='none';document.body.appendChild(form);form.submit();form.remove();
   }
 
+  // PDFの文字・画像の解像度を変更せず、内部構造のみ再保存して容量削減を試みる。
+  // 4MB以下は一切加工しない。削減できなければ原本の品質を優先して送信を中止する。
+  async function GF146_prepareResidentPdf(file,btn) {
+    const limit=4000000;
+    let chosen=file;
+    if(file.size>limit) {
+      btn.textContent='PDFを画質を落とさず最適化しています…';
+      if(!window.PDFLib) throw new Error('PDF最適化機能を読み込めません。通信を確認して再度お試しください。');
+      try {
+        const source=new Uint8Array(await file.arrayBuffer());
+        const pdf=await PDFLib.PDFDocument.load(source, {updateMetadata:false});
+        const bytes=await pdf.save({useObjectStreams:true, addDefaultPage:false, updateFieldAppearances:false});
+        if(bytes.length<file.size && bytes.length<=limit) {
+          chosen=new Blob([bytes],{type:'application/pdf'});
+        }
+      } catch(e) {
+        console.warn('PDF最適化不可（原本は変更していません）');
+      }
+      if(chosen.size>limit) throw new Error('このPDFは画質を保ったまま4MB以下にできませんでした。文字が読めなくなる圧縮は行いません。小さいPDFを選ぶか、原本郵送を選んでください。');
+    }
+    btn.textContent='PDFを読み込んでいます…';
+    return await new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=()=>resolve(r.result);
+      r.onerror=()=>reject(new Error('PDFを読み込めませんでした'));
+      r.readAsDataURL(chosen);
+    });
+  }
+
   async function save146Docs() {
     if (!liffReady || !window.liff || !liff.isLoggedIn()) {alert('LINEログインが必要です');return;}
     const token=liff.getIDToken();
@@ -750,18 +780,18 @@
     if(!licenseFrontData||!licenseBackData){alert('免許証の表・裏を撮影してください');return;}
     if(!residentMethod){alert('住民票の提出方法を選択してください');return;}
     const file=document.getElementById('residentFile').files[0];
-    if(residentMethod==='upload' && (!file || file.type!=='application/pdf' || file.size>4000000)){alert('住民票PDFは4MB以内で選択してください');return;}
+    if(residentMethod==='upload' && (!file || !(file.type==='application/pdf'||/\.pdf$/i.test(file.name)))){alert('住民票のPDFを選択してください');return;}
     if(!confirm('146テスト：撮影画像と住民票を指定テストDriveへ保存します。実物ではなくダミー書類で実行してください。'))return;
     const btn=document.querySelector('#docs146Panel button');btn.disabled=true;btn.textContent='書類を準備しています…';
     try {
-      const resident=residentMethod==='upload'?await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error('PDF読み込み失敗'));r.readAsDataURL(file);}):'';
+      const resident=residentMethod==='upload'?await GF146_prepareResidentPdf(file,btn):'';
       const fields={demo_action:'save_146_docs_v1',id_token:token,receipt,front:licenseFrontData,back:licenseBackData,residentMethod,resident};
       if(fields.front.length>2800000||fields.back.length>2800000){alert('免許証画像が大きすぎます。撮り直してください（各2MB以内）');return;}
       const form=document.createElement('form');form.method='POST';form.action=LINE_VERIFY_TEST_URL;form.target='_blank';
       Object.entries(fields).forEach(([name,val])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=val;form.appendChild(input);});
       form.style.display='none';document.body.appendChild(form);form.submit();form.remove();
       alert('別タブで146の保存結果を確認してください。結果が成功と表示されるまで完了ではありません。');
-    }catch(e){alert('ファイル準備に失敗しました。');}
+    }catch(e){alert(e && e.message ? e.message : 'ファイル準備に失敗しました。');}
     finally{btn.disabled=false;btn.textContent='146 免許証・住民票を保存';}
   }
 
