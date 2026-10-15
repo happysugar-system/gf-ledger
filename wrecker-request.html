@@ -14,7 +14,7 @@
 <section id="success" class="card hidden"><h2>受付完了</h2><p id="receipt" class="ok"></p><p>いただいた情報をもとに担当スタッフが確認し、営業時間内に手配・ご連絡いたします。</p><p>お急ぎの場合：ロードサービス PINKGOLD <a href="tel:07033433676">070-3343-3676</a>（担当：佐藤）</p><p class="muted">受付完了はレッカー出動の確約ではありません。</p></section></main>
 <script>
 // GitHub Pages: token はLINEから発行された一時トークン。公開HTMLに秘密鍵を置かない。
-const GAS_URL='__GAS_WEB_APP_EXEC_URL__';
+const GAS_URL='https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec';
 const $=id=>document.getElementById(id);
 const token=new URLSearchParams(location.search).get('t')||'';
 let latitude='',longitude='',busy=false;
