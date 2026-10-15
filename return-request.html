@@ -10,6 +10,7 @@ select{font:inherit;width:100%;padding:13px;border:1px solid #b8c4d3;border-radi
 .pickers{display:flex;gap:6px;margin-top:8px}.pickers button{font-size:12px;flex:1;padding:10px 4px;background:#edf2f9;color:#22334b;border:1px solid #d6e1ed}
 button{border:0;border-radius:10px;padding:15px;background:#1e5fae;color:white;font-weight:700;font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}#send{width:100%;margin-top:16px;font-weight:700}
 #progress{margin-top:12px;line-height:1.7;font-weight:700;white-space:pre-line}progress{width:100%;height:16px;margin-top:10px}#done{display:none;background:#e8f7ee;padding:14px;border-radius:10px;margin-top:14px}.warning{background:#fff5e5;padding:12px;border-radius:10px;font-size:13px;line-height:1.6}.small{font-size:12px;color:#667488}
+.example-photo{display:block;width:100%;height:auto;border-radius:12px;border:1px solid #d7e0ec;margin:12px 0 8px}.example-note{font-size:13px;line-height:1.65;color:#475569}.example-photo-link{display:block;text-decoration:none;color:inherit}
 @media(max-width:370px){.grid{grid-template-columns:1fr}}
 </style></head><body><main>
 <h1>🚗 車両返却のお申し込み</h1><p class="sub">必要事項と車両の写真8方向を登録してください。カメラ撮影・保存済み写真のどちらも使えます。</p>
@@ -26,7 +27,7 @@ button{border:0;border-radius:10px;padding:15px;background:#1e5fae;color:white;f
 <div class="choices"><label><input type="radio" name="damage" value="あり">あり</label><label><input type="radio" name="damage" value="なし">なし</label></div>
 <div id="insuranceWrap" hidden><label>保険会社への報告は済んでいますか？ *</label><div class="choices"><label><input type="radio" name="insurance" value="済">済</label><label><input type="radio" name="insurance" value="未">未</label></div></div>
 <label for="memo">備考（任意）</label><textarea id="memo" maxlength="500" placeholder="気になる傷や返却時の連絡事項など"></textarea>
-</section><section><h2>車両の写真（8方向）</h2><p class="small">各方向を1枚ずつ選択してください。選択後は画像を確認・差し替えできます。</p><div class="grid" id="slots"></div></section>
+</section><section><h2>車両の写真（8方向）</h2><p class="small">各方向を1枚ずつ選択してください。選択後は画像を確認・差し替えできます。</p><div class="example-note"><strong>📷 8方向の撮影例</strong><br>下の写真を参考に、車両全体が入るように撮影してください。写真をタップすると拡大できます。</div><a class="example-photo-link" href="return-photo-example.jpg" target="_blank" rel="noopener" aria-label="8方向の撮影例を拡大"><img class="example-photo" src="return-photo-example.jpg" alt="軽バンの撮影例。正面・右前・右側・右後・後面・左後・左側・左前の8方向を示す写真一覧" loading="lazy"></a><p class="small">※これは見本です。実際の車両の写真を8枚登録してください。</p><div class="grid" id="slots"></div></section>
 <button id="send" type="button">写真8枚を保存して申し込む</button>
 <progress id="bar" value="0" max="8" hidden></progress><div id="progress" role="status" aria-live="polite"></div><div id="done">✅ 返却申込を受け付けました。スタッフからの連絡をお待ちください。</div>
 <iframe id="transport" name="gf191_transport" hidden title="データ送信"></iframe>
