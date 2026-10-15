@@ -7,14 +7,14 @@
 <label for="model">車種</label><input id="model" required maxlength="100" placeholder="例：エブリイ">
 <label for="name">氏名フルネーム</label><input id="name" required maxlength="100" autocomplete="name" placeholder="例：山田 太郎">
 <label for="phone">電話番号</label><input id="phone" required maxlength="20" type="tel" inputmode="tel" autocomplete="tel" placeholder="例：09012345678">
-<label for="place">トラブル場所</label><input id="place" required maxlength="300" placeholder="住所・道路名・目印など"><button id="locate" class="secondary" type="button" style="margin-top:9px">📍 現在地を取得する</button><p id="geoStatus" class="muted">位置情報の利用は任意です。取得後も住所・目印を確認してください。</p>
+<label for="place">トラブル場所</label><input id="place" maxlength="300" placeholder="住所・道路名・目印など"><button id="locate" class="secondary" type="button" style="margin-top:9px">📍 現在地を取得する</button><p id="geoStatus" class="muted">現在地を取得できた場合、住所・目印の入力は不要です。</p>
 <label for="trouble">トラブルの状況</label><select id="trouble" required><option value="">選択してください</option><option>エンジンがかからない</option><option>事故</option><option>パンク</option><option>バッテリー上がり</option><option>車が動かない</option><option>その他</option></select><textarea id="details" maxlength="300" placeholder="詳しい状況（任意）"></textarea>
 <label for="insurance">保険会社</label><input id="insurance" required maxlength="100" placeholder="例：東京海上日動（不明の場合は「不明」）">
 <p class="check">送信後、担当スタッフが内容を確認し、営業時間内に手配・ご連絡いたします。</p><p id="message" class="err"></p><button class="primary" id="submit" type="submit">レッカー依頼を送信する</button></form>
 <section id="success" class="card hidden"><h2>受付完了</h2><p id="receipt" class="ok"></p><p>いただいた情報をもとに担当スタッフが確認し、営業時間内に手配・ご連絡いたします。</p><p>お急ぎの場合：ロードサービス PINKGOLD <a href="tel:07033433676">070-3343-3676</a>（担当：佐藤）</p><p class="muted">受付完了はレッカー出動の確約ではありません。</p></section></main>
 <script>
 // GitHub Pages: token はLINEから発行された一時トークン。公開HTMLに秘密鍵を置かない。
-const GAS_URL='https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec';
+const GAS_URL='__GAS_WEB_APP_EXEC_URL__';
 const $=id=>document.getElementById(id);
 const token=new URLSearchParams(location.search).get('t')||'';
 let latitude='',longitude='',busy=false;
@@ -25,7 +25,7 @@ if(!/^[a-f0-9]{64}$/.test(token)){
 $('locate').addEventListener('click',()=>{
  if(!navigator.geolocation){$('geoStatus').textContent='位置情報を取得できません。住所を入力してください。';return;}
  $('geoStatus').textContent='現在地を確認しています…';
- navigator.geolocation.getCurrentPosition(p=>{latitude=String(p.coords.latitude);longitude=String(p.coords.longitude);$('geoStatus').textContent='📍 位置情報を取得しました。住所・目印も入力してください。';},()=>{$('geoStatus').textContent='取得できませんでした。住所・目印を入力してください。';},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+ navigator.geolocation.getCurrentPosition(p=>{latitude=String(p.coords.latitude);longitude=String(p.coords.longitude);$('geoStatus').textContent='📍 現在地を取得しました！住所・目印の入力は不要です。';},()=>{$('geoStatus').textContent='取得できませんでした。住所・目印を入力してください。';},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
 });
 $('form').addEventListener('submit',e=>{
  e.preventDefault();
@@ -33,6 +33,8 @@ $('form').addEventListener('submit',e=>{
  if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL)){
   $('message').textContent='フォームの送信先が未設定です。管理者へご連絡ください。';return;
  }
+ if(!(latitude&&longitude)&&!$('place').value.trim()){ $('message').textContent='現在地を取得するか、住所・目印を入力してください。';$('place').focus();return; }
+ $('message').textContent='';
  const t=$('trouble').value, detail=$('details').value.trim();
  if(!confirm('入力内容をレッカー依頼として送信しますか？'))return;
  const values={action:'gf181_submit',t:token,'発生日時':$('date').value,'発生時刻':$('time').value,'車両番号':$('plate').value.trim(),'車種':$('model').value.trim(),'氏名フルネーム':$('name').value.trim(),'電話番号':$('phone').value.trim(),'トラブル場所':$('place').value.trim(),'トラブルの状況':t+(detail?' / '+detail:''),'保険会社':$('insurance').value.trim(),latitude,longitude};
