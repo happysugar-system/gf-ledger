@@ -401,6 +401,11 @@
     </div>
     <button type="button" id="serverVerifyButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="verifyLineIdentityOnServer()">LINE本人識別をサーバーでテスト</button>
     <button type="button" id="save145Button" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="save145Form()">145 フォーム入力をテスト保存</button>
+    <div class="note" id="docs146Panel" style="display:none;margin-bottom:16px">
+      <strong>146 書類保存テスト</strong><br>まず「145 フォーム入力をテスト保存」で受付番号を発行し、結果画面の番号を入力してください。<br>※ダミー画像・ダミーPDFだけでテストしてください。
+      <input type="text" id="receipt146" placeholder="TEST145-..." style="margin-top:10px">
+      <button type="button" class="secondary" style="margin-top:10px;width:100%" onclick="save146Docs()">146 免許証・住民票を保存</button>
+    </div>
     <button type="button" id="save144Button" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="save144Dummy()">144 架空申込をテスト保存</button>
     <button type="button" id="candidateCheckButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="checkDriverCandidateOnServer()">143 既存ドライバー照合テスト</button>
     <div class="note" id="serverVerifyHelp" style="display:none;margin-bottom:16px">これは認証テストです。氏名・免許証・住民票などは送信しません。</div>
@@ -658,6 +663,7 @@
           document.getElementById('candidateCheckButton').style.display = 'block';
           document.getElementById('save144Button').style.display = 'block';
           document.getElementById('save145Button').style.display = 'block';
+          document.getElementById('docs146Panel').style.display = 'block';
           document.getElementById('serverVerifyHelp').style.display = 'block';
         }
         // ここでは画面上のログイン状態だけを確認します。
@@ -734,6 +740,29 @@
     const form=document.createElement('form');form.method='POST';form.action=LINE_VERIFY_TEST_URL;form.target='_blank';
     Object.entries(fields).forEach(([k,v])=>{const el=document.createElement('input');el.type='hidden';el.name=k;el.value=v;form.appendChild(el);});
     form.style.display='none';document.body.appendChild(form);form.submit();form.remove();
+  }
+
+  async function save146Docs() {
+    if (!liffReady || !window.liff || !liff.isLoggedIn()) {alert('LINEログインが必要です');return;}
+    const token=liff.getIDToken();
+    const receipt=document.getElementById('receipt146').value.trim();
+    if(!token || !/^TEST145-\d{14}-[0-9a-f]{8}$/i.test(receipt)){alert('受付番号・LINE認証を確認してください');return;}
+    if(!licenseFrontData||!licenseBackData){alert('免許証の表・裏を撮影してください');return;}
+    if(!residentMethod){alert('住民票の提出方法を選択してください');return;}
+    const file=document.getElementById('residentFile').files[0];
+    if(residentMethod==='upload' && (!file || file.type!=='application/pdf' || file.size>4000000)){alert('住民票PDFは4MB以内で選択してください');return;}
+    if(!confirm('146テスト：撮影画像と住民票を指定テストDriveへ保存します。実物ではなくダミー書類で実行してください。'))return;
+    const btn=document.querySelector('#docs146Panel button');btn.disabled=true;btn.textContent='書類を準備しています…';
+    try {
+      const resident=residentMethod==='upload'?await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error('PDF読み込み失敗'));r.readAsDataURL(file);}):'';
+      const fields={demo_action:'save_146_docs_v1',id_token:token,receipt,front:licenseFrontData,back:licenseBackData,residentMethod,resident};
+      if(fields.front.length>2800000||fields.back.length>2800000){alert('免許証画像が大きすぎます。撮り直してください（各2MB以内）');return;}
+      const form=document.createElement('form');form.method='POST';form.action=LINE_VERIFY_TEST_URL;form.target='_blank';
+      Object.entries(fields).forEach(([name,val])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=val;form.appendChild(input);});
+      form.style.display='none';document.body.appendChild(form);form.submit();form.remove();
+      alert('別タブで146の保存結果を確認してください。結果が成功と表示されるまで完了ではありません。');
+    }catch(e){alert('ファイル準備に失敗しました。');}
+    finally{btn.disabled=false;btn.textContent='146 免許証・住民票を保存';}
   }
 
   // 144：入力欄の値は一切送らない。サーバーが固定の架空データを保存する。
