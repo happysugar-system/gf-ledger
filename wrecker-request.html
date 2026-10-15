@@ -41,6 +41,6 @@ $('form').addEventListener('submit',e=>{
  const form=$('form');form.action=GAS_URL;
  Object.entries(values).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
  busy=true;$('submit').disabled=true;$('submit').textContent='送信中…';
- form.submit();
+ HTMLFormElement.prototype.submit.call(form);
 });
 </script></body></html>
