@@ -6,7 +6,7 @@
 main{max-width:660px;margin:auto;padding:18px 14px 50px}h1{font-size:23px;margin:12px 0 8px}.sub{color:#566477;line-height:1.7}
 section{background:white;border:1px solid #e0e5ed;border-radius:16px;padding:18px;margin-top:16px;box-shadow:0 2px 8px #00000006}
 label{display:block;font-weight:700;margin:13px 0 6px}input,textarea{font:inherit;width:100%;padding:13px;border:1px solid #b8c4d3;border-radius:10px;background:white}
-textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.slot{border:1px solid #d7e0ec;border-radius:12px;padding:12px;min-width:0}.slot strong{display:block;margin-bottom:8px}.preview{width:100%;height:120px;object-fit:cover;border-radius:9px;background:#e9eef4;display:none}
+select{font:inherit;width:100%;padding:13px;border:1px solid #b8c4d3;border-radius:10px;background:white}.choices{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}.choices label{display:flex;align-items:center;gap:7px;font-weight:500;margin:0}.choices input{width:auto;accent-color:#1e5fae}.error{color:#b3261e;font-size:13px;margin-top:5px}textarea{min-height:90px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.slot{border:1px solid #d7e0ec;border-radius:12px;padding:12px;min-width:0}.slot strong{display:block;margin-bottom:8px}.preview{width:100%;height:120px;object-fit:cover;border-radius:9px;background:#e9eef4;display:none}
 .pickers{display:flex;gap:6px;margin-top:8px}.pickers button{font-size:12px;flex:1;padding:10px 4px;background:#edf2f9;color:#22334b;border:1px solid #d6e1ed}
 button{border:0;border-radius:10px;padding:15px;background:#1e5fae;color:white;font-weight:700;font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}#send{width:100%;margin-top:16px;font-weight:700}
 #progress{margin-top:12px;line-height:1.7;font-weight:700;white-space:pre-line}progress{width:100%;height:16px;margin-top:10px}#done{display:none;background:#e8f7ee;padding:14px;border-radius:10px;margin-top:14px}.warning{background:#fff5e5;padding:12px;border-radius:10px;font-size:13px;line-height:1.6}.small{font-size:12px;color:#667488}
@@ -19,6 +19,12 @@ button{border:0;border-radius:10px;padding:15px;background:#1e5fae;color:white;f
 <label for="name">氏名 *</label><input id="name" autocomplete="name" required maxlength="80">
 <label for="phone">電話番号 *</label><input id="phone" inputmode="tel" autocomplete="tel" required>
 <label for="date">返却希望日 *</label><input id="date" type="date" required>
+<p class="small">土日祝日は定休日のため選択できません。平日をご指定ください。</p><div id="dateError" class="error" role="alert"></div>
+<label for="time">返却希望時間 *</label><select id="time" required><option value="">時間を選択してください</option></select>
+<p class="small">受付時間 10:00〜16:00（30分刻み）</p>
+<label>納車時と比べて、新しい損傷はありますか？ *</label>
+<div class="choices"><label><input type="radio" name="damage" value="あり">あり</label><label><input type="radio" name="damage" value="なし">なし</label></div>
+<div id="insuranceWrap" hidden><label>保険会社への報告は済んでいますか？ *</label><div class="choices"><label><input type="radio" name="insurance" value="済">済</label><label><input type="radio" name="insurance" value="未">未</label></div></div>
 <label for="memo">備考（任意）</label><textarea id="memo" maxlength="500" placeholder="気になる傷や返却時の連絡事項など"></textarea>
 </section><section><h2>車両の写真（8方向）</h2><p class="small">各方向を1枚ずつ選択してください。選択後は画像を確認・差し替えできます。</p><div class="grid" id="slots"></div></section>
 <button id="send" type="button">写真8枚を保存して申し込む</button>
@@ -32,6 +38,27 @@ const DIRS=['正面','右前','右側','右後','後面','左後','左側','左�
 const token=new URLSearchParams(location.search).get('t')||'';
 const files={};const $=id=>document.getElementById(id);
 let busy=false;
+// 日本の祝日（振替休日・国民の休日を含む）。祝日計算は2026〜2031年を想定。
+function japanHoliday(y,m,d){
+ const key=(mm,dd)=>String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+ const holidays=new Set();const add=(mm,dd)=>holidays.add(key(mm,dd));
+ const nthMonday=(mm,n)=>{const first=new Date(y,mm-1,1).getDay();return 1+(8-first)%7+7*(n-1)};
+ add(1,1);add(2,11);add(2,23);add(4,29);add(5,3);add(5,4);add(5,5);add(8,11);add(11,3);add(11,23);
+ add(1,nthMonday(1,2));add(7,nthMonday(7,3));add(9,nthMonday(9,3));add(10,nthMonday(10,2));
+ add(3,Math.floor(20.8431+0.242194*(y-1980)-Math.floor((y-1980)/4)));
+ add(9,Math.floor(23.2488+0.242194*(y-1980)-Math.floor((y-1980)/4)));
+ // 日曜の祝日は、次の平日で祝日でない日を振替休日とする
+ for(const k of [...holidays]){const [mm,dd]=k.split('-').map(Number);if(new Date(y,mm-1,dd).getDay()===0){let x=new Date(y,mm-1,dd+1);while(holidays.has(key(x.getMonth()+1,x.getDate())))x.setDate(x.getDate()+1);if(x.getFullYear()===y)add(x.getMonth()+1,x.getDate());}}
+ // 祝日に挟まれた平日（国民の休日）
+ for(let i=2;i<365;i++){const x=new Date(y,0,i),prev=new Date(y,0,i-1),next=new Date(y,0,i+1);if(x.getFullYear()!==y||next.getFullYear()!==y)continue;const k=key(x.getMonth()+1,x.getDate());if(!holidays.has(k)&&holidays.has(key(prev.getMonth()+1,prev.getDate()))&&holidays.has(key(next.getMonth()+1,next.getDate())))add(x.getMonth()+1,x.getDate());}
+ return holidays.has(key(m,d));
+}
+function validDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;const [y,m,d]=value.split('-').map(Number);const dt=new Date(y,m-1,d);if(dt.getFullYear()!==y||dt.getMonth()!==m-1||dt.getDate()!==d)return false;const today=new Date();today.setHours(0,0,0,0);return dt>=today&&dt.getDay()!==0&&dt.getDay()!==6&&!japanHoliday(y,m,d)}
+const today=new Date();$('date').min=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+for(let mins=600;mins<=960;mins+=30){const t=String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');const opt=document.createElement('option');opt.value=t;opt.textContent=t;$('time').append(opt)}
+$('date').addEventListener('change',()=>{const ok=validDate($('date').value);$('dateError').textContent=ok?'':'土日祝日・過去の日付は選べません。平日を選び直してください。';$('date').setCustomValidity(ok?'':'平日の返却希望日を選択してください。')});
+document.querySelectorAll('input[name="damage"]').forEach(r=>r.addEventListener('change',()=>{const yes=document.querySelector('input[name="damage"]:checked')?.value==='あり';$('insuranceWrap').hidden=!yes;if(!yes)document.querySelectorAll('input[name="insurance"]').forEach(i=>i.checked=false)}));
+
 DIRS.forEach((dir,i)=>{
  const div=document.createElement('div');div.className='slot';
  const title=document.createElement('strong');title.textContent=(i+1)+'. '+dir;
@@ -75,8 +102,8 @@ async function jpegBase64(file){
 $('send').onclick=async()=>{
  if(busy)return;
  if(!token){status('LINEから案内された専用リンクで開いてください。');return}
- const data={car:$('car').value.trim(),name:$('name').value.trim(),phone:$('phone').value.trim(),date:$('date').value,memo:$('memo').value.trim()};
- if(!data.car||!data.name||!/^0[0-9\-\s]{9,14}$/.test(data.phone)||!data.date){status('車番・氏名・電話番号・返却希望日を確認してください。');return}
+ const data={car:$('car').value.trim(),name:$('name').value.trim(),phone:$('phone').value.trim(),date:$('date').value,time:$('time').value,damage:document.querySelector('input[name="damage"]:checked')?.value||'',insurance:document.querySelector('input[name="insurance"]:checked')?.value||'',memo:$('memo').value.trim()};
+ if(!data.car||!data.name||!/^0[0-9\-\s]{9,14}$/.test(data.phone)||!validDate(data.date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(data.time)||data.time<'10:00'||data.time>'16:00'||!['あり','なし'].includes(data.damage)||(data.damage==='あり'&&!['済','未'].includes(data.insurance))){status('入力内容を確認してください。返却希望日は平日、時間は10:00〜16:00、損傷の有無も必須です。');return}
  const missing=DIRS.filter(d=>!files[d]);if(missing.length){status('写真が未選択です：'+missing.join('、'));return}
  busy=true;$('send').disabled=true;$('bar').hidden=false;
  try{
