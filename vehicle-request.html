@@ -400,6 +400,7 @@
       LINE連携を確認しています…（デモ：個人情報は送信しません）
     </div>
     <button type="button" id="serverVerifyButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="verifyLineIdentityOnServer()">LINE本人識別をサーバーでテスト</button>
+    <button type="button" id="save144Button" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="save144Dummy()">144 架空申込をテスト保存</button>
     <button type="button" id="candidateCheckButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="checkDriverCandidateOnServer()">143 既存ドライバー照合テスト</button>
     <div class="note" id="serverVerifyHelp" style="display:none;margin-bottom:16px">これは認証テストです。氏名・免許証・住民票などは送信しません。</div>
     <button type="button" id="liffLoginButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="startLiffLogin()">LINEでログインする</button>
@@ -654,6 +655,7 @@
         if (LINE_VERIFY_TEST_URL.startsWith('https://script.google.com/macros/s/')) {
           document.getElementById('serverVerifyButton').style.display = 'block';
           document.getElementById('candidateCheckButton').style.display = 'block';
+          document.getElementById('save144Button').style.display = 'block';
           document.getElementById('serverVerifyHelp').style.display = 'block';
         }
         // ここでは画面上のログイン状態だけを確認します。
@@ -706,6 +708,24 @@
     document.body.appendChild(form);
     form.submit();
     form.remove();
+  }
+
+  // 144：入力欄の値は一切送らない。サーバーが固定の架空データを保存する。
+  function save144Dummy() {
+    if (!liffReady || !window.liff || !liff.isLoggedIn()) {
+      alert('LINEからログインして開いてください。'); return;
+    }
+    const token = liff.getIDToken();
+    if (!token) { alert('認証情報を取得できません。'); return; }
+    if (!confirm('144：入力内容や書類は送信せず、架空データ1件だけをテスト用シートに保存します。続けますか？')) return;
+    const form = document.createElement('form');
+    form.method='POST'; form.action=LINE_VERIFY_TEST_URL; form.target='_blank';
+    const fields={demo_action:'save_144_dummy_v1',id_token:token};
+    Object.entries(fields).forEach(([key,val]) => {
+      const el=document.createElement('input'); el.type='hidden'; el.name=key; el.value=val; form.appendChild(el);
+    });
+    form.style.display='none'; document.body.appendChild(form);
+    form.submit(); form.remove();
   }
 
   // 143：認証トークンと照合に必要な文字情報だけを送信。画像・PDF・保証人情報は送信しない。
