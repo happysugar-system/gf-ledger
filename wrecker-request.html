@@ -1,0 +1,44 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>レッカー依頼フォーム</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f8;color:#20242b;font:15px/1.55 -apple-system,BlinkMacSystemFont,'Noto Sans JP',sans-serif}header{background:#171d27;color:#fff;padding:20px 18px}header h1{margin:2px 0;font-size:22px}main{max-width:610px;margin:auto;padding:14px}.card{background:#fff;border-radius:14px;padding:18px;margin:0 0 13px;box-shadow:0 2px 9px #1111}.urgent{background:#fff3f0;border-left:4px solid #b42318}.urgent a{font-size:21px;font-weight:800;color:#b42318;text-decoration:none}label{display:block;font-weight:700;margin:15px 0 6px}input,select,textarea{display:block;width:100%;border:1px solid #cbd3df;border-radius:9px;padding:12px;font:inherit;background:white}textarea{min-height:100px}button{font:inherit;border:0;border-radius:10px;padding:13px;font-weight:700;cursor:pointer}.primary{background:#171d27;color:white;width:100%;margin:12px 0}.secondary{background:#edf0f4;width:100%}.muted{font-size:12px;color:#626b78}.err{color:#b42318;font-weight:700;white-space:pre-wrap}.ok{color:#11734c;font-weight:700}.hidden{display:none}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:430px){.grid{grid-template-columns:1fr}}.check{font-size:13px;color:#444}
+</style></head><body><header><small>GOLD FIRST / ロードサービス</small><h1>🚨 レッカー依頼フォーム</h1></header><main>
+<section class="card urgent"><b>お急ぎの場合はこちら</b><p style="margin:7px 0">ロードサービス <b>PINKGOLD</b><br><a href="tel:07033433676">070-3343-3676</a><br>担当：佐藤</p><div class="muted">けが人がいる場合は119、交通事故の場合は110へ。安全確保を優先してください。フォーム送信は出動手配の確定ではありません。</div></section>
+<form id="form" class="card" method="POST"><b>必要事項をご入力ください</b><div class="grid"><div><label for="date">発生日時（日付）</label><input id="date" type="date" required></div><div><label for="time">発生時刻</label><input id="time" type="time" required></div></div>
+<label for="plate">車両番号</label><input id="plate" required maxlength="100" placeholder="例：大宮481り12-34">
+<label for="model">車種</label><input id="model" required maxlength="100" placeholder="例：エブリイ">
+<label for="name">氏名フルネーム</label><input id="name" required maxlength="100" autocomplete="name" placeholder="例：山田 太郎">
+<label for="phone">電話番号</label><input id="phone" required maxlength="20" type="tel" inputmode="tel" autocomplete="tel" placeholder="例：09012345678">
+<label for="place">トラブル場所</label><input id="place" required maxlength="300" placeholder="住所・道路名・目印など"><button id="locate" class="secondary" type="button" style="margin-top:9px">📍 現在地を取得する</button><p id="geoStatus" class="muted">位置情報の利用は任意です。取得後も住所・目印を確認してください。</p>
+<label for="trouble">トラブルの状況</label><select id="trouble" required><option value="">選択してください</option><option>エンジンがかからない</option><option>事故</option><option>パンク</option><option>バッテリー上がり</option><option>車が動かない</option><option>その他</option></select><textarea id="details" maxlength="300" placeholder="詳しい状況（任意）"></textarea>
+<label for="insurance">保険会社</label><input id="insurance" required maxlength="100" placeholder="例：東京海上日動（不明の場合は「不明」）">
+<p class="check">送信後、担当スタッフが内容を確認し、営業時間内に手配・ご連絡いたします。</p><p id="message" class="err"></p><button class="primary" id="submit" type="submit">レッカー依頼を送信する</button></form>
+<section id="success" class="card hidden"><h2>受付完了</h2><p id="receipt" class="ok"></p><p>いただいた情報をもとに担当スタッフが確認し、営業時間内に手配・ご連絡いたします。</p><p>お急ぎの場合：ロードサービス PINKGOLD <a href="tel:07033433676">070-3343-3676</a>（担当：佐藤）</p><p class="muted">受付完了はレッカー出動の確約ではありません。</p></section></main>
+<script>
+// GitHub Pages: token はLINEから発行された一時トークン。公開HTMLに秘密鍵を置かない。
+const GAS_URL='__GAS_WEB_APP_EXEC_URL__';
+const $=id=>document.getElementById(id);
+const token=new URLSearchParams(location.search).get('t')||'';
+let latitude='',longitude='',busy=false;
+if(!/^[a-f0-9]{64}$/.test(token)){
+  $('message').textContent='LINEの「レッカー依頼」からフォームを開いてください。';
+  $('submit').disabled=true;
+}
+$('locate').addEventListener('click',()=>{
+ if(!navigator.geolocation){$('geoStatus').textContent='位置情報を取得できません。住所を入力してください。';return;}
+ $('geoStatus').textContent='現在地を確認しています…';
+ navigator.geolocation.getCurrentPosition(p=>{latitude=String(p.coords.latitude);longitude=String(p.coords.longitude);$('geoStatus').textContent='📍 位置情報を取得しました。住所・目印も入力してください。';},()=>{$('geoStatus').textContent='取得できませんでした。住所・目印を入力してください。';},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+});
+$('form').addEventListener('submit',e=>{
+ e.preventDefault();
+ if(busy||!/^[a-f0-9]{64}$/.test(token))return;
+ if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL)){
+  $('message').textContent='フォームの送信先が未設定です。管理者へご連絡ください。';return;
+ }
+ const t=$('trouble').value, detail=$('details').value.trim();
+ if(!confirm('入力内容をレッカー依頼として送信しますか？'))return;
+ const values={action:'gf181_submit',t:token,'発生日時':$('date').value,'発生時刻':$('time').value,'車両番号':$('plate').value.trim(),'車種':$('model').value.trim(),'氏名フルネーム':$('name').value.trim(),'電話番号':$('phone').value.trim(),'トラブル場所':$('place').value.trim(),'トラブルの状況':t+(detail?' / '+detail:''),'保険会社':$('insurance').value.trim(),latitude,longitude};
+ const form=$('form');form.action=GAS_URL;
+ Object.entries(values).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
+ busy=true;$('submit').disabled=true;$('submit').textContent='送信中…';
+ form.submit();
+});
+</script></body></html>
