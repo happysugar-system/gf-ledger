@@ -400,6 +400,7 @@
       LINE連携を確認しています…（デモ：個人情報は送信しません）
     </div>
     <button type="button" id="serverVerifyButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="verifyLineIdentityOnServer()">LINE本人識別をサーバーでテスト</button>
+    <button type="button" id="save145Button" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="save145Form()">145 フォーム入力をテスト保存</button>
     <button type="button" id="save144Button" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="save144Dummy()">144 架空申込をテスト保存</button>
     <button type="button" id="candidateCheckButton" class="secondary" style="display:none;margin-bottom:16px;width:100%" onclick="checkDriverCandidateOnServer()">143 既存ドライバー照合テスト</button>
     <div class="note" id="serverVerifyHelp" style="display:none;margin-bottom:16px">これは認証テストです。氏名・免許証・住民票などは送信しません。</div>
@@ -656,6 +657,7 @@
           document.getElementById('serverVerifyButton').style.display = 'block';
           document.getElementById('candidateCheckButton').style.display = 'block';
           document.getElementById('save144Button').style.display = 'block';
+          document.getElementById('save145Button').style.display = 'block';
           document.getElementById('serverVerifyHelp').style.display = 'block';
         }
         // ここでは画面上のログイン状態だけを確認します。
@@ -708,6 +710,30 @@
     document.body.appendChild(form);
     form.submit();
     form.remove();
+  }
+
+  // 145：入力した文字情報のみテストシートに保存。写真・PDF・LINE IDは保存しない。
+  function save145Form() {
+    if (!liffReady || !window.liff || !liff.isLoggedIn()) {alert('LINEからログインしてください。');return;}
+    const token=liff.getIDToken(); if(!token){alert('LINE認証情報を取得できません。');return;}
+    const ids=['name','kana','phone','referrer','company','area','email','guarantorName','guarantorPhone','guarantorEmail'];
+    const fields={demo_action:'save_145_form_v1',id_token:token};
+    ids.forEach(k=>fields[k]=document.getElementById(k).value.trim());
+    if(!fields.name||!fields.phone||!fields.email||!fields.guarantorName||!fields.guarantorPhone||!fields.guarantorEmail){
+      alert('氏名・電話番号・メール・連帯保証人の氏名/電話/メールを入力してください。');return;
+    }
+    if(fields.email!==document.getElementById('emailConfirm').value.trim() || fields.guarantorEmail!==document.getElementById('guarantorEmailConfirm').value.trim()){
+      alert('メールアドレスと確認用の入力が一致しません。');return;
+    }
+    const dc=document.querySelector('input[name="deliveryChoice"]:checked').value;
+    const sc=document.querySelector('input[name="startChoice"]:checked').value;
+    fields.deliveryWish=dc==='asap'?'最短希望':document.getElementById('deliveryDate').value;
+    fields.startWish=sc==='undecided'?'未定':document.getElementById('startDate').value;
+    if((dc==='date'&&!fields.deliveryWish)||(sc==='date'&&!fields.startWish)){alert('希望日を入力してください。');return;}
+    if(!confirm('145テスト：入力した氏名・連絡先・連帯保証人情報・希望日をテスト用スプレッドシートに保存します。免許証・住民票は送信しません。続けますか？'))return;
+    const form=document.createElement('form');form.method='POST';form.action=LINE_VERIFY_TEST_URL;form.target='_blank';
+    Object.entries(fields).forEach(([k,v])=>{const el=document.createElement('input');el.type='hidden';el.name=k;el.value=v;form.appendChild(el);});
+    form.style.display='none';document.body.appendChild(form);form.submit();form.remove();
   }
 
   // 144：入力欄の値は一切送らない。サーバーが固定の架空データを保存する。
