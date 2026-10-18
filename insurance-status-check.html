@@ -10,10 +10,10 @@ btn.addEventListener('click',()=>{
  const seq=++current;let finished=false;let script=document.createElement('script');
  btn.disabled=true;out.textContent='診断中…\n1. JSONPスクリプトを読み込みます。';
  const timer=setTimeout(()=>finish('タイムアウト：8秒以内にコールバックを受信できませんでした。'),8000);
- function finish(message){if(finished||seq!==current)return;finished=true;clearTimeout(timer);btn.disabled=false;out.textContent=message;script.remove()}
- window.GF195_statusCallback=function(d){finish('コールバック成功！\n'+JSON.stringify(d,null,2)+'\n\nこのページではGASの受付結果を読み取れています。')};
+ function finish(message,data){if(finished||seq!==current)return;finished=true;clearTimeout(timer);btn.disabled=false;out.textContent=message;script.remove();if(new URLSearchParams(location.search).get('auto')==='1'){parent.postMessage(Object.assign({source:'GF195_CHECK',key:k},data||{error:message}),location.origin)}}
+ window.GF195_statusCallback=function(d){finish('コールバック成功！\n'+JSON.stringify(d,null,2)+'\n\nこのページではGASの受付結果を読み取れています。',d)};
  script.onload=()=>{if(!finished)finish('スクリプト読込イベントは発生しましたが、GF195_statusCallbackが呼ばれませんでした。\nGAS応答がJavaScriptとして実行されていない可能性があります。')};
  script.onerror=()=>finish('スクリプト読込エラー。\nブラウザの制限、CSP、リダイレクト、MIMEタイプ等でJSONPがブロックされている可能性があります。');
  script.src=url()+'&_='+Date.now();document.head.appendChild(script);
 });
-</script></body></html>
+if(new URLSearchParams(location.search).get('auto')==='1'){const k=new URLSearchParams(location.search).get('key');if(k)key.value=k;updateLink();setTimeout(()=>btn.click(),150)}</script></body></html>
