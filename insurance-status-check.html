@@ -1,0 +1,19 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>保険受付・完了確認診断（DEMO）</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#f5f7fa;color:#182434;margin:0;padding:24px 16px}main{max-width:550px;margin:auto}section{background:white;padding:20px;border-radius:16px}input{box-sizing:border-box;width:100%;padding:13px;font:inherit;border:1px solid #bac8d8;border-radius:8px}button{margin-top:14px;padding:15px;width:100%;border:0;border-radius:9px;background:#06c755;color:white;font-size:16px;font-weight:700}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef2f6;padding:12px;border-radius:8px}a{overflow-wrap:anywhere}small{color:#64748b}</style></head><body><main><p style="color:#087f5b;font-weight:700">GOLDFIRST · DEMO · 受信診断</p><h2>受付完了確認だけをテスト</h2><p>このページでは<strong>新しい受付は送信・保存しません</strong>。保存済みの送信キーを使い、GASから結果を読み取れるか確認します。</p><section><label for="key">保存済みの送信キー（32文字）</label><input id="key" value="4ebb361b4b2dfc04acd8116c4e9cb010" autocomplete="off" spellcheck="false"><button id="test">保存済みの受付を照会</button><pre id="result" aria-live="polite">まだテストしていません。</pre><p><small>直接開いた場合の応答も比較できます。</small></p><a id="direct" target="_blank" rel="noopener noreferrer">GASの応答を別画面で開く</a></section></main><script>
+const GAS='https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec';
+const key=document.getElementById('key'),out=document.getElementById('result'),btn=document.getElementById('test'),direct=document.getElementById('direct');
+let current=0;
+function url(){return GAS+'?action=gf195_status&key='+encodeURIComponent(key.value.trim())}
+function updateLink(){direct.href=url()}
+key.addEventListener('input',updateLink);updateLink();
+btn.addEventListener('click',()=>{
+ const k=key.value.trim();if(!/^[0-9a-f]{32}$/i.test(k)){out.textContent='送信キーは32文字の英数字を入力してください。';return}
+ const seq=++current;let finished=false;let script=document.createElement('script');
+ btn.disabled=true;out.textContent='診断中…\n1. JSONPスクリプトを読み込みます。';
+ const timer=setTimeout(()=>finish('タイムアウト：8秒以内にコールバックを受信できませんでした。'),8000);
+ function finish(message){if(finished||seq!==current)return;finished=true;clearTimeout(timer);btn.disabled=false;out.textContent=message;script.remove()}
+ window.GF195_statusCallback=function(d){finish('コールバック成功！\n'+JSON.stringify(d,null,2)+'\n\nこのページではGASの受付結果を読み取れています。')};
+ script.onload=()=>{if(!finished)finish('スクリプト読込イベントは発生しましたが、GF195_statusCallbackが呼ばれませんでした。\nGAS応答がJavaScriptとして実行されていない可能性があります。')};
+ script.onerror=()=>finish('スクリプト読込エラー。\nブラウザの制限、CSP、リダイレクト、MIMEタイプ等でJSONPがブロックされている可能性があります。');
+ script.src=url()+'&_='+Date.now();document.head.appendChild(script);
+});
+</script></body></html>
