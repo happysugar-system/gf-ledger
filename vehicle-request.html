@@ -387,7 +387,7 @@
     /* 社長向けデモ：開発専用UIを非表示。テスト関数自体は保存 */
     #serverVerifyButton, #save145Button, #docs146Panel,
     #save144Button, #candidateCheckButton, #serverVerifyHelp { display:none !important; }
-    #liffStatus { display:none; }
+    #liffStatus, #liffLoginButton { display:none !important; }
     #demoNotice { margin-bottom:18px; }
   </style>
 </head>
@@ -397,11 +397,11 @@
   <div class="card">
     <h1>🚗 車両依頼</h1>
     <p class="lead">
-      車両のご依頼に必要な情報・書類をご登録ください。
+      車両のご依頼に必要な情報をご入力ください。
       入力内容は最後に確認できます。
     </p>
 
-    <div class="note" id="demoNotice">こちらは車両依頼のご案内デモです。入力した情報や書類は、現時点では正式な申込として送信されません。</div>
+    <div class="note" id="demoNotice">【デモ画面】入力内容や書類は送信されません。</div>
     <div class="note" id="liffStatus" role="status" aria-live="polite" style="margin-bottom:16px">
       LINE連携を確認しています…（デモ：個人情報は送信しません）
     </div>
