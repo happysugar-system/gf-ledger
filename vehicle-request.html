@@ -384,6 +384,11 @@
       font-size: 15px;
       line-height: 1.7;
     }
+    /* 社長向けデモ：開発専用UIを非表示。テスト関数自体は保存 */
+    #serverVerifyButton, #save145Button, #docs146Panel,
+    #save144Button, #candidateCheckButton, #serverVerifyHelp { display:none !important; }
+    #liffStatus { display:none; }
+    #demoNotice { margin-bottom:18px; }
   </style>
 </head>
 
@@ -396,6 +401,7 @@
       入力内容は最後に確認できます。
     </p>
 
+    <div class="note" id="demoNotice">こちらは車両依頼のご案内デモです。入力した情報や書類は、現時点では正式な申込として送信されません。</div>
     <div class="note" id="liffStatus" role="status" aria-live="polite" style="margin-bottom:16px">
       LINE連携を確認しています…（デモ：個人情報は送信しません）
     </div>
@@ -604,7 +610,7 @@
 
       <div class="buttons">
         <button class="secondary" type="button" onclick="showPage(4)">戻る</button>
-        <button class="primary" type="button" onclick="demoSubmit()">接続テストを実行する</button>
+        <button class="primary" type="button" onclick="demoSubmit()">デモの確認を終了する</button>
       </div>
     </section>
   </div>
@@ -1189,44 +1195,10 @@
       showPage(4);
       return;
     }
-    const url = TEST_GAS_WEB_APP_URL.trim();
-    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(url)) {
-      alert('まだ接続先が未設定です。GASのWebアプリURL（/exec）を設定してください。');
-      return;
-    }
-    const ok = confirm(
-      '接続テストを実行します。\\n' +
-      'フォームに入力した氏名・電話番号・免許証・住民票などは一切送信しません。\\n' +
-      '契約の事前確認を架空の受付としてテスト用シートに記録します。よろしいですか？'
-    );
-    if (!ok) return;
-    // クロスオリジンのため、GASの結果は新しいタブで表示します。
-    // POSTにフィールドを付けないことで、入力内容や書類は送信されません。
-    const form = document.createElement('form');
-    form.method = 'POST';
-    // デモ用の3項目だけを送信。入力値や撮影データは一切送信しない。
-    const demoFields = {
-      demo_action: 'contract_preview_confirm_v1',
-      demo_checked: 'yes',
-      demo_version: CONTRACT_DEMO_VERSION
-    };
-    Object.entries(demoFields).forEach(([name, val]) => {
-      const field = document.createElement('input');
-      field.type = 'hidden';
-      field.name = name;
-      field.value = val;
-      form.appendChild(field);
-    });
-    form.action = url;
-    form.target = '_blank';
-    form.style.display = 'none';
-    document.body.appendChild(form);
-    form.submit();
-    form.remove();
     document.getElementById('summary').innerHTML =
-      '<div class="successBox"><strong>契約事前確認の接続テストを送信しました。</strong><br>' +
-      '別タブの結果画面を確認してください。<br>' +
-      '※固定の架空受付として記録します。フォームの入力情報や書類は送信していません。</div>';
+      '<div class="successBox"><strong>デモの確認が完了しました。</strong><br>' +
+      '画面の操作はここまでです。<br>' +
+      '正式な車両依頼の送信・書類保存はまだ行っていません。</div>';
   }
 
   window.addEventListener('pagehide', stopCamera);
