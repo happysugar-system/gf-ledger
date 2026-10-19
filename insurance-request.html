@@ -10,7 +10,7 @@
 const $=id=>document.getElementById(id), params=new URLSearchParams(location.search);let current='',stream=null,busy=false,completed=false;
 const entry=params.get('gf_ins_entry')||''; $('entry').value=entry;
 const existingKey=sessionStorage.getItem('gf197_key_'+entry);const key=existingKey||Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');sessionStorage.setItem('gf197_key_'+entry,key);$('sendKey').value=key;
-const gasURL='__GAS_EXEC_URL__'; // GASの /exec URLに置換する
+const gasURL='https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec'; // GASの /exec URLに置換する
 $('form').action=gasURL;
 async function openCamera(side){current=side;$('cameraTitle').textContent=side==='registration'?'車検証を撮影':side==='front'?'免許証・表を撮影':'免許証・裏を撮影';$('cameraHint').textContent=side==='registration'?'A4の車検証を縦向きの枠に合わせて撮影してください。':'免許証を横向きの枠に合わせて撮影してください。';$('guide').classList.toggle('a4',side==='registration');$('cameraModal').classList.add('on');document.body.style.overflow='hidden';try{if(!navigator.mediaDevices?.getUserMedia)throw Error('カメラ非対応');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});$('video').srcObject=stream;await $('video').play()}catch(e){$('cameraHint').textContent='カメラを使用できません。下の「写真ライブラリから選ぶ」から写真を選択してください。'}}
 function closeCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('video').srcObject=null;$('cameraModal').classList.remove('on');document.body.style.overflow=''}
