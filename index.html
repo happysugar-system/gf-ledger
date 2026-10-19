@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ja">
 <head>
@@ -45,6 +46,7 @@ function isIOS(){
   return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+
 function openLedger(){
   if (isIOS()) {
     window.location.href = 'googlechromes://script.google.com/macros/s/AKfycbzDrU44saPdqQLxP3yyTPA8UgGkbw0fWSkNcUZp9XCEF2QErzk5uQki4_4eVDVwl4Hw0g/exec';
@@ -52,13 +54,11 @@ function openLedger(){
     window.location.href = 'https://script.google.com/macros/s/AKfycbzDrU44saPdqQLxP3yyTPA8UgGkbw0fWSkNcUZp9XCEF2QErzk5uQki4_4eVDVwl4Hw0g/exec';
   }
 }
+
 function openReception(){
- const key='gf_reception_staff_url';
- let url=localStorage.getItem(key)||'';
- if(!url){url=(prompt('LINE受付専用GASのウェブアプリURL（/exec）を入力してください')||'').trim();if(!url)return;}
- try{const u=new URL(url);if(u.protocol!=='https:'||u.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec$/.test(u.pathname)){alert('GASの /exec URLを指定してください');localStorage.removeItem(key);return;}u.searchParams.set('page','staff');localStorage.setItem(key,u.origin+u.pathname);window.location.href=u.href;}catch(e){alert('URLを確認してください');localStorage.removeItem(key)}
+  window.location.href =
+    'https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec?page=staff';
 }
-function resetReceptionUrl(){localStorage.removeItem('gf_reception_staff_url');alert('受付管理URLの登録を解除しました');}
 </script>
 </head>
 <body>
@@ -78,9 +78,27 @@ function resetReceptionUrl(){localStorage.removeItem('gf_reception_staff_url');a
      <span class="arrow">›</span>
    </button>
 
-   <button class="menu" type="button" onclick="openReception()" style="margin-top:16px"><span class="menuIcon">📩</span><span class="menuText"><span class="menuTitle">LINE受付管理</span><span class="menuSub">車両依頼・保険・返却・レッカーなど</span></span><span class="arrow">›</span></button>
-   <button class="menu" type="button" disabled style="margin-top:16px;opacity:.55;cursor:default"><span class="menuIcon">📅</span><span class="menuText"><span class="menuTitle">シフト管理</span><span class="menuSub">接続準備中</span></span><span class="arrow">›</span></button>
-   <div class="note">この画面をホーム画面に追加してご利用ください。<br>LINE受付管理は初回のみ専用GASのURL登録が必要です。<br><a href="#" onclick="resetReceptionUrl();return false">受付管理URLを再設定</a></div>
+   <button class="menu" type="button" onclick="openReception()" style="margin-top:16px">
+     <span class="menuIcon">📩</span>
+     <span class="menuText">
+       <span class="menuTitle">LINE受付管理</span>
+       <span class="menuSub">車両依頼・お問い合わせ（任意保険・代車）</span>
+     </span>
+     <span class="arrow">›</span>
+   </button>
+
+   <button class="menu" type="button" disabled style="margin-top:16px;opacity:.55;cursor:default">
+     <span class="menuIcon">📅</span>
+     <span class="menuText">
+       <span class="menuTitle">シフト管理</span>
+       <span class="menuSub">接続準備中</span>
+     </span>
+     <span class="arrow">›</span>
+   </button>
+
+   <div class="note">
+     この画面をホーム画面に追加してご利用ください。
+   </div>
  </div>
 </main>
 </body>
