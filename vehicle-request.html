@@ -610,7 +610,7 @@
 
       <div class="buttons">
         <button class="secondary" type="button" onclick="showPage(4)">戻る</button>
-        <button class="primary" type="button" onclick="demoSubmit()">デモの確認を終了する</button>
+        <button class="primary" type="button" onclick="demoSubmit()">車両依頼を送信する</button>
       </div>
     </section>
   </div>
@@ -1189,16 +1189,39 @@
     return div.innerHTML;
   }
 
-  function demoSubmit() {
+  // GAS100のデプロイURLを設定してください。空欄なら送信しません。
+  const GF_VEHICLE_SUBMIT_URL = '';
+  let gfSubmitting = false;
+  async function demoSubmit() {
+    if (gfSubmitting) return;
     if (!document.getElementById('contractConfirmed').checked || !contractConfirmedAt) {
-      alert('契約書の事前確認が完了していません。');
-      showPage(4);
-      return;
+      alert('契約書の事前確認が完了していません。'); showPage(4); return;
     }
-    document.getElementById('summary').innerHTML =
-      '<div class="successBox"><strong>デモの確認が完了しました。</strong><br>' +
-      '画面の操作はここまでです。<br>' +
-      '正式な車両依頼の送信・書類保存はまだ行っていません。</div>';
+    const entry = new URLSearchParams(location.search).get('gf_entry') || '';
+    if (!/^[a-f0-9]{64}$/i.test(entry)) {alert('公式LINEから「車両依頼」を開き直してください。');return;}
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GF_VEHICLE_SUBMIT_URL)) {
+      alert('送信先の設定がまだ完了していません。管理者にご連絡ください。'); return;
+    }
+    if (!licenseFrontData || !licenseBackData || !residentMethod) {alert('書類の入力を確認してください。');showPage(3);return;}
+    const btn=document.querySelector('#page5 button.primary');
+    gfSubmitting=true;btn.disabled=true;btn.textContent='送信の準備中…';
+    try {
+      const file=document.getElementById('residentFile').files[0];
+      if(residentMethod==='upload' && !file) throw new Error('住民票のPDFを選択してください。');
+      const resident=residentMethod==='upload'?await GF146_prepareResidentPdf(file,btn):'';
+      const keys=['name','kana','phone','referrer','company','area','email','guarantorName','guarantorPhone','guarantorEmail'];
+      const fields={action:'gf_vehicle_submit_test',gf_entry:entry,front:licenseFrontData,back:licenseBackData,residentMethod,resident};
+      keys.forEach(k=>fields[k]=document.getElementById(k).value.trim());
+      const dc=document.querySelector('input[name="deliveryChoice"]:checked').value;
+      const sc=document.querySelector('input[name="startChoice"]:checked').value;
+      fields.deliveryWish=dc==='asap'?'最短希望':document.getElementById('deliveryDate').value;
+      fields.startWish=sc==='undecided'?'未定':document.getElementById('startDate').value;
+      if(fields.email!==value('emailConfirm')||fields.guarantorEmail!==value('guarantorEmailConfirm'))throw new Error('メールアドレスの確認欄が一致しません。');
+      if(fields.front.length>2800000||fields.back.length>2800000)throw new Error('免許証の画像が大きすぎます。撮り直してください。');
+      const form=document.createElement('form');form.method='POST';form.action=GF_VEHICLE_SUBMIT_URL;form.target='_self';
+      Object.entries(fields).forEach(([name,val])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=val;form.appendChild(input);});
+      form.style.display='none';document.body.appendChild(form);btn.textContent='送信中…';form.submit();
+    } catch(e) {alert(e.message||'送信の準備に失敗しました。');gfSubmitting=false;btn.disabled=false;btn.textContent='車両依頼を送信する';}
   }
 
   window.addEventListener('pagehide', stopCamera);
