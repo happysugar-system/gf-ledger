@@ -29,7 +29,6 @@ button{border:0;border-radius:10px;padding:15px;background:#1e5fae;color:white;f
 <label for="memo">備考（任意）</label><textarea id="memo" maxlength="500" placeholder="気になる傷や返却時の連絡事項など"></textarea>
 </section><section><h2>車両の写真（8方向）</h2><p class="small">各方向を1枚ずつ選択してください。選択後は画像を確認・差し替えできます。</p><div class="example-note">各撮影欄に、その角度の<strong>見本写真（中央に「例」と表示）</strong>を載せています。見本と同じ向きから車両全体を撮影してください。</div><div class="grid" id="slots"></div></section>
 <button id="send" type="button">写真8枚を保存して申し込む</button>
- <section id="connectionTest" style="background:#f0f6ff"><h2 style="font-size:17px">🔧 通信確認（写真不要）</h2><p class="small">入力・写真の選択なしで確認できます。車両台帳や受付データは変更しません。</p><button id="testConnection" type="button" style="width:100%;background:#42566e">通信だけテストする</button><div id="testResult" role="status" aria-live="polite" style="margin-top:10px;white-space:pre-line;font-size:14px"></div></section>
 <progress id="bar" value="0" max="8" hidden></progress><div id="progress" role="status" aria-live="polite"></div><div id="done">✅ 返却申込を受け付けました。スタッフからの連絡をお待ちください。</div>
 <iframe id="transport" name="gf191_transport" hidden title="データ送信"></iframe>
 </main><script>
@@ -92,41 +91,6 @@ function callGAS(action,fields,timeout=120000){return new Promise((resolve,rejec
  for(const [k,v] of Object.entries({gf191_action:action,nonce,...fields})){const input=document.createElement('input');input.name=k;input.value=String(v);form.append(input)}
  document.body.append(form);form.submit();
 })}
-// 写真・受付データを送らない公開通信診断。既存の本番送信処理には影響しない。
-$('testConnection').addEventListener('click',async()=>{
- const button=$('testConnection'),out=$('testResult'),frame=$('transport');
- if(busy){out.textContent='申込の送信中はテストできません。';return}
- button.disabled=true;
- const nonce=randomNonce();let received=0,matched=false,loaded=0,finished=false;
- out.textContent='① 公開GASへテスト送信中…';
- const report=message=>{out.textContent=message};
- const onLoad=()=>{loaded++;if(!finished)report('① iframeの読み込みを検知（'+loaded+'回）\n② GASからの返信を待っています…')};
- const onMessage=e=>{
-  const origin=String(e.origin||'');
-  if(origin!=='https://script.google.com'&&!/^https:\/\/[a-z0-9.-]*googleusercontent\.com$/i.test(origin))return;
-  received++;
-  const d=e.data;
-  if(!d||d.type!=='GF191_RESULT'||d.nonce!==nonce)return;
-  matched=true;finished=true;
-  if(d.payload?.error==='未対応の操作です')report('✅ 通信成功！\nGASからの返信がGitHubまで届いています。\nテスト用の「未対応の操作です」は正常です。');
-  else report('✅ GASの返信を受信しました。\n結果：'+JSON.stringify(d.payload));
- };
- frame.addEventListener('load',onLoad);window.addEventListener('message',onMessage);
- const form=document.createElement('form');form.method='POST';form.action=ENDPOINT;form.target='gf191_transport';form.style.display='none';
- for(const [k,v] of Object.entries({gf191_action:'test',nonce})){
-  const input=document.createElement('input');input.name=k;input.value=v;form.append(input);
- }
- document.body.append(form);
- try{
-  form.submit();
-  await new Promise(resolve=>setTimeout(resolve,15000));
-  if(!matched){
-   finished=true;
-   report('⚠️ GASの返信を受信できませんでした。\niframe読込回数：'+loaded+'\nGoogleからのmessage数：'+received+'\n送信先は確認済みなので、iframeの返信経路を調べる必要があります。\nこの結果をポテトに送ってね。');
-  }
- }catch(err){report('⚠️ 通信テスト中のエラー：'+err.message)}
- finally{frame.removeEventListener('load',onLoad);window.removeEventListener('message',onMessage);form.remove();button.disabled=false}
-});
 function readAsDataURL(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(Error('写真を読み取れませんでした'));r.readAsDataURL(blob)})}
 async function jpegBase64(file){
  // 通常のスマホ写真はブラウザで縮小。HEICなどブラウザが表示できない形式は明確に案内。
