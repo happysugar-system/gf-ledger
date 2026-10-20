@@ -12,12 +12,34 @@ const entry=params.get('gf_ins_entry')||''; $('entry').value=entry;
 const existingKey=sessionStorage.getItem('gf197_key_'+entry);const key=existingKey||Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');sessionStorage.setItem('gf197_key_'+entry,key);$('sendKey').value=key;
 const gasURL='https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec'; // GASの /exec URLに置換する
 $('form').action=gasURL;
+let statusTimer=null,statusAttempts=0;
+function checkReceipt(){
+  if(completed||!busy)return;
+  if(statusAttempts++>=18){
+    busy=false;$('submit').disabled=true;
+    $('submit').textContent='送信状況を確認中';
+    $('result').textContent='受付結果を確認できませんでした。重複防止のため、再送信せず担当スタッフへお問い合わせください。';
+    return;
+  }
+  const old=document.getElementById('gf197StatusScript');if(old)old.remove();
+  const sc=document.createElement('script');sc.id='gf197StatusScript';
+  sc.src=gasURL+'?action=gf197_status&gf_ins_entry='+encodeURIComponent(entry)+'&sendKey='+encodeURIComponent(key)+'&_='+Date.now();
+  sc.onerror=()=>{};document.head.appendChild(sc);
+  statusTimer=setTimeout(checkReceipt,8000);
+}
+window.GF197_statusCallback=function(d){
+  if(!d||!d.found||completed)return;
+  completed=true;busy=false;if(statusTimer)clearTimeout(statusTimer);
+  $('form').classList.add('hidden');
+  $('result').textContent='受付が完了しました。\n受付番号：'+d.receipt+'\n担当スタッフよりご連絡いたします。';
+  sessionStorage.removeItem('gf197_key_'+entry);
+};
 async function openCamera(side){current=side;$('cameraTitle').textContent=side==='registration'?'車検証を撮影':side==='front'?'免許証・表を撮影':'免許証・裏を撮影';$('cameraHint').textContent=side==='registration'?'A4の車検証を縦向きの枠に合わせて撮影してください。':'免許証を横向きの枠に合わせて撮影してください。';$('guide').classList.toggle('a4',side==='registration');$('cameraModal').classList.add('on');document.body.style.overflow='hidden';try{if(!navigator.mediaDevices?.getUserMedia)throw Error('カメラ非対応');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});$('video').srcObject=stream;await $('video').play()}catch(e){$('cameraHint').textContent='カメラを使用できません。下の「写真ライブラリから選ぶ」から写真を選択してください。'}}
 function closeCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('video').srcObject=null;$('cameraModal').classList.remove('on');document.body.style.overflow=''}
 function setPhoto(side,data){$(side+'Data').value=data;$(side+'Preview').src=data;$(side+'Box').classList.add('done');$(side+'Status').textContent='✓ 撮影済み（押すと撮り直せます）';closeCamera()}
 function takePhoto(){const v=$('video'),g=$('guide');if(!v.videoWidth)return alert('カメラを準備中です');const vr=v.getBoundingClientRect(),gr=g.getBoundingClientRect();const scale=Math.max(vr.width/v.videoWidth,vr.height/v.videoHeight);const rw=v.videoWidth*scale,rh=v.videoHeight*scale;const sx=Math.max(0,(gr.left-vr.left+(rw-vr.width)/2)/scale),sy=Math.max(0,(gr.top-vr.top+(rh-vr.height)/2)/scale),sw=Math.min(v.videoWidth-sx,gr.width/scale),sh=Math.min(v.videoHeight-sy,gr.height/scale);const c=$('canvas');c.width=1280;c.height=Math.round(1280*sh/sw);c.getContext('2d').drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);setPhoto(current,c.toDataURL('image/jpeg',.83))}
 function openLibrary(side){$(side+'Library').click()}
 function selectFile(input,side){const f=input.files?.[0];if(!f)return;if(!/^image\//.test(f.type))return alert('画像ファイルを選んでください');const img=new Image();const url=URL.createObjectURL(f);img.onload=()=>{const c=$('canvas'),ratio=Math.min(1,1600/img.width,1600/img.height);c.width=Math.round(img.width*ratio);c.height=Math.round(img.height*ratio);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);setPhoto(side,c.toDataURL('image/jpeg',.8));input.value=''};img.onerror=()=>{URL.revokeObjectURL(url);alert('画像を読み込めませんでした')};img.src=url}
-$('form').addEventListener('submit',e=>{if(completed||busy){e.preventDefault();return}if(!/^[a-f0-9]{64}$/i.test(entry)){e.preventDefault();return alert('LINEの任意保険メニューから開き直してください')}if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(gasURL)){e.preventDefault();return alert('送信先が未設定です')}for(const id of ['registration','front','back'])if(!$(id+'Data').value){e.preventDefault();return alert('車検証・免許証の表裏を撮影してください')}if(!confirm('この内容で任意保険を申し込みますか？')){e.preventDefault();return}busy=true;$('submit').disabled=true;$('submit').textContent='送信中…';$('result').textContent='送信しています。画面を閉じないでください。';setTimeout(()=>{if(!completed&&busy){busy=false;$('submit').disabled=false;$('submit').textContent='再送信する';$('result').textContent='結果の確認に時間がかかっています。受付が重複しないよう同じ送信キーで再送信します。'}},90000)});
-window.addEventListener('message',e=>{if(e.origin!=='https://script.google.com'&&e.origin!=='https://script.googleusercontent.com')return;const d=e.data;if(!d||d.source!=='GF197_INSURANCE')return;busy=false;if(d.ok){completed=true;$('form').classList.add('hidden');$('result').textContent='受付が完了しました。\n受付番号：'+d.receipt+'\n担当スタッフよりご連絡いたします。';sessionStorage.removeItem('gf197_key_'+entry)}else{$('submit').disabled=false;$('submit').textContent='もう一度送信する';$('result').textContent='送信できませんでした：'+(d.message||'しばらくしてから再度お試しください')}});
+$('form').addEventListener('submit',e=>{if(completed||busy){e.preventDefault();return}if(!/^[a-f0-9]{64}$/i.test(entry)){e.preventDefault();return alert('LINEの任意保険メニューから開き直してください')}if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(gasURL)){e.preventDefault();return alert('送信先が未設定です')}for(const id of ['registration','front','back'])if(!$(id+'Data').value){e.preventDefault();return alert('車検証・免許証の表裏を撮影してください')}if(!confirm('この内容で任意保険を申し込みますか？')){e.preventDefault();return}busy=true;$('submit').disabled=true;$('submit').textContent='送信中…';$('result').textContent='送信しています。画面を閉じないでください。';setTimeout(checkReceipt,8000)});
+window.addEventListener('message',e=>{if(e.origin!=='https://script.google.com'&&e.origin!=='https://script.googleusercontent.com')return;const d=e.data;if(!d||d.source!=='GF197_INSURANCE')return;busy=false;if(statusTimer)clearTimeout(statusTimer);if(d.ok){completed=true;$('form').classList.add('hidden');$('result').textContent='受付が完了しました。\n受付番号：'+d.receipt+'\n担当スタッフよりご連絡いたします。';sessionStorage.removeItem('gf197_key_'+entry)}else{$('submit').disabled=true;$('submit').textContent='送信結果をご確認ください';$('result').textContent='送信できませんでした：'+(d.message||'担当スタッフにお問い合わせください')+'\n再送信する前に受付状況を確認してください。'}});
 </script></body></html>
