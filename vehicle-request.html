@@ -394,7 +394,11 @@
 
 <body>
 <div class="wrap">
-  <div class="card">
+  <div id="entryGate" class="card" role="status" aria-live="polite" style="text-align:center;line-height:1.8">
+    <h2 id="entryGateTitle">フォームを確認しています…</h2>
+    <p id="entryGateMessage">少々お待ちください。</p>
+  </div>
+  <div class="card" id="vehicleForm" style="display:none">
     <h1>🚗 車両依頼</h1>
     <p class="lead">
       車両のご依頼に必要な情報をご入力ください。
@@ -1191,8 +1195,44 @@
 
   // GAS100のデプロイURLを設定してください。空欄なら送信しません。
   const GF_VEHICLE_SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec';
+  // 期限判定はサーバーのキャッシュを正本とする（ブラウザの時刻では判定しない）。
+  let gfEntryVerified = false;
+  let gfEntryCheckFinished = false;
+  function GFVehicleEntryCheck(response) {
+    if (gfEntryCheckFinished) return;
+    gfEntryCheckFinished = true;
+    const valid = !!(response && response.valid === true);
+    gfEntryVerified = valid;
+    if (valid) {
+      document.getElementById('entryGate').style.display = 'none';
+      document.getElementById('vehicleForm').style.display = 'block';
+      return;
+    }
+    document.getElementById('entryGateTitle').textContent = 'フォームの有効期限が切れています';
+    document.getElementById('entryGateMessage').textContent =
+      'このフォームは使用できません。公式LINEのメニューから「車両依頼」を選び直し、新しいフォームを開いてください。';
+  }
+  function GFVehicleEntryCheckFailed() {
+    if (gfEntryCheckFinished) return;
+    gfEntryCheckFinished = true;
+    document.getElementById('entryGateTitle').textContent = 'フォームを確認できませんでした';
+    document.getElementById('entryGateMessage').textContent =
+      '通信環境をご確認のうえ、公式LINEから「車両依頼」を開き直してください。';
+  }
+  function GFVehicleEntryCheckOnOpen() {
+    const entry = new URLSearchParams(location.search).get('gf_entry') || '';
+    if (!/^[a-f0-9]{64}$/i.test(entry)) { GFVehicleEntryCheck({valid:false}); return; }
+    const script = document.createElement('script');
+    script.src = GF_VEHICLE_SUBMIT_URL + '?action=gf_vehicle_entry_check&gf_entry=' + encodeURIComponent(entry);
+    script.onerror = GFVehicleEntryCheckFailed;
+    document.head.appendChild(script);
+    setTimeout(GFVehicleEntryCheckFailed, 12000);
+  }
+  window.addEventListener('DOMContentLoaded', GFVehicleEntryCheckOnOpen);
+
   let gfSubmitting = false;
   async function demoSubmit() {
+    if (!gfEntryVerified) { alert('公式LINEから「車両依頼」を開き直してください。'); return; }
     if (gfSubmitting) return;
     if (!document.getElementById('contractConfirmed').checked || !contractConfirmedAt) {
       alert('契約書の事前確認が完了していません。'); showPage(4); return;
