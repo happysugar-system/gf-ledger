@@ -283,8 +283,8 @@ h1{
 
     <div id="authLogin" class="hidden">
       <div class="authDescription">
-        承認待ち件数を表示するには、
-        最初に管理者メールでログインしてください。
+        このアプリでは初回だけメール認証が必要です。<br>
+        メールに届いたコードを、この画面に入力してください。
       </div>
 
       <input
@@ -300,8 +300,16 @@ h1{
         class="authButton"
         type="button"
         onclick="sendAdminLogin()">
-        ログインリンクを送信
+        認証コードをメールで受け取る
       </button>
+      <div id="otpArea" class="hidden" style="margin-top:14px">
+        <label for="otpCode" class="authDescription">メールに届いた認証コード</label>
+        <input id="otpCode" class="authInput" type="text"
+          inputmode="numeric" autocomplete="one-time-code"
+          maxlength="8" placeholder="認証コード">
+        <button id="verifyButton" class="authButton" type="button"
+          onclick="verifyAdminOtp()">コードでログイン</button>
+      </div>
     </div>
 
     <div id="authLoggedIn" class="hidden">
@@ -339,7 +347,7 @@ h1{
 
 <script>
 /*
- * GF155｜管理者ログイン維持＋通知バッジ
+ * GF157｜PWA内メールコード認証＋通知バッジ
  *
  * 公開可能なPublishableキーのみ使用。
  * Secretキー・service_roleキーは禁止。
@@ -360,6 +368,10 @@ let gfClient = null;
 let adminVerified = false;
 let refreshInProgress = false;
 let authSequence = 0;
+let pendingOtpEmail = '';
+let currentLineCount = null;
+let currentRegistrationCount = null;
+let authCheckInProgress = false;
 
 // 既存リンクは変更しない
 function openLedger(){
@@ -404,8 +416,23 @@ function updateBadge(count, badgeId = 'registrationBadge'){
   }
 
   badge.textContent = count > 99 ? '99+' : String(count);
-  badge.setAttribute('aria-label','承認待ち'+count+'件');
+  badge.setAttribute('aria-label','通知'+count+'件');
   badge.classList.remove('hidden');
+}
+
+// アイコンバッジはiOS側の通知許可などが整っている場合のみ反映される。
+// Web Push未設定のため、アプリを閉じている間の更新は保証しない。
+async function updateAppIconBadge(){
+  if(!('setAppBadge' in navigator)) return;
+  if(typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if(currentLineCount === null || currentRegistrationCount === null) return;
+  try{
+    const total = currentLineCount + currentRegistrationCount;
+    if(total > 0) await navigator.setAppBadge(total);
+    else if('clearAppBadge' in navigator) await navigator.clearAppBadge();
+  }catch(err){
+    console.info('アイコンバッジは利用できません',err);
+  }
 }
 
 /*
@@ -438,8 +465,7 @@ async function checkAdminSession(){
 
   showAuthSection('authLoading');
   setAuthStatus('');
-  updateBadge(0);
-  updateBadge(0, 'lineBadge');
+  // 認証確認中は古い件数を消さず、再取得成功時に更新する。
   adminVerified = false;
 
   try{
@@ -447,6 +473,10 @@ async function checkAdminSession(){
 
     if(seq !== authSequence) return;
     if(error || !data.user){
+      currentLineCount = null;
+      currentRegistrationCount = null;
+      updateBadge(0);
+      updateBadge(0,'lineBadge');
       showAuthSection('authLogin');
       return;
     }
@@ -456,6 +486,10 @@ async function checkAdminSession(){
     if(seq !== authSequence) return;
 
     if(!allowed){
+      currentLineCount = null;
+      currentRegistrationCount = null;
+      updateBadge(0);
+      updateBadge(0,'lineBadge');
       showAuthSection('authLogin');
       setAuthStatus(
         'ログイン済みですが、管理者権限がありません。' +
@@ -518,6 +552,7 @@ async function refreshNotifications(){
     }
 
     updateBadge(count);
+    currentRegistrationCount = count;
 
     // GF156: GASがSupabaseに同期したLINE受付の未完了件数
     const {data:lineData,error:lineError} = await gfClient
@@ -528,13 +563,18 @@ async function refreshNotifications(){
 
     if(seq !== authSequence || !adminVerified) return;
     if(lineError) {
+      currentLineCount = null;
       updateBadge(0,'lineBadge');
       console.error('GF156 LINE通知取得エラー',lineError.message);
     } else if(lineData && Number.isSafeInteger(lineData.pending_count)) {
+      currentLineCount = lineData.pending_count;
       updateBadge(lineData.pending_count,'lineBadge');
     } else {
+      currentLineCount = null;
       updateBadge(0,'lineBadge');
     }
+
+    await updateAppIconBadge();
 
     setAuthStatus(
       count === 0
@@ -545,6 +585,8 @@ async function refreshNotifications(){
   }catch(err){
     if(seq !== authSequence) return;
 
+    currentLineCount = null;
+    currentRegistrationCount = null;
     updateBadge(0);
     updateBadge(0,'lineBadge');
     setAuthStatus(
@@ -562,47 +604,55 @@ async function refreshNotifications(){
 }
 
 /*
- * メールリンクでログイン。
- * 認証後はトップ画面に戻る。
+ * Supabase Email OTP: メールテンプレートに {{ .Token }} が必要。
+ * マジックリンクを開く必要がないのでPWA内で認証が完結する。
  */
 async function sendAdminLogin(){
   if(!gfClient) return;
-
   const email = $('adminEmail').value.trim();
-
   if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
     setAuthStatus('メールアドレスを確認してください。');
     return;
   }
-
   $('loginButton').disabled = true;
-  setAuthStatus('ログインメールを送信しています…');
-
+  setAuthStatus('認証コードを送信しています…');
   try{
-    const redirectUrl =
-      window.location.origin + window.location.pathname;
-
     const {error} = await gfClient.auth.signInWithOtp({
       email,
-      options:{
-        emailRedirectTo:redirectUrl
-      }
+      options:{shouldCreateUser:false}
     });
-
     if(error) throw error;
-
-    setAuthStatus(
-      'ログインリンクを送信しました。' +
-      '届いたメールのリンクを開いてください。'
-    );
-
+    pendingOtpEmail = email;
+    $('otpArea').classList.remove('hidden');
+    setAuthStatus('メールに届いた認証コードを、このアプリに入力してください。');
+    $('otpCode').focus();
   }catch(err){
-    setAuthStatus(
-      'メールを送信できませんでした：' +
-      (err.message || '認証エラー')
-    );
+    setAuthStatus('送信できませんでした：' + (err.message || '認証エラー'));
   }finally{
     $('loginButton').disabled = false;
+  }
+}
+
+async function verifyAdminOtp(){
+  if(!gfClient) return;
+  const email = pendingOtpEmail || $('adminEmail').value.trim();
+  const token = $('otpCode').value.trim().replace(/\s/g,'');
+  if(!email || !/^\d{6,8}$/.test(token)){
+    setAuthStatus('メールに届いた6〜8桁の数字を入力してください。');
+    return;
+  }
+  $('verifyButton').disabled = true;
+  setAuthStatus('認証中…');
+  try{
+    const {error} = await gfClient.auth.verifyOtp({email,token,type:'email'});
+    if(error) throw error;
+    $('otpCode').value = '';
+    pendingOtpEmail = '';
+    await checkAdminSession();
+  }catch(err){
+    setAuthStatus('認証できませんでした：' + (err.message || 'コードを確認してください'));
+  }finally{
+    $('verifyButton').disabled = false;
   }
 }
 
@@ -611,6 +661,8 @@ async function logoutAdmin(){
 
   ++authSequence;
   adminVerified = false;
+  currentLineCount = null;
+  currentRegistrationCount = null;
   updateBadge(0);
   updateBadge(0,'lineBadge');
 
@@ -623,6 +675,7 @@ async function logoutAdmin(){
   }
 
   showAuthSection('authLogin');
+  $('otpArea').classList.add('hidden');
   setAuthStatus('ログアウトしました。');
 }
 
