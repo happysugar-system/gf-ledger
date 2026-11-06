@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ja">
 <head>
@@ -46,12 +47,10 @@ function isIOS(){
          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-
 function openLedger(){
   window.location.href =
     'https://script.google.com/macros/s/AKfycbzDrU44saPdqQLxP3yyTPA8UgGkbw0fWSkNcUZp9XCEF2QErzk5uQki4_4eVDVwl4Hw0g/exec';
 }
-
 
 function openReception(){
   window.location.href =
@@ -61,6 +60,12 @@ function openReception(){
 function openShift(){
   window.location.href =
     'https://script.google.com/macros/s/AKfycbxg5vAgqOAFFoss2u6Sso_O7_z0UMg4Hu0ku6PQ9KLIm9i3_VMwxBTXI9AbktSuHRSg/exec';
+}
+
+// GF154｜ドライバー登録申請・承認画面
+function openDriverRegistrations(){
+  window.location.href =
+    'https://happysugar-system.github.io/gf-mypage-demo/admin-registrations.html';
 }
 </script>
 </head>
@@ -95,6 +100,15 @@ function openShift(){
      <span class="menuText">
        <span class="menuTitle">勤怠・シフト管理</span>
        <span class="menuSub">シフト確認・出退勤・打刻修正申請</span>
+     </span>
+     <span class="arrow">›</span>
+   </button>
+
+   <button class="menu" type="button" onclick="openDriverRegistrations()" style="margin-top:16px">
+     <span class="menuIcon">👤</span>
+     <span class="menuText">
+       <span class="menuTitle">ドライバー登録申請</span>
+       <span class="menuSub">本人確認・DriverID照合・承認</span>
      </span>
      <span class="arrow">›</span>
    </button>
