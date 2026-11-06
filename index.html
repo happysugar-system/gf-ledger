@@ -222,7 +222,7 @@ h1{
   <button class="menu" type="button"
     onclick="openReception()"
     style="margin-top:16px">
-    <span class="menuIcon">📩</span>
+    <span class="menuIcon">📩<span id="lineBadge" class="notificationBadge hidden" aria-label="LINE受付の未完了件数"></span></span>
     <span class="menuText">
       <span class="menuTitle">
         LINE受付管理
@@ -272,7 +272,7 @@ h1{
   </button>
 
   <!-- GF155｜管理者ログイン状態 -->
-  <section id="authBox" class="authBox">
+  <section id="authBox" class="authBox hidden">
     <div class="authTitle">
       管理者通知
     </div>
@@ -382,6 +382,7 @@ function openDriverRegistrations(){
 }
 
 function showAuthSection(id){
+  $('authBox').classList.toggle('hidden', id !== 'authLogin');
   ['authLoading','authLogin','authLoggedIn']
     .forEach(name => {
       $(name).classList.toggle('hidden',name !== id);
@@ -392,8 +393,8 @@ function setAuthStatus(message){
   $('authStatus').textContent = message;
 }
 
-function updateBadge(count){
-  const badge = $('registrationBadge');
+function updateBadge(count, badgeId = 'registrationBadge'){
+  const badge = $(badgeId);
 
   if(!Number.isInteger(count) || count <= 0){
     badge.classList.add('hidden');
@@ -438,6 +439,7 @@ async function checkAdminSession(){
   showAuthSection('authLoading');
   setAuthStatus('');
   updateBadge(0);
+  updateBadge(0, 'lineBadge');
   adminVerified = false;
 
   try{
@@ -517,6 +519,23 @@ async function refreshNotifications(){
 
     updateBadge(count);
 
+    // GF156: GASがSupabaseに同期したLINE受付の未完了件数
+    const {data:lineData,error:lineError} = await gfClient
+      .from('gf_portal_notification_counts')
+      .select('pending_count')
+      .eq('notification_type','line_reception')
+      .maybeSingle();
+
+    if(seq !== authSequence || !adminVerified) return;
+    if(lineError) {
+      updateBadge(0,'lineBadge');
+      console.error('GF156 LINE通知取得エラー',lineError.message);
+    } else if(lineData && Number.isSafeInteger(lineData.pending_count)) {
+      updateBadge(lineData.pending_count,'lineBadge');
+    } else {
+      updateBadge(0,'lineBadge');
+    }
+
     setAuthStatus(
       count === 0
         ? '現在、承認待ちの申請はありません。'
@@ -527,6 +546,7 @@ async function refreshNotifications(){
     if(seq !== authSequence) return;
 
     updateBadge(0);
+    updateBadge(0,'lineBadge');
     setAuthStatus(
       '承認待ち件数を取得できませんでした。' +
       '「承認待ち件数を更新」を押してください。'
@@ -592,6 +612,7 @@ async function logoutAdmin(){
   ++authSequence;
   adminVerified = false;
   updateBadge(0);
+  updateBadge(0,'lineBadge');
 
   const {error} = await gfClient.auth.signOut();
 
