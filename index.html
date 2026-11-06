@@ -12,41 +12,356 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" href="./icon.png">
 <link rel="apple-touch-icon" href="./icon.png">
+
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:#171717}
-body{
- background:
- radial-gradient(circle at 10% 8%,rgba(207,164,64,.12),transparent 22%),
- radial-gradient(circle at 95% 62%,rgba(207,164,64,.10),transparent 25%),
- linear-gradient(180deg,#fff 0%,#fffdf8 100%);
+html,body{
+  margin:0;
+  min-height:100%;
+  font-family:-apple-system,BlinkMacSystemFont,
+    "Segoe UI","Noto Sans JP",sans-serif;
+  color:#171717;
 }
-main{min-height:100vh;display:flex;justify-content:center;padding:44px 22px 34px}
-.portal{width:min(440px,100%);text-align:center}
-.logo{width:190px;height:190px;object-fit:contain;margin:8px auto 8px;display:block}
-.goldline{width:62px;height:2px;background:#c69a2d;margin:4px auto 26px}
-h1{font-size:34px;line-height:1.25;margin:0 0 14px;font-weight:800;letter-spacing:.02em}
-.sub{font-size:16px;line-height:1.7;color:#777;margin:0 0 38px}
+body{
+  background:
+    radial-gradient(circle at 10% 8%,rgba(207,164,64,.12),transparent 22%),
+    radial-gradient(circle at 95% 62%,rgba(207,164,64,.10),transparent 25%),
+    linear-gradient(180deg,#fff 0%,#fffdf8 100%);
+}
+main{
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  padding:44px 22px 34px;
+}
+.portal{
+  width:min(440px,100%);
+  text-align:center;
+}
+.logo{
+  width:190px;
+  height:190px;
+  object-fit:contain;
+  margin:8px auto 8px;
+  display:block;
+}
+.goldline{
+  width:62px;
+  height:2px;
+  background:#c69a2d;
+  margin:4px auto 26px;
+}
+h1{
+  font-size:34px;
+  line-height:1.25;
+  margin:0 0 14px;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+.sub{
+  font-size:16px;
+  line-height:1.7;
+  color:#777;
+  margin:0 0 38px;
+}
 .menu{
- width:100%;border:1px solid #eee;background:rgba(255,255,255,.96);
- border-radius:22px;padding:18px;display:flex;align-items:center;gap:16px;
- text-align:left;box-shadow:0 10px 26px rgba(0,0,0,.08);cursor:pointer;
- -webkit-tap-highlight-color:transparent;
+  width:100%;
+  border:1px solid #eee;
+  background:rgba(255,255,255,.96);
+  border-radius:22px;
+  padding:18px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  text-align:left;
+  box-shadow:0 10px 26px rgba(0,0,0,.08);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
 }
 .menu:active{transform:scale(.99)}
-.menuIcon{width:64px;height:64px;border-radius:17px;background:#fff4d8;display:grid;place-items:center;font-size:31px;flex:none}
+.menuIcon{
+  width:64px;
+  height:64px;
+  border-radius:17px;
+  background:#fff4d8;
+  display:grid;
+  place-items:center;
+  font-size:31px;
+  flex:none;
+  position:relative;
+}
 .menuText{flex:1;min-width:0}
-.menuTitle{display:block;font-size:20px;font-weight:800}
-.menuSub{display:block;font-size:14px;color:#777;margin-top:5px}
-.arrow{font-size:34px;color:#c49a31;line-height:1}
-.note{margin-top:42px;padding:16px 18px;border-radius:15px;background:rgba(255,255,255,.72);color:#888;font-size:13px;line-height:1.7}
-</style>
-<script>
-function isIOS(){
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+.menuTitle{
+  display:block;
+  font-size:20px;
+  font-weight:800;
+}
+.menuSub{
+  display:block;
+  font-size:14px;
+  color:#777;
+  margin-top:5px;
+}
+.arrow{
+  font-size:34px;
+  color:#c49a31;
+  line-height:1;
+}
+.note{
+  margin-top:42px;
+  padding:16px 18px;
+  border-radius:15px;
+  background:rgba(255,255,255,.72);
+  color:#888;
+  font-size:13px;
+  line-height:1.7;
 }
 
+/* GF155｜通知バッジ */
+.notificationBadge{
+  position:absolute;
+  top:-9px;
+  right:-9px;
+  min-width:25px;
+  height:25px;
+  padding:0 6px;
+  border-radius:20px;
+  background:#e02c38;
+  color:#fff;
+  font-size:13px;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px solid #fff;
+  box-shadow:0 2px 7px #0002;
+}
+.hidden{display:none!important}
+
+/* GF155｜管理者ログイン */
+.authBox{
+  margin-top:22px;
+  padding:16px;
+  background:#fff;
+  border:1px solid #eee;
+  border-radius:17px;
+  text-align:left;
+  box-shadow:0 4px 14px #00000008;
+}
+.authTitle{
+  font-size:15px;
+  font-weight:800;
+  margin-bottom:8px;
+}
+.authDescription{
+  font-size:12px;
+  color:#777;
+  line-height:1.7;
+}
+.authInput{
+  width:100%;
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:13px;
+  font-size:16px;
+  margin-top:12px;
+}
+.authButton{
+  width:100%;
+  border:0;
+  border-radius:10px;
+  background:#176b56;
+  color:white;
+  padding:13px;
+  margin-top:12px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+}
+.authButton:disabled{opacity:.55}
+.authSecondary{
+  background:#eaf0ed;
+  color:#235348;
+}
+.authStatus{
+  margin-top:10px;
+  font-size:12px;
+  color:#56736a;
+  line-height:1.6;
+  overflow-wrap:anywhere;
+}
+</style>
+</head>
+
+<body>
+<main>
+<div class="portal">
+
+  <img class="logo" src="./icon.png" alt="GOLD FIRST">
+  <div class="goldline"></div>
+
+  <h1>業務システム</h1>
+  <p class="sub">
+    GOLD FIRST の各種システムに<br>
+    アクセスできます。
+  </p>
+
+  <button class="menu" type="button"
+    onclick="openLedger()">
+    <span class="menuIcon">🚗</span>
+    <span class="menuText">
+      <span class="menuTitle">
+        車両・ドライバー管理
+      </span>
+      <span class="menuSub">開く</span>
+    </span>
+    <span class="arrow">›</span>
+  </button>
+
+  <button class="menu" type="button"
+    onclick="openReception()"
+    style="margin-top:16px">
+    <span class="menuIcon">📩</span>
+    <span class="menuText">
+      <span class="menuTitle">
+        LINE受付管理
+      </span>
+      <span class="menuSub">
+        車両依頼・お問い合わせ（任意保険・代車）
+      </span>
+    </span>
+    <span class="arrow">›</span>
+  </button>
+
+  <button class="menu" type="button"
+    onclick="openShift()"
+    style="margin-top:16px">
+    <span class="menuIcon">📅</span>
+    <span class="menuText">
+      <span class="menuTitle">
+        勤怠・シフト管理
+      </span>
+      <span class="menuSub">
+        シフト確認・出退勤・打刻修正申請
+      </span>
+    </span>
+    <span class="arrow">›</span>
+  </button>
+
+  <button class="menu" type="button"
+    onclick="openDriverRegistrations()"
+    style="margin-top:16px">
+    <span class="menuIcon">
+      👤
+      <span
+        id="registrationBadge"
+        class="notificationBadge hidden"
+        aria-label="承認待ち0件"
+      ></span>
+    </span>
+    <span class="menuText">
+      <span class="menuTitle">
+        ドライバー登録申請
+      </span>
+      <span class="menuSub">
+        本人確認・DriverID照合・承認
+      </span>
+    </span>
+    <span class="arrow">›</span>
+  </button>
+
+  <!-- GF155｜管理者ログイン状態 -->
+  <section id="authBox" class="authBox">
+    <div class="authTitle">
+      管理者通知
+    </div>
+
+    <div id="authLoading" class="authDescription">
+      ログイン状態を確認しています…
+    </div>
+
+    <div id="authLogin" class="hidden">
+      <div class="authDescription">
+        承認待ち件数を表示するには、
+        最初に管理者メールでログインしてください。
+      </div>
+
+      <input
+        id="adminEmail"
+        class="authInput"
+        type="email"
+        autocomplete="email"
+        placeholder="管理者メールアドレス"
+      >
+
+      <button
+        id="loginButton"
+        class="authButton"
+        type="button"
+        onclick="sendAdminLogin()">
+        ログインリンクを送信
+      </button>
+    </div>
+
+    <div id="authLoggedIn" class="hidden">
+      <div id="loggedInText" class="authDescription">
+        管理者ログイン中
+      </div>
+
+      <button
+        class="authButton authSecondary"
+        type="button"
+        onclick="refreshNotifications()">
+        承認待ち件数を更新
+      </button>
+
+      <button
+        class="authButton authSecondary"
+        type="button"
+        onclick="logoutAdmin()">
+        ログアウト
+      </button>
+    </div>
+
+    <div id="authStatus" class="authStatus"
+      role="status" aria-live="polite"></div>
+  </section>
+
+  <div class="note">
+    この画面をホーム画面に追加してご利用ください。
+  </div>
+
+</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<script>
+/*
+ * GF155｜管理者ログイン維持＋通知バッジ
+ *
+ * 公開可能なPublishableキーのみ使用。
+ * Secretキー・service_roleキーは禁止。
+ */
+
+const SUPABASE_URL =
+  'https://tgxrnrqxafytyqfwwsag.supabase.co';
+
+const SUPABASE_PUBLISHABLE_KEY =
+  'sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
+
+const REGISTRATION_URL =
+  'https://happysugar-system.github.io/gf-mypage-demo/admin-registrations.html';
+
+const $ = id => document.getElementById(id);
+
+let gfClient = null;
+let adminVerified = false;
+let refreshInProgress = false;
+let authSequence = 0;
+
+// 既存リンクは変更しない
 function openLedger(){
   window.location.href =
     'https://script.google.com/macros/s/AKfycbzDrU44saPdqQLxP3yyTPA8UgGkbw0fWSkNcUZp9XCEF2QErzk5uQki4_4eVDVwl4Hw0g/exec';
@@ -62,61 +377,286 @@ function openShift(){
     'https://script.google.com/macros/s/AKfycbxg5vAgqOAFFoss2u6Sso_O7_z0UMg4Hu0ku6PQ9KLIm9i3_VMwxBTXI9AbktSuHRSg/exec';
 }
 
-// GF154｜ドライバー登録申請・承認画面
 function openDriverRegistrations(){
-  window.location.href =
-    'https://happysugar-system.github.io/gf-mypage-demo/admin-registrations.html';
+  window.location.href = REGISTRATION_URL;
 }
+
+function showAuthSection(id){
+  ['authLoading','authLogin','authLoggedIn']
+    .forEach(name => {
+      $(name).classList.toggle('hidden',name !== id);
+    });
+}
+
+function setAuthStatus(message){
+  $('authStatus').textContent = message;
+}
+
+function updateBadge(count){
+  const badge = $('registrationBadge');
+
+  if(!Number.isInteger(count) || count <= 0){
+    badge.classList.add('hidden');
+    badge.textContent = '';
+    badge.setAttribute('aria-label','承認待ち0件');
+    return;
+  }
+
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.setAttribute('aria-label','承認待ち'+count+'件');
+  badge.classList.remove('hidden');
+}
+
+/*
+ * 既存の管理者専用RPCを利用して
+ * 管理者権限を確認する。
+ *
+ * 非管理者はRPC側で拒否される。
+ */
+async function verifyAdmin(){
+  const {error} = await gfClient.rpc(
+    'gf153_find_driver_candidates',
+    {p_full_name:'__GF155_ADMIN_CHECK__'}
+  );
+
+  if(error){
+    console.warn(
+      '管理者権限の確認に失敗',
+      error.code || error.name || 'unknown'
+    );
+    return false;
+  }
+
+  return true;
+}
+
+async function checkAdminSession(){
+  if(!gfClient) return;
+
+  const seq = ++authSequence;
+
+  showAuthSection('authLoading');
+  setAuthStatus('');
+  updateBadge(0);
+  adminVerified = false;
+
+  try{
+    const {data,error} = await gfClient.auth.getUser();
+
+    if(seq !== authSequence) return;
+    if(error || !data.user){
+      showAuthSection('authLogin');
+      return;
+    }
+
+    const allowed = await verifyAdmin();
+
+    if(seq !== authSequence) return;
+
+    if(!allowed){
+      showAuthSection('authLogin');
+      setAuthStatus(
+        'ログイン済みですが、管理者権限がありません。' +
+        '管理者として登録されたメールアドレスでログインしてください。'
+      );
+      return;
+    }
+
+    adminVerified = true;
+    showAuthSection('authLoggedIn');
+
+    $('loggedInText').textContent =
+      '管理者ログイン中：' + (data.user.email || '');
+
+    await refreshNotifications();
+
+  }catch(err){
+    if(seq !== authSequence) return;
+
+    showAuthSection('authLogin');
+    setAuthStatus(
+      'ログイン状態を確認できませんでした。' +
+      '通信状態を確認して再度お試しください。'
+    );
+
+    console.error(
+      'GF155認証確認エラー',
+      err.code || err.name || 'unknown'
+    );
+  }
+}
+
+/*
+ * RLSにより閲覧可能な承認待ち申請だけ数える。
+ * 件数取得に失敗した場合は0件と誤表示しない。
+ */
+async function refreshNotifications(){
+  if(!gfClient || !adminVerified || refreshInProgress){
+    return;
+  }
+
+  refreshInProgress = true;
+  const seq = authSequence;
+
+  try{
+    const {count,error} = await gfClient
+      .from('gf_mypage_registration_requests')
+      .select('auth_user_id',{
+        count:'exact',
+        head:true
+      })
+      .eq('status','pending');
+
+    if(seq !== authSequence || !adminVerified) return;
+
+    if(error) throw error;
+
+    if(typeof count !== 'number'){
+      throw new Error('件数を取得できませんでした');
+    }
+
+    updateBadge(count);
+
+    setAuthStatus(
+      count === 0
+        ? '現在、承認待ちの申請はありません。'
+        : '承認待ち：' + count + '件'
+    );
+
+  }catch(err){
+    if(seq !== authSequence) return;
+
+    updateBadge(0);
+    setAuthStatus(
+      '承認待ち件数を取得できませんでした。' +
+      '「承認待ち件数を更新」を押してください。'
+    );
+
+    console.error(
+      'GF155通知取得エラー',
+      err.code || err.name || 'unknown'
+    );
+  }finally{
+    refreshInProgress = false;
+  }
+}
+
+/*
+ * メールリンクでログイン。
+ * 認証後はトップ画面に戻る。
+ */
+async function sendAdminLogin(){
+  if(!gfClient) return;
+
+  const email = $('adminEmail').value.trim();
+
+  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    setAuthStatus('メールアドレスを確認してください。');
+    return;
+  }
+
+  $('loginButton').disabled = true;
+  setAuthStatus('ログインメールを送信しています…');
+
+  try{
+    const redirectUrl =
+      window.location.origin + window.location.pathname;
+
+    const {error} = await gfClient.auth.signInWithOtp({
+      email,
+      options:{
+        emailRedirectTo:redirectUrl
+      }
+    });
+
+    if(error) throw error;
+
+    setAuthStatus(
+      'ログインリンクを送信しました。' +
+      '届いたメールのリンクを開いてください。'
+    );
+
+  }catch(err){
+    setAuthStatus(
+      'メールを送信できませんでした：' +
+      (err.message || '認証エラー')
+    );
+  }finally{
+    $('loginButton').disabled = false;
+  }
+}
+
+async function logoutAdmin(){
+  if(!gfClient) return;
+
+  ++authSequence;
+  adminVerified = false;
+  updateBadge(0);
+
+  const {error} = await gfClient.auth.signOut();
+
+  if(error){
+    setAuthStatus('ログアウトできませんでした。');
+    await checkAdminSession();
+    return;
+  }
+
+  showAuthSection('authLogin');
+  setAuthStatus('ログアウトしました。');
+}
+
+async function initGF155(){
+  if(!window.supabase){
+    showAuthSection('authLogin');
+    setAuthStatus('認証ライブラリを読み込めませんでした。');
+    return;
+  }
+
+  gfClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    {
+      auth:{
+        persistSession:true,
+        autoRefreshToken:true,
+        detectSessionInUrl:true
+      }
+    }
+  );
+
+  // 先に認証イベントを登録する。
+  // コールバック内ではSupabaseへの問い合わせを直接行わない。
+  gfClient.auth.onAuthStateChange((event) => {
+    if(event === 'SIGNED_IN' ||
+       event === 'SIGNED_OUT'){
+      setTimeout(() => checkAdminSession(),0);
+    }
+  });
+
+  await checkAdminSession();
+
+  // 60秒ごとに件数更新
+  setInterval(() => {
+    if(!document.hidden){
+      refreshNotifications();
+    }
+  },60000);
+
+  // アプリに戻ったときに更新
+  document.addEventListener('visibilitychange',() => {
+    if(!document.hidden){
+      checkAdminSession();
+    }
+  });
+
+  window.addEventListener('pageshow',(event) => {
+    if(event.persisted){
+      checkAdminSession();
+    }
+  });
+}
+
+initGF155();
 </script>
-</head>
-<body>
-<main>
- <div class="portal">
-   <img class="logo" src="./icon.png" alt="GOLD FIRST">
-   <div class="goldline"></div>
-   <h1>業務システム</h1>
-   <p class="sub">GOLD FIRST の各種システムに<br>アクセスできます。</p>
-
-   <button class="menu" type="button" onclick="openLedger()">
-     <span class="menuIcon">🚗</span>
-     <span class="menuText">
-       <span class="menuTitle">車両・ドライバー管理</span>
-       <span class="menuSub">開く</span>
-     </span>
-     <span class="arrow">›</span>
-   </button>
-
-   <button class="menu" type="button" onclick="openReception()" style="margin-top:16px">
-     <span class="menuIcon">📩</span>
-     <span class="menuText">
-       <span class="menuTitle">LINE受付管理</span>
-       <span class="menuSub">車両依頼・お問い合わせ（任意保険・代車）</span>
-     </span>
-     <span class="arrow">›</span>
-   </button>
-
-   <button class="menu" type="button" onclick="openShift()" style="margin-top:16px">
-     <span class="menuIcon">📅</span>
-     <span class="menuText">
-       <span class="menuTitle">勤怠・シフト管理</span>
-       <span class="menuSub">シフト確認・出退勤・打刻修正申請</span>
-     </span>
-     <span class="arrow">›</span>
-   </button>
-
-   <button class="menu" type="button" onclick="openDriverRegistrations()" style="margin-top:16px">
-     <span class="menuIcon">👤</span>
-     <span class="menuText">
-       <span class="menuTitle">ドライバー登録申請</span>
-       <span class="menuSub">本人確認・DriverID照合・承認</span>
-     </span>
-     <span class="arrow">›</span>
-   </button>
-
-   <div class="note">
-     この画面をホーム画面に追加してご利用ください。
-   </div>
- </div>
-</main>
 </body>
 </html>
