@@ -1245,6 +1245,14 @@
     if (!licenseFrontData || !licenseBackData || !residentMethod) {alert('書類の入力を確認してください。');showPage(3);return;}
     const btn=document.querySelector('#page5 button.primary');
     gfSubmitting=true;btn.disabled=true;btn.textContent='送信の準備中…';
+    // 受付完了画面に遷移するまで案内を表示する（保存処理自体は変更しない）。
+    const waitMessage=document.createElement('div');
+    waitMessage.id='vehicleSubmitWaitMessage';
+    waitMessage.setAttribute('role','status');
+    waitMessage.setAttribute('aria-live','polite');
+    waitMessage.style.cssText='margin:16px 0;padding:18px 14px;border-radius:12px;background:#eef5ff;color:#193b62;text-align:center;line-height:1.8;font-size:15px';
+    waitMessage.innerHTML='<strong>車両依頼を送信しています</strong><br>必要書類のアップロードと受付登録を行っています。<br><strong>受付完了画面が表示されるまで、このままお待ちください。</strong><br><small>画面を閉じたり、戻るボタンを押したりしないでください。</small>';
+    btn.insertAdjacentElement('afterend',waitMessage);
     try {
       const file=document.getElementById('residentFile').files[0];
       if(residentMethod==='upload' && !file) throw new Error('住民票のPDFを選択してください。');
@@ -1261,7 +1269,7 @@
       const form=document.createElement('form');form.method='POST';form.action=GF_VEHICLE_SUBMIT_URL;form.target='_self';
       Object.entries(fields).forEach(([name,val])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=val;form.appendChild(input);});
       form.style.display='none';document.body.appendChild(form);btn.textContent='送信中…';form.submit();
-    } catch(e) {alert(e.message||'送信の準備に失敗しました。');gfSubmitting=false;btn.disabled=false;btn.textContent='車両依頼を送信する';}
+    } catch(e) {if(waitMessage)waitMessage.remove();alert(e.message||'送信の準備に失敗しました。');gfSubmitting=false;btn.disabled=false;btn.textContent='車両依頼を送信する';}
   }
 
   window.addEventListener('pagehide', stopCamera);
