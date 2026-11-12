@@ -93,7 +93,8 @@ Deno.serve(async req=>{
    const mime=(req.headers.get("content-type")||"").split(";")[0].toLowerCase();
    const max=kind==="resident_pdf"?4_000_000:2_000_000;
    if(Number(req.headers.get("content-length")||0)>max*1.4)return json(413,{error:"too_large"});
-   const bytes=await readBounded(req,max);\n   if(!bytes)return json(413,{error:"invalid_size"});
+   const bytes=await readBounded(req,max);
+   if(!bytes)return json(413,{error:"invalid_size"});
    if(bytes.length<100||bytes.length>max)return json(413,{error:"invalid_size"});
    if(!isMagic(bytes,kind,mime))return json(415,{error:"invalid_signature"});
    const digest=await sha(bytes);
