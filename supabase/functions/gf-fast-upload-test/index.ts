@@ -1,4 +1,4 @@
-// TEST ONLY — not deployed. Requires SQL migration, private bucket, and
+// TEST ONLY — deployed to isolated test endpoint; NOT connected to production. Requires SQL migration, private bucket, and
 // GF_FAST_INTAKE_SECRET in Supabase Secrets; matching GAS script property.
 // Requires service_role server-side; never put it in browser code.
 // Existing admin-only test functions remain unchanged.
@@ -7,7 +7,7 @@ import { verifyGasEnvelope, requestKeyHash } from "../_shared/gf-fast-gas-auth.t
 const url = Deno.env.get("SUPABASE_URL") ?? "";
 const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const secret = Deno.env.get("GF_FAST_INTAKE_SECRET") ?? "";
-const db = createClient(url,key,{auth:{persistSession:false}});
+const db = url && key ? createClient(url,key,{auth:{persistSession:false}}) : null;
 const bucket="gf-secure-intake-staging";
 const json=(status:number,body:unknown)=>new Response(JSON.stringify(body),{
  status,headers:{"content-type":"application/json","cache-control":"no-store"}
@@ -44,11 +44,13 @@ const isMagic=(bytes:Uint8Array,kind:string,mime:string)=>{
 };
 Deno.serve(async req=>{
  if(req.method!=="POST")return json(405,{error:"method_not_allowed"});
- if(!secret||secret.length<48||!url||!key)return json(503,{error:"not_configured"});
+ if(!secret||secret.length<48||!url||!key||!db)return json(503,{error:"not_configured"});
  const action=new URL(req.url).searchParams.get("action");
  if(action==="issue"){
    // Server-to-server only. Never call from the public browser.
-   let p:unknown;try{p=await req.json()}catch{return json(400,{error:"bad_json"})}
+   const body=await readBounded(req,4096);
+   if(!body)return json(413,{error:"issue_body_too_large"});
+   let p:unknown;try{p=JSON.parse(new TextDecoder().decode(body))}catch{return json(400,{error:"bad_json"})}
    if(!p||typeof p!=="object")return json(400,{error:"bad_request"});
    const b=p as Record<string,unknown>;
    if(!await verifyGasEnvelope(b,secret))return json(401,{error:"invalid_signature"});
