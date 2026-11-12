@@ -32,7 +32,8 @@ Deno.serve(async req=>{
    if(!p||typeof p!=="object")return json(400,{error:"bad_request"});
    const b=p as Record<string,unknown>;
    if(!await verifyGasEnvelope(b,secret))return json(401,{error:"invalid_signature"});
-   if(!["mail","upload"].includes(String(b.residentMethod)))return json(400,{error:"invalid_method"});\n   // residentMethod is included in the GAS HMAC signature, never trusted separately.
+   if(!["mail","upload"].includes(String(b.residentMethod)))return json(400,{error:"invalid_method"});
+   // residentMethod is included in the GAS HMAC signature, never trusted separately.
    const hash=await requestKeyHash(String(b.requestId));
    const token=randomToken();
    const tokenHash=await sha(new TextEncoder().encode(token));
@@ -71,7 +72,15 @@ Deno.serve(async req=>{
    if(prior)return json(prior.sha256===digest&&prior.bytes===bytes.length?200:409,
       prior.sha256===digest&&prior.bytes===bytes.length?{ok:true,duplicate:true}:{error:"document_conflict"});
    const {error:ue}=await db.storage.from(bucket).upload(path,bytes,{contentType:mime,upsert:false});
-   if(ue)return json(409,{error:"upload_conflict_or_failure"});
+   if(ue){
+     // Retry recovery: a previous attempt may have saved the file but failed
+     // before writing metadata. Never overwrite or accept mismatching bytes.
+     const {data:orphan,error:oe}=await db.storage.from(bucket).download(path);
+     if(oe||!orphan)return json(503,{error:"upload_failed"});
+     const stored=new Uint8Array(await orphan.arrayBuffer());
+     if(stored.length!==bytes.length||await sha(stored)!==digest)
+       return json(409,{error:"existing_file_conflict"});
+   }
    const {data:download,error:de}=await db.storage.from(bucket).download(path);
    if(de||!download)return json(503,{error:"verification_failed"});
    const saved=new Uint8Array(await download.arrayBuffer());
@@ -79,7 +88,17 @@ Deno.serve(async req=>{
    const {error:me}=await db.from("gf_fast_upload_documents_test").insert({
       session_id:session.id,document_type:kind,object_path:path,sha256:digest,bytes:bytes.length
    });
-   if(me)return json(503,{error:"metadata_failed"});
+   if(me){
+     // A concurrent identical request may have inserted metadata first.
+     if(me.code==="23505"){
+       const {data:concurrent}=await db.from("gf_fast_upload_documents_test")
+         .select("sha256,bytes").eq("session_id",session.id).eq("document_type",kind).maybeSingle();
+       if(concurrent?.sha256===digest&&concurrent.bytes===bytes.length)
+         return json(200,{ok:true,document_type:kind,verified:true,duplicate:true});
+       return json(409,{error:"document_conflict"});
+     }
+     return json(503,{error:"metadata_failed"});
+   }
    return json(201,{ok:true,document_type:kind,verified:true});
  }
  if(action==="status"){
