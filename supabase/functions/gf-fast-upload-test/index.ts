@@ -15,6 +15,26 @@ const json=(status:number,body:unknown)=>new Response(JSON.stringify(body),{
 const sha=async (b:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",b)),v=>v.toString(16).padStart(2,"0")).join("");
 const randomToken=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,"0")).join("");
 const allowed=["license_front","license_back","resident_pdf"] as const;
+/** Read uploads with a hard byte cap even when Content-Length is absent or false. */
+async function readBounded(req:Request,max:number):Promise<Uint8Array|null>{
+ if(!req.body)return null;
+ const reader=req.body.getReader();
+ const chunks:Uint8Array[]=[];
+ let total=0;
+ try{
+   while(true){
+     const {done,value}=await reader.read();
+     if(done)break;
+     total+=value.byteLength;
+     if(total>max){await reader.cancel("size_limit");return null;}
+     chunks.push(value);
+   }
+ }finally{reader.releaseLock();}
+ const result=new Uint8Array(total);
+ let offset=0;
+ for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.byteLength;}
+ return result;
+}
 const isMagic=(bytes:Uint8Array,kind:string,mime:string)=>{
  const pdf=bytes.length>5 && new TextDecoder().decode(bytes.subarray(0,5))==="%PDF-";
  const jpg=bytes.length>3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
@@ -73,7 +93,7 @@ Deno.serve(async req=>{
    const mime=(req.headers.get("content-type")||"").split(";")[0].toLowerCase();
    const max=kind==="resident_pdf"?4_000_000:2_000_000;
    if(Number(req.headers.get("content-length")||0)>max*1.4)return json(413,{error:"too_large"});
-   const bytes=new Uint8Array(await req.arrayBuffer());
+   const bytes=await readBounded(req,max);\n   if(!bytes)return json(413,{error:"invalid_size"});
    if(bytes.length<100||bytes.length>max)return json(413,{error:"invalid_size"});
    if(!isMagic(bytes,kind,mime))return json(415,{error:"invalid_signature"});
    const digest=await sha(bytes);
