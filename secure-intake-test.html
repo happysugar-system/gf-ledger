@@ -39,11 +39,12 @@ run.onclick=async()=>{
  try {
   const {data:{session}}=await supabase.auth.getSession();if(!session)throw Error('ログインが必要です');
   const {data:{user}}=await supabase.auth.getUser();log.textContent+='ログイン中: '+(user?.email||'不明')+'\n';
+  const receipt='STAGING-'+crypto.randomUUID();log.textContent+='共通受付番号: '+receipt+'\n';
   const img=await imageBlob();if(!img)throw Error('ダミー画像生成失敗');
   for(const [kind,blob] of [['license_front',img],['license_back',img],['resident_pdf',pdfBlob()]]){
-   const r=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-secure-intake-staging-test',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':blob.type,'x-document-type':kind},body:blob});
+   const r=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-secure-intake-staging-test',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':blob.type,'x-document-type':kind,'x-test-receipt':receipt},body:blob});
    const result=await r.json();log.textContent+=kind+': HTTP '+r.status+' '+JSON.stringify(result)+'\n';
-   if(!r.ok||result.verified!==true)throw Error(kind+' の検証失敗');
+   if(!r.ok||result.verified!==true||result.receipt_id!==receipt)throw Error(kind+' の検証失敗');
   }
   log.textContent+='3書類すべて保存・再取得・ハッシュ一致 OK\n';
  }catch(e){log.textContent+='停止: '+e.message+'\n';}finally{run.disabled=false;}
