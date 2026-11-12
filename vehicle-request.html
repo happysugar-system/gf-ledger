@@ -648,12 +648,69 @@
 <canvas id="captureCanvas" style="display:none"></canvas>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script>
   const LIFF_ID = '2012019621-Gu0mOfuK';
   // 別GASプロジェクトの「認証テスト専用」URL。/exec を貼るまでテストボタンは出しません。
   const LINE_VERIFY_TEST_URL = 'https://script.google.com/macros/s/AKfycbztpbpy0mCDl0Ev8nVTnEz4fFK6gp5qlJyt6dQGcTiZpohozJT-Wz5yT81RzVZgAN1EPA/exec';
   let liffReady = false;
+
+  // LINE本人確認はLIFF既存の車両依頼画面経由で実施。
+  // URLパラメータだけで個人情報を開示せず、LINE ID tokenをサーバーへ送り検証する。
+  const GF_MYPAGE_LINK_MODE = (() => {
+    const p = new URLSearchParams(location.search);
+    const until = Number(sessionStorage.getItem('gf_mypage_link_until') || 0);
+    if(p.get('gf_mypage_link') === '1') {
+      sessionStorage.setItem('gf_mypage_link_until', String(Date.now()+5*60*1000));
+      return true;
+    }
+    return until > Date.now();
+  })();
+  function GF_MYPAGE_link_status(msg) {
+    const title=document.getElementById('entryGateTitle');
+    const area=document.getElementById('entryGateMessage');
+    if(title)title.textContent='LINEで本人確認';
+    if(area)area.textContent=msg;
+  }
+  async function GF_MYPAGE_link_from_existing_liff() {
+    if(!liff.isLoggedIn()){
+      GF_MYPAGE_link_status('LINEログインを確認しています…');
+      liff.login();
+      return;
+    }
+    GF_MYPAGE_link_status('LINEとマイページのログイン情報を照合しています…');
+    const idToken=liff.getIDToken();
+    if(!idToken){GF_MYPAGE_link_status('LINE認証情報を取得できません。公式LINEから開き直してください。');return;}
+    if(!window.supabase){GF_MYPAGE_link_status('通信環境を確認して、もう一度お試しください。');return;}
+    const sb=window.supabase.createClient(
+      'https://tgxrnrqxafytyqfwwsag.supabase.co',
+      'sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW',
+      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
+    );
+    const {data:{session},error}=await sb.auth.getSession();
+    if(error||!session?.access_token){
+      GF_MYPAGE_link_status('先に同じブラウザでドライバーマイページのメール認証を済ませてから、もう一度LINE確認を開いてください。');
+      return;
+    }
+    const resp=await fetch(
+      'https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-line-mypage-link',
+      {method:'POST',headers:{
+        Authorization:'Bearer '+session.access_token,
+        apikey:'sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW',
+        'Content-Type':'application/json'
+      },body:JSON.stringify({line_id_token:idToken}),cache:'no-store'}
+    );
+    const payload=await resp.json().catch(()=>({}));
+    if(!resp.ok||payload.linked!==true){
+      GF_MYPAGE_link_status('本人確認を完了できませんでした。車両依頼時と同じLINEアカウントを使っているか確認してください。');
+      return;
+    }
+    sessionStorage.removeItem('gf_mypage_link_until');
+    GF_MYPAGE_link_status('本人確認が完了しました。マイページに移動します…');
+    location.replace('https://happysugar-system.github.io/gf-mypage-demo/mypage-prod-test.html');
+  }
+
 
   function setLiffStatus(message) {
     const el = document.getElementById('liffStatus');
@@ -668,6 +725,11 @@
     try {
       await liff.init({ liffId: LIFF_ID });
       liffReady = true;
+      if (GF_MYPAGE_LINK_MODE) {
+        try { await GF_MYPAGE_link_from_existing_liff(); }
+        catch(_e) { GF_MYPAGE_link_status('LINE連携を確認できませんでした。時間をおいてお試しください。'); }
+        return;
+      }
       if (liff.isLoggedIn()) {
         if (LINE_VERIFY_TEST_URL.startsWith('https://script.google.com/macros/s/')) {
           document.getElementById('serverVerifyButton').style.display = 'block';
@@ -1220,6 +1282,10 @@
       '通信環境をご確認のうえ、公式LINEから「車両依頼」を開き直してください。';
   }
   function GFVehicleEntryCheckOnOpen() {
+    if(GF_MYPAGE_LINK_MODE){
+      GF_MYPAGE_link_status('LINEとの本人確認を準備しています…');
+      return;
+    }
     const entry = new URLSearchParams(location.search).get('gf_entry') || '';
     if (!/^[a-f0-9]{64}$/i.test(entry)) { GFVehicleEntryCheck({valid:false}); return; }
     const script = document.createElement('script');
