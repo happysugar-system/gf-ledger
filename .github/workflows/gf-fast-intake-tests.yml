@@ -1,0 +1,29 @@
+name: GF fast intake auth tests
+on:
+  push:
+    branches: [feature/vehicle-intake-fast-staging]
+    paths:
+      - "supabase/functions/_shared/gf-fast-gas-auth.ts"
+      - "supabase/tests/gf-fast-gas-auth_test.ts"
+      - ".github/workflows/gf-fast-intake-tests.yml"
+  pull_request:
+    paths:
+      - "supabase/functions/_shared/gf-fast-gas-auth.ts"
+      - "supabase/tests/gf-fast-gas-auth_test.ts"
+      - ".github/workflows/gf-fast-intake-tests.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check HMAC implementation and tests
+        run: deno check supabase/tests/gf-fast-gas-auth_test.ts
+      - name: Verify signature, tampering, expiry and request hashing
+        run: deno test supabase/tests/gf-fast-gas-auth_test.ts
