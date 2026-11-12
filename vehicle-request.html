@@ -786,6 +786,22 @@
 
   // PDFの文字・画像の解像度を変更せず、内部構造のみ再保存して容量削減を試みる。
   // 4MB以下は一切加工しない。削減できなければ原本の品質を優先して送信を中止する。
+  // PDFは選択直後にバックグラウンドで準備。最終送信時の待機を短縮する。
+  let gfResidentPrepared = null;
+  let gfResidentPreparePromise = null;
+  function GF_fastPrepareResident(file) {
+    if (!file) { gfResidentPrepared=null; gfResidentPreparePromise=null; return; }
+    if (gfResidentPrepared && gfResidentPrepared.file===file) return;
+    const promise=GF146_prepareResidentPdf(file,{set textContent(_value){}});
+    gfResidentPreparePromise=promise;
+    gfResidentPrepared={file,promise};
+    promise.catch(()=>{}); // 送信時に正しいエラーを表示
+  }
+  async function GF_fastResidentData(file,btn) {
+    if (gfResidentPrepared && gfResidentPrepared.file===file) return await gfResidentPrepared.promise;
+    return await GF146_prepareResidentPdf(file,btn);
+  }
+  document.getElementById('residentFile').addEventListener('change',function(){GF_fastPrepareResident(this.files[0]);});
   async function GF146_prepareResidentPdf(file,btn) {
     const limit=4000000;
     let chosen=file;
@@ -825,7 +841,7 @@
     if(!confirm('146テスト：撮影画像と住民票を指定テストDriveへ保存します。実物ではなくダミー書類で実行してください。'))return;
     const btn=document.querySelector('#docs146Panel button');btn.disabled=true;btn.textContent='書類を準備しています…';
     try {
-      const resident=residentMethod==='upload'?await GF146_prepareResidentPdf(file,btn):'';
+      const resident=residentMethod==='upload'?await GF_fastResidentData(file,btn):'';
       GF_submitProgress('準備した情報をGOLD FIRSTの受付へ送信しています…');
       const fields={demo_action:'save_146_docs_v1',id_token:token,receipt,front:licenseFrontData,back:licenseBackData,residentMethod,resident};
       if(fields.front.length>2800000||fields.back.length>2800000){alert('免許証画像が大きすぎます。撮り直してください（各2MB以内）');return;}
@@ -1311,7 +1327,7 @@
     try {
       const file=document.getElementById('residentFile').files[0];
       if(residentMethod==='upload' && !file) throw new Error('住民票のPDFを選択してください。');
-      const resident=residentMethod==='upload'?await GF146_prepareResidentPdf(file,btn):'';
+      const resident=residentMethod==='upload'?await GF_fastResidentData(file,btn):'';
       const keys=['name','kana','phone','referrer','company','area','email','guarantorName','guarantorPhone','guarantorEmail'];
       const fields={action:'gf_vehicle_submit_test',gf_entry:entry,front:licenseFrontData,back:licenseBackData,residentMethod,resident};
       keys.forEach(k=>fields[k]=document.getElementById(k).value.trim());
