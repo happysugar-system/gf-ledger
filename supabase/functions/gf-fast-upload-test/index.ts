@@ -70,13 +70,14 @@ Deno.serve(async req=>{
    if(!error)return json(201,{session_id:data.id,upload_token:token,expires_in_seconds:600});
    if(error.code!=="23505")return json(503,{error:"issue_failed"});
    const {data:existing,error:lookupError}=await db.from("gf_fast_upload_sessions_test")
-     .select("id,gas_receipt,resident_method").eq("request_key_hash",hash).maybeSingle();
+     .select("id,nonce,gas_receipt,resident_method").eq("request_key_hash",hash).maybeSingle();
    if(lookupError||!existing||existing.gas_receipt!==b.receipt||existing.resident_method!==b.residentMethod)
      return json(409,{error:"session_identity_conflict"});
    const {data:renewed,error:renewError}=await db.from("gf_fast_upload_sessions_test")
      .update({nonce:b.nonce,token_hash:tokenHash,expires_at:new Date(Date.now()+10*60*1000).toISOString()})
-     .eq("id",existing.id).select("id").single();
-   if(renewError||!renewed)return json(503,{error:"resume_failed"});
+     .eq("id",existing.id).eq("nonce",existing.nonce).select("id").maybeSingle();
+   if(renewError)return json(503,{error:"resume_failed"});
+   if(!renewed)return json(409,{error:"concurrent_resume_retry"});
    return json(200,{session_id:renewed.id,upload_token:token,expires_in_seconds:600,resumed:true});
  }
  if(action==="upload"){
