@@ -4,11 +4,12 @@ const secret="unit-test-secret-should-be-at-least-forty-eight-characters-long";
 const lineUserId="U"+"a".repeat(32);
 const requestId="b".repeat(64);
 const receipt="TEST145-20261113002000-abcdef12";
+const residentMethod="upload";
 async function signed(timestamp:number,nonce="123e4567-e89b-42d3-a456-426614174000"){
- const msg=[timestamp,nonce,requestId,receipt,lineUserId].join("\n");
+ const msg=[timestamp,nonce,requestId,receipt,lineUserId,residentMethod].join("\n");
  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
  const signature=Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(msg))),b=>b.toString(16).padStart(2,"0")).join("");
- return {timestamp,nonce,requestId,receipt,lineUserId,signature};
+ return {timestamp,nonce,requestId,receipt,lineUserId,residentMethod,signature};
 }
 const assert=(value:boolean,msg:string)=>{if(!value)throw Error(msg)};
 Deno.test("valid GAS signature accepted",async()=>{
@@ -31,4 +32,10 @@ Deno.test("short secret rejected",async()=>{
 Deno.test("request hash deterministic and hides raw request ID",async()=>{
  const a=await requestKeyHash(requestId);
  assert(a===await requestKeyHash(requestId)&&a!==requestId&&/^[0-9a-f]{64}$/.test(a),"bad request hash");
+});
+
+Deno.test("resident method tampering rejected",async()=>{
+ const t=1_800_000_000;
+ const p=await signed(t);
+ assert(!await verifyGasEnvelope({...p,residentMethod:"mail"},secret,t),"resident method tampering accepted");
 });
