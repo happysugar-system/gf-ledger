@@ -1,0 +1,3288 @@
+<!DOCTYPE html><html><head><base target="_top"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+.homeHead{margin-bottom:28px}.homeTitle{font-size:26px;font-weight:900;margin:0 0 8px}.homeSub{color:#64748b;font-size:15px;line-height:1.6}.homeMenu{display:grid;gap:14px}.homeBtn{width:100%;text-align:left;border:1px solid #cbd5e1;background:#fff;border-radius:18px;padding:22px 20px;font-size:19px;font-weight:800;color:#1683e6;box-shadow:0 2px 8px rgba(0,0,0,.03)}.backBtn{border:0;background:transparent;color:#256f3a;font-weight:800;font-size:15px;padding:0 0 14px}.sectionTitle{font-size:25px;font-weight:900;margin:0 0 18px}.appSection{display:none}.appSection.on{display:block}
+*{box-sizing:border-box}body{margin:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:#1f2937}.wrap{max-width:650px;margin:auto;padding:22px 14px 50px}.title{font-size:25px;font-weight:800;margin-bottom:18px}.menu{display:flex;gap:7px;margin-bottom:16px}.tab{flex:1;border:1px solid #cbd5e1;background:#fff;color:#334155;padding:11px 5px;border-radius:12px;font-size:13px;font-weight:700}.tab.on{background:#256f3a;color:#fff;border-color:#256f3a}.card{background:#fff;border-radius:18px;padding:20px;box-shadow:0 3px 14px rgba(0,0,0,.06)}.page{display:none}.page.on{display:block}h2{margin:0 0 18px;font-size:21px}label{display:block;font-weight:700;margin:17px 0 8px}.search{position:relative}.search input{width:100%;height:55px;border:1px solid #cbd5e1;border-radius:13px;padding:0 52px 0 14px;font-size:17px}.arrow{position:absolute;right:0;top:0;width:50px;height:55px;display:flex;align-items:center;justify-content:center}.list{display:none;position:absolute;z-index:100;left:0;right:0;top:59px;max-height:290px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:13px;box-shadow:0 8px 24px rgba(0,0,0,.14)}.list.show{display:block}.row{padding:13px 14px;border-bottom:1px solid #eef2f7}.main{font-size:17px;font-weight:800}.sub,.note{font-size:13px;color:#64748b;margin-top:4px}.none{padding:15px;color:#64748b}input[type=file]{width:100%;padding:12px;border:1px dashed #b8c2cf;border-radius:12px;background:#fafbfc}select,input[type=date]{width:100%;height:55px;border:1px solid #cbd5e1;border-radius:13px;padding:0 14px;font-size:17px;background:#fff;color:#1f2937}.submit,.undo{width:100%;margin-top:22px;border:0;border-radius:13px;padding:16px;font-size:16px;font-weight:800}.submit{background:#256f3a;color:#fff}.undo{background:#fff;color:#b42318;border:1px solid #f0b4ae;margin-top:10px}.submit:disabled,.undo:disabled{opacity:.45}.result{display:none;margin-top:16px;padding:14px;border-radius:11px;line-height:1.65}.ok{display:block;background:#eef8f0}.err{display:block;background:#fff0f0}.wait{display:block;background:#f2f4f7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:430px){.grid{grid-template-columns:1fr}.menu{gap:4px}.tab{font-size:12px;padding:10px 3px}}
+.vehicleField input,.vehicleField select,.vehicleField textarea{width:100%;border:1px solid #cbd5e1;border-radius:13px;padding:0 14px;font-size:17px;background:#fff;color:#1f2937}
+.vehicleField input,.vehicleField select{height:55px}
+.vehicleField textarea{min-height:100px;padding-top:13px;resize:vertical}
+.requiredMark{color:#b42318;font-size:13px;margin-left:5px}
+.scheduleMonthBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+#scheduleMonthTitle{
+  font-size:18px;
+  font-weight:900;
+}
+.scheduleFilter{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:18px;
+}
+.scheduleFilterBtn{
+  border:1px solid #cbd5e1;
+  background:#fff;
+  border-radius:999px;
+  padding:9px 14px;
+  font-weight:800;
+  color:#475569;
+}
+.scheduleFilterBtn.on{
+  background:#1683e6;
+  color:#fff;
+  border-color:#1683e6;
+}
+.scheduleDay{
+  margin:18px 0;
+}
+.scheduleDayTitle{
+  font-size:17px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+.scheduleItem{
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  padding:13px 14px;
+  margin-bottom:8px;
+}
+.scheduleType{
+  font-weight:900;
+  margin-bottom:4px;
+}
+.scheduleSub{
+  font-size:14px;
+  color:#64748b;
+  line-height:1.5;
+}
+.scheduleEmpty{
+  text-align:center;
+  padding:35px 10px;
+  color:#64748b;
+}
+
+/* 選択文字を1タップで消す。▼と44pxずつの押しやすい領域を確保。 */
+.search input{padding-right:100px}
+.searchClear{position:absolute;right:50px;top:0;width:44px;height:55px;margin:0;padding:0;border:0;background:transparent;color:#64748b;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.searchClear:focus-visible{outline:2px solid #256f3a;border-radius:10px}
+/* 車両予定：画面幅いっぱいの月カレンダー */
+body.scheduleOpen .wrap{max-width:none;padding:12px 8px 24px}
+#scheduleArea{max-width:1100px;margin:auto}#scheduleArea .sectionTitle{font-size:22px;margin:0 0 10px}#scheduleArea .backBtn{padding-bottom:10px}
+.scheduleToolbar{background:#fff;border-radius:16px;padding:12px;margin-bottom:8px}.scheduleModes{display:flex;gap:6px;margin-bottom:10px}.scheduleMode{flex:1;border:1px solid #dbe4df;background:#f7faf8;color:#496154;border-radius:10px;padding:11px;font-size:15px;font-weight:800}.scheduleMode.on{background:#256f3a;border-color:#256f3a;color:white}.scheduleNav{border:0;background:#f1f5f3;color:#256f3a;border-radius:10px;min-width:44px;height:42px;font-size:22px}.scheduleActions{display:flex;gap:6px}.scheduleSmallBtn{border:1px solid #dce5df;background:white;border-radius:8px;padding:7px 10px;color:#476454;font-size:13px}
+#scheduleLoading{font-size:13px;padding:4px 8px;color:#64748b;min-height:24px}#scheduleMonthTitle{font-size:18px;white-space:nowrap}
+#scheduleCalendar{flex-direction:column;background:white;border:1px solid #dce5df;border-radius:14px;overflow:hidden;height:clamp(340px,58dvh,620px)}.scheduleWeekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:13px;font-weight:700;color:#718078;padding:9px 0;background:#f8faf9}.scheduleWeekdays span:first-child{color:#c24c4c}.scheduleWeekdays span:last-child{color:#467bb9}#scheduleGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:1;min-height:0}.scheduleCell,.scheduleBlank{border:0;border-top:1px solid #e5ebe7;border-right:1px solid #e5ebe7;background:#fff;min-width:0;overflow:hidden}.scheduleCell{display:flex;flex-direction:column;align-items:stretch;padding:5px 2px;text-align:left;color:#33463a;cursor:pointer}.scheduleBlank{background:#f7faf8}.scheduleCell.selected{background:#eaf5ee;box-shadow:inset 0 0 0 2px #287c49}.scheduleDateNum{align-self:center;font-size:14px;font-weight:700;line-height:25px;width:25px;text-align:center;border-radius:50%}.sunday .scheduleDateNum{color:#c24c4c}.saturday .scheduleDateNum{color:#467bb9}.today .scheduleDateNum{background:#287c49;color:#fff}.scheduleCellEvents{display:flex;flex-direction:column;gap:3px;margin-top:3px;min-width:0}.scheduleChip{display:block;border-radius:3px;padding:3px 2px;background:#dfede3;color:#225c38;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}.scheduleChip.expiry{background:#fff0dc;color:#925b10}.scheduleMore{font-size:10px;color:#64748b;padding-left:2px}.scheduleCount{font-size:12px;font-weight:500;color:#718078}#scheduleDayDetail{margin-top:10px;background:#fff;border-radius:14px;padding:14px;max-height:34dvh;overflow-y:auto}.scheduleDayEmpty{font-size:14px;color:#64748b;padding:12px 0}.scheduleItem{border-left:4px solid #549e6a}.scheduleDayTitle{font-size:17px}#scheduleArea button:focus-visible{outline:3px solid #1683e6;outline-offset:-3px}
+@media(min-width:700px){#scheduleCalendar{height:62dvh}.scheduleChip{font-size:12px;padding:4px}.scheduleDateNum{font-size:16px}#scheduleDayDetail{max-height:26dvh}}
+
+/* 月別は縦の空き領域をすべてカレンダーに使う。詳細は手前のパネル。 */
+body.scheduleMonthly .wrap{height:100vh;height:100dvh;box-sizing:border-box;padding:8px 0 0}
+body.scheduleMonthly #scheduleArea.on{display:flex;flex-direction:column;height:100%;min-height:0}
+body.scheduleMonthly #scheduleArea>.backBtn,body.scheduleMonthly #scheduleArea>.sectionTitle,body.scheduleMonthly .scheduleToolbar,body.scheduleMonthly #scheduleLoading{flex-shrink:0}
+body.scheduleMonthly #scheduleCalendar{height:auto;flex:1;min-height:240px;border-radius:0;border-left:0;border-right:0}
+body.scheduleMonthly .scheduleToolbar{border-radius:0;padding:8px}
+body.scheduleMonthly #scheduleArea>.sectionTitle,body.scheduleMonthly #scheduleArea>.backBtn{margin-left:8px}
+body.scheduleMonthly #scheduleArea>.backBtn{align-self:flex-start}
+#scheduleDetailOverlay{position:fixed;inset:0;z-index:10000;background:rgba(20,30,40,.50);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:12px 12px calc(12px + env(safe-area-inset-bottom));box-sizing:border-box}
+#scheduleDetailOverlay[hidden]{display:none}
+#scheduleDetailPanel{width:100%;max-width:900px;max-height:75vh;max-height:75dvh;background:#fff;border-radius:24px;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;box-shadow:0 12px 50px #0003}
+.scheduleDetailHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf1f5;padding-bottom:12px}
+#scheduleDetailTitle{font-size:22px;font-weight:800;margin:0}
+#scheduleDetailClose{flex-shrink:0;width:48px;height:48px;border:0;border-radius:50%;background:#f1f5f9;font-size:30px;color:#334155}
+#scheduleDayDetail{display:block;margin:0;padding:12px 0 0;max-height:none;overflow-y:auto;min-height:0}
+body.scheduleDetailOpen{overflow:hidden}
+
+</style></head><body><div class="wrap">
+<div id="home" class="appSection on">
+  <div class="homeHead">
+    <div class="homeTitle">GOLD FIRST 管理画面</div>
+    <div class="homeSub">やることを選んで、見たまま入力してください。</div>
+  </div>
+  <div class="homeMenu">
+    <button class="homeBtn" onclick="画面を開く('driverNewArea')">👤 ドライバーを登録する</button>
+    <button class="homeBtn" onclick="画面を開く('vehicleNewArea')">🚙 車両台帳に入力する</button>
+    <button class="homeBtn" onclick="画面を開く('dateArea')">📅 日付を登録する</button>
+    <button class="homeBtn" onclick="画面を開く('actualArea')">🚗 実績を登録する</button>
+    <button class="homeBtn" onclick="予定一覧画面を開く()">
+  🗓️ 予定を見る
+</button>
+    <button class="homeBtn" onclick="画面を開く('savedDocumentsArea')">📂 書類・写真を見る</button>
+    <button class="homeBtn" onclick="画面を開く('mediaArea')">📷 写真・書類</button>
+  </div>
+</div>
+<div id="scheduleArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">🗓️ 車両の予定を見る</div>
+  <div class="scheduleToolbar">
+    <div class="scheduleModes" role="group" aria-label="予定の表示期間">
+      <button class="scheduleMode on" data-schedule-mode="今日" onclick="予定表示切替('今日')">今日</button>
+      <button class="scheduleMode" data-schedule-mode="今週" onclick="予定表示切替('今週')">今週</button>
+      <button class="scheduleMode" data-schedule-mode="月別" onclick="予定表示切替('月別')">月別</button>
+    </div>
+    <div class="scheduleMonthBar">
+      <button class="scheduleNav" onclick="予定月移動(-1)" aria-label="前の期間">‹</button>
+      <strong id="scheduleMonthTitle"></strong>
+      <button class="scheduleNav" onclick="予定月移動(1)" aria-label="次の期間">›</button>
+    </div>
+    <div class="scheduleActions"><button class="scheduleSmallBtn" onclick="予定今日へ()">今日へ</button><button class="scheduleSmallBtn" onclick="予定一覧を読み込む()">↻ 更新</button></div>
+  </div>
+  <div id="scheduleLoading" role="status" aria-live="polite"></div>
+  <div id="scheduleCalendar" style="display:none">
+    <div class="scheduleWeekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+    <div id="scheduleGrid"></div>
+  </div>
+  <div id="scheduleDetailOverlay" hidden onclick="if(event.target===this)予定詳細を閉じる()">
+    <section id="scheduleDetailPanel" role="dialog" aria-modal="true" aria-labelledby="scheduleDetailTitle">
+      <div class="scheduleDetailHeader"><h2 id="scheduleDetailTitle"></h2><button id="scheduleDetailClose" type="button" aria-label="予定詳細を閉じる" onclick="予定詳細を閉じる()">×</button></div>
+      <div id="scheduleDayDetail"></div>
+    </section>
+  </div>
+  <div id="scheduleList"></div>
+</div>
+<div id="driverNewArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">👤 ドライバー管理</div>
+  <div id="driverModeMenu" class="card">
+    <h2>何をしますか？</h2>
+    <button class="homeBtn" type="button" onclick="新規ドライバー画面を開く()">➕ 新しいドライバーを登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="ドライバー編集画面を開く()">✏️ 登録済みドライバーを編集</button>
+  </div>
+  <div id="driverCreateArea" class="card" style="display:none">
+    <button class="backBtn" type="button" onclick="ドライバー管理メニューへ戻る()">← ドライバー管理へ戻る</button>
+    <h2>➕ 新しいドライバーを登録</h2>
+    <div class="note">免許証がまだ無くても登録できます。登録方法を選んでください。</div>
+    <button class="homeBtn" type="button" style="margin-top:16px" onclick="新規登録方法を選ぶ('license')">🪪 免許証から登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="新規登録方法を選ぶ('manual')">⌨️ 手入力で登録</button>
+    <div id="driverLicenseMode" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2>🪪 免許証から登録</h2>
+      <div class="note">表・裏2枚から氏名を読み取り、DriverID・個人フォルダ・免許証PDFまで登録します。</div>
+      <label>免許証（表・裏）</label>
+      <input id="newDriverLicenseFiles" type="file" accept="image/*" multiple>
+      <div id="newDriverLicenseCount" class="note">2枚まとめて選択してください</div>
+      <p class="note">読み取りだけでは登録されません。氏名と追加情報を確認してから登録してください。</p>
+      <button id="newDriverReadBtn" class="submit" type="button" onclick="新規ドライバー免許証から氏名を読む()">免許証から氏名を読み取る</button>
+      <div id="newDriverReadResult" class="result"></div>
+      <button id="driverLicenseNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次のドライバーを登録する('license')">➕ 次のドライバーを登録する</button>
+      <button id="continueDriverInfoBtn" class="submit" type="button" style="display:none" onclick="免許証登録後の追加情報を開く()">続けて追加情報を登録する</button>
+      <div id="licenseAfterInfoArea" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid #e2e8f0">
+        <h2>追加情報</h2>
+        <div id="driverNewForm"></div>
+        <div id="driverNewCarSearch"></div>
+        <div class="note">車両を割り当てない場合は未選択のままでOKです。</div>
+        <button id="driverNewBtn" class="submit" type="button" onclick="新規ドライバーを登録する()">ドライバーと免許証を登録</button>
+        <div id="driverNewResult" class="result"></div>
+      <button id="driverInfoNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次のドライバーを登録する('license')">➕ 次のドライバーを登録する</button>
+        <button id="driverToVehicleBtn" class="submit" style="display:none" onclick="続けてこの人の車両を登録する()">🚙 続けてこの人の車両を登録する</button>
+      </div>
+    </div>
+    <div id="driverManualMode" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2>⌨️ 手入力で登録</h2>
+      <div class="note">氏名だけ必須です。免許証はあとから「登録済みドライバーを編集」から追加できます。</div>
+      <div id="driverManualForm"></div>
+      <div id="driverManualCarSearch"></div>
+      <div class="note">車両を割り当てない場合は未選択のままでOKです。</div>
+      <button id="driverManualSaveBtn" class="submit" type="button" onclick="手入力で新規ドライバーを登録する()">手入力で登録</button>
+      <div id="driverManualResult" class="result"></div>
+      <button id="driverManualNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次のドライバーを登録する('manual')">➕ 次のドライバーを登録する</button>
+    </div>
+  </div>
+  <div id="driverEditArea" class="card" style="display:none">
+    <button class="backBtn" type="button" onclick="ドライバー管理メニューへ戻る()">← ドライバー管理へ戻る</button>
+    <h2>✏️ 登録済みドライバーを編集</h2>
+    <div class="note">氏名・フリガナ・電話番号・DriverIDで検索できます。</div>
+    <label>ドライバーを選択</label>
+    <div class="search">
+      <input id="driverEditQ" type="text" placeholder="氏名・電話番号など" autocomplete="off">
+      <button class="searchClear" type="button" aria-label="ドライバーの選択を解除" onpointerdown="event.preventDefault()" onclick="選択欄を空にする('driverEditQ','driverEditList')">×</button>
+      <div class="arrow" onclick="編集ドライバー候補を描画する()">▼</div>
+      <div id="driverEditList" class="list"></div>
+    </div>
+    <div id="driverEditSelected" class="note"></div>
+    <div id="driverEditResult" class="result" role="status" aria-live="polite"></div>
+    <button id="driverEditRetry" class="backBtn" style="display:none" onclick="編集ドライバーを読み込む(編集中DriverID)">もう一度読み込む</button>
+    <div id="driverEditBody" style="display:none">
+      <div id="driverEditForm"></div>
+      <button id="driverEditSaveBtn" class="submit" type="button" onclick="既存ドライバー情報を保存する()">変更を保存</button>
+      <div style="margin-top:24px;padding-top:18px;border-top:1px solid #e2e8f0">
+        <h2>🪪 免許証を登録・更新</h2>
+        <div class="note">免許証が後から届いた場合も、更新した場合もここから同じDriverIDへ登録できます。</div>
+        <input id="driverEditLicenseFiles" type="file" accept="image/*" multiple>
+        <div id="driverEditLicenseCount" class="note">表・裏2枚をまとめて選択してください</div>
+        <button id="driverEditLicenseBtn" class="submit" type="button" onclick="既存ドライバー免許証を登録する()">免許証を登録・更新</button>
+        <div id="driverEditLicenseResult" class="result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="vehicleNewArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">🚙 車両台帳に入力する</div>
+  <div class="card">
+    <button class="homeBtn" type="button" onclick="新規車両メニューを開く()">➕ 新しい車両を登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="既存車両編集を開く()">✏️ 登録済み車両を編集</button>
+  </div>
+  <div id="vehicleNewMenuArea" class="card" style="display:none;margin-top:16px">
+    <h2>➕ 新しい車両を登録</h2>
+    <div class="note">登録方法を選んでください。車検証から読み取った内容も、登録前に修正できます。</div>
+    <button class="homeBtn" type="button" style="margin-top:16px" onclick="新規車両登録方法を選ぶ('ai')">📄 車両書類から登録</button>
+    <button class="homeBtn" type="button" style="margin-top:12px" onclick="新規車両登録方法を選ぶ('manual')">⌨️ 手入力で登録</button>
+    <div id="vehicleAiArea" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2>📄 車両書類から登録</h2>
+      <div class="note">車両書類3枚を選択してください。</div>
+      <label>車両書類 3枚</label>
+      <input id="vehicleAiFiles" type="file" accept="image/*" multiple>
+      <div id="vehicleAiCount" class="note"></div>
+      <button id="vehicleAiReadBtn" class="submit" type="button" onclick="新規車両書類をAIで読む()">記録事項から読み取る</button>
+      <div id="vehicleAiResult" class="result"></div>
+    </div>
+    <div id="vehicleFormArea" style="display:none;margin-top:22px;padding-top:18px;border-top:1px solid #e2e8f0">
+      <h2 id="vehicleFormTitle">確認・修正</h2>
+      <div class="note">内容を確認して、違うところがあればここで直してから登録してください。</div>
+      <div id="vehicleNewForm"></div>
+      <button id="vehicleNewBtn" class="submit" type="button" onclick="新規車両を登録する()">車両台帳へ登録</button>
+
+      <div id="vehicleNewResult" class="result"></div>
+      <button id="vehicleNextBtn" class="submit" type="button" style="display:none;margin-top:12px" onclick="次の車両を登録する()">➕ 次の車両を登録する</button>
+    </div>
+  </div>
+  <div id="vehicleEditArea" class="card" style="display:none;margin-top:16px">
+    <h2>✏️ 登録済み車両を編集</h2>
+    <div class="note">車両台帳の最新内容を読み込みます。車番・管轄・現在使用者で検索できます。</div>
+    <div id="vehicleEditSearch" style="margin-top:14px"></div>
+    <div id="vehicleEditResult" class="result" role="status" aria-live="polite"></div>
+    <button id="vehicleEditRetry" class="backBtn" style="display:none" onclick="既存車両を読み込む(selVehicleEdit)">もう一度読み込む</button>
+    <div id="vehicleEditFormArea" style="display:none;margin-top:18px">
+      <div id="vehicleEditForm"></div>
+      <div class="vehicleField">
+        <label>現在使用者（ドライバー） <span class="note">任意</span></label>
+        <div id="vehicleEditDriverSearch"></div>
+        <div class="note">変更しない場合はそのまま。空欄にすると現在使用者を解除します。</div>
+      </div>
+      <button id="vehicleEditSaveBtn" class="submit" type="button" onclick="既存車両を保存する()">変更を保存</button>
+      <div id="vehicleEditFixedNotice" style="display:none;margin-top:14px;padding:14px;border-radius:12px;background:#fff1f0;color:#b42318;font-size:14px;font-weight:800;line-height:1.7"></div>
+      <div id="vehicleEditNotice" style="display:none;margin-top:14px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;line-height:1.7"></div>
+    </div>
+  </div>
+</div>
+<div id="mediaArea" class="appSection">
+<button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+<div class="sectionTitle">📷 写真・書類</div>
+<div class="menu"><button class="tab on" id="tPhoto" onclick="切替('photo')">📷 車両写真</button><button class="tab" id="tLic" onclick="切替('lic')">🪪 免許証</button><button class="tab" id="tDocs" onclick="切替('docs')">📄 車両書類</button></div>
+<div class="card">
+<div id="photo" class="page on">
+  <h2>📷 車両状態写真</h2>
+  <div id="carSearch1"></div>
+  <label>撮影日</label>
+  <input id="photoDate" type="date">
+  <div class="note">
+    この日付で車両状態画像フォルダを作成します
+  </div>
+  <label>写真</label>
+  <input id="photos" type="file" accept="image/*" multiple>
+  <div id="photoCount" class="note">
+    最大40枚までまとめて選択できます
+  </div>
+  <button
+    id="photoBtn"
+    class="submit"
+    onclick="写真登録()"
+  >
+    まとめて登録
+  </button>
+  <div id="photoResult" class="result"></div>
+  <button
+    id="photoUndo"
+    class="undo"
+    style="display:none"
+    onclick="取消('photo')"
+  >
+    ↩️ 今の登録を取り消す
+  </button>
+</div>
+<div id="lic" class="page">
+  <h2>🪪 免許証</h2>
+  <div id="driverSearch"></div>
+  <label>免許証（表・裏）</label>
+<input id="licenseFiles" type="file" accept="image/*" multiple>
+<div id="licenseCount" class="note">表・裏2枚を選択してください</div>
+  <button id="licBtn" class="submit" onclick="免許登録()">2枚をまとめて登録</button>
+  <div id="licResult" class="result"></div>
+  <button id="licUndo" class="undo" style="display:none" onclick="取消('lic')">↩️ 今の登録を取り消す</button>
+</div>
+<div id="docs" class="page">
+  <h2>📄 車両書類</h2>
+  <div id="carSearch2"></div>
+  <label>車両書類（記録事項・車検証・自賠責）</label>
+  <input id="documentFiles" type="file" accept="image/*" multiple>
+  <div id="documentCount" class="note">3枚まとめて選択、または「写真を撮る」で1枚ずつ追加できます。</div>
+  <button type="button" class="backBtn" onclick="GF_車両書類選択をクリアする_80()">選択した写真をクリア</button>
+  <button id="docsAiBtn" class="submit" type="button" onclick="GF_車検更新AI確認_90()">車検満了日・使用者を確認</button>
+  <div id="docsAiPanel" style="display:none;margin-top:16px;padding:14px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc">
+    <h3>車検更新の確認</h3>
+    <label>車検満了日（確認・修正できます）</label><input type="date" id="docsAiExpiry">
+    <div id="docsAiOldExpiry" class="note"></div>
+    <label>車検証の使用者</label><div id="docsAiUser" class="note"></div>
+    <div id="docsAiCurrentUser" class="note"></div>
+    <label style="font-weight:normal"><input type="checkbox" id="docsAiChangeUser"> 台帳の現在使用者も変更する</label>
+    <div class="note">使用者が違っても、チェックしなければ現在使用者とDriverIDは変更しません。</div>
+    <button id="docsAiSaveBtn" class="submit" type="button" onclick="GF_車検更新を確定_90()">確認して3枚と車検情報を登録</button>
+  </div>
+  <div class="note" style="margin-top:12px">車検更新では上の確認から登録してください。通常の書類保存だけなら下のボタンを使えます。</div>
+  <button id="docsBtn" class="submit" onclick="書類登録()">書類3枚のみ登録（台帳情報は変更しない）</button>
+  <div class="note" style="margin-top:18px">登録時の書類を送り直す場合は、上で登録済み車両を選び、書類3枚を選択して下のボタンを押してください。</div>
+  <button id="docsRepairBtn" type="button" class="backBtn" onclick="GF_登録時の書類を送り直す_80()">登録時の書類3枚を送り直す</button>
+  <div id="docsResult" class="result"></div>
+  <button id="docsUndo" class="undo" style="display:none" onclick="取消('docs')">↩️ 今の登録を取り消す</button>
+</div>
+</div></div>
+</div>
+<div id="savedDocumentsArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">📂 書類・写真を見る</div>
+  <div class="card">
+    <h2>車両の書類・写真</h2>
+    <div class="note">車両を選ぶと、保存済みの書類や写真を開けます。</div>
+    <div id="savedVehicleSearch"></div><div id="savedLoanView" class="note" style="display:none;white-space:pre-line;background:#f3f8f4;padding:12px;border-radius:12px;margin-top:12px" aria-live="polite"></div>
+    <div id="savedVehicleCandidateStatus" class="note" role="status"></div>
+    <button class="backBtn" type="button" style="margin-top:10px" onclick="GF_閲覧候補を読み込む_80('車両')">車両候補を更新</button>
+    <button class="backBtn" type="button" style="margin-top:12px" onclick="GF_保存書類を再読込する_80('車両')">表示を更新</button>
+    <div id="savedVehicleResult" role="status" aria-live="polite" style="margin-top:16px">車両を選択してください。</div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h2>ドライバーから免許証を探す</h2>
+    <div id="savedDriverSearch"></div>
+    <div id="savedDriverCandidateStatus" class="note" role="status"></div>
+    <button class="backBtn" type="button" style="margin-top:10px" onclick="GF_閲覧候補を読み込む_80('ドライバー')">ドライバー候補を更新</button>
+    <button class="backBtn" type="button" style="margin-top:12px" onclick="GF_保存書類を再読込する_80('ドライバー')">表示を更新</button>
+    <div id="savedDriverResult" role="status" aria-live="polite" style="margin-top:16px">ドライバーを選択してください。</div>
+  </div>
+</div>
+<div id="actualArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">🚗 実績を登録する</div>
+  <!-- 実績画面：使用者選択なし・日付変更対応 20261006-1630 -->
+  <div class="card">
+    <h2>実際に行った日をワンタッチ登録</h2>
+    <div class="note">確認画面で実施日を変更できます。車両に登録された現在使用者で受付し、裏で反映します。</div>
+    <label>車両</label>
+    <div id="actualVehicleSearch"></div><button class="backBtn" type="button" style="margin-top:12px" onclick="GF_貸出情報を読む_80(selActualVehicle,'actualLoanView')">代車貸出情報を更新</button><div id="actualLoanView" class="note" style="display:none;white-space:pre-line;background:#f3f8f4;padding:12px;border-radius:12px;margin-top:12px" aria-live="polite"></div><div id="actualVehicleUndoBox" style="display:none;margin-top:12px"><button id="actualVehicleUndoButton" class="backBtn" type="button" style="width:100%;border:1px solid #bb4b4b;color:#a32e2e" onclick="GF_選択車両の実績を取り消す_80()">↩️ この車両の実績を取り消す</button><div id="actualVehicleUndoMessage" class="note" role="status" aria-live="polite" style="margin-top:8px"></div></div>
+    <div style="height:14px"></div>
+    <button class="submit" onclick="実績登録('貸出開始')">🚗 貸出開始</button>
+    <button class="submit" onclick="実績登録('返却完了')">↩️ 返却完了</button>
+    <button class="submit" onclick="実績登録('代車開始')">🚙 代車開始</button>
+    <button class="submit" onclick="実績登録('代車返却')">↩️ 代車返却</button>
+    <div id="actualResult" class="result" role="status" aria-live="polite"></div>
+    <dialog id="actualConfirm" style="border:0;border-radius:18px;padding:24px;width:90%;max-width:440px;max-height:85vh;max-height:85dvh;overflow-y:auto">
+      <h2 id="actualConfirmTitle"></h2>
+      <div id="actualConfirmCar" class="note"></div>
+      <label for="actualDate">実施日（変更できます）</label>
+      <input id="actualDate" type="date" onchange="実績確認文を更新する()">
+      <div id="actualMemoArea" style="display:none">
+        <label for="actualBorrower">代車貸出先（任意）</label><input id="actualBorrower" type="text" maxlength="100" placeholder="例：山田 太郎" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px"><label for="actualAreaInput">代車貸出エリア（任意）</label><input id="actualAreaInput" type="text" maxlength="100" placeholder="例：八王子" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px"><label for="actualMemo">代車貸出備考（任意）</label>
+        <textarea id="actualMemo" maxlength="1000" rows="3" placeholder="貸出先のドライバー名・エリアなど" style="width:100%;border:1px solid #cbd5e1;border-radius:13px;padding:12px;font:inherit;resize:vertical"></textarea>
+        <div class="note">例：山田 太郎／八王子エリア</div>
+      </div>
+      <div id="actualConfirmQuestion" style="margin-top:16px" aria-live="polite"></div>
+      <div id="actualConfirmStatus" class="result" role="status" aria-live="polite"></div>
+      <button id="actualConfirmSend" class="submit" type="button" onclick="実績をキューへ送信する()">この日付で登録する</button>
+      <button id="actualUndo" class="backBtn" type="button" style="display:none;margin-top:12px" onclick="GF_今の実績を取り消す_80()">今の登録を取り消す</button>
+      <button id="actualConfirmClose" class="backBtn" type="button" style="margin-top:16px" onclick="if(!実績送信中)GF_実績確認を閉じる_80()">キャンセル</button>
+    </dialog>
+  </div>
+</div>
+<div id="dateArea" class="appSection">
+  <button class="backBtn" onclick="ホームへ()">← 管理画面へ戻る</button>
+  <div class="sectionTitle">📅 日付を登録する</div>
+  <div class="card">
+    <h2>車両予定</h2>
+    <div id="carSearch3"></div><button class="backBtn" type="button" style="margin-top:12px" onclick="GF_貸出情報を読む_80(selCar3,'planLoanView')">代車貸出情報を更新</button><div id="planLoanView" class="note" style="display:none;white-space:pre-line;background:#f3f8f4;padding:12px;border-radius:12px;margin-top:12px" aria-live="polite"></div>
+    <label>予定種類</label>
+    <select id="planType" disabled onchange="GF_予定貸出入力を切り替える_80()">
+      <option value="">予定種類を読み込み中…</option>
+    </select>
+    <div id="planTypeNote" class="note">予定種類マスターから読み込みます</div>
+    <label>予定日</label>
+    <input id="planDate" type="date">
+    <div id="planLoanFields" style="display:none">
+      <label>代車貸出先（任意）</label><input id="planBorrower" type="text" maxlength="100" placeholder="例：山田 太郎" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px">
+      <label>代車貸出エリア（任意）</label><input id="planArea" type="text" maxlength="100" placeholder="例：八王子" style="width:100%;padding:12px;font-size:17px;border:1px solid #cbd5e1;border-radius:13px">
+      <label>代車貸出備考（任意）</label><textarea id="planMemo" rows="3" maxlength="1000" placeholder="貸出に関するメモ" style="width:100%;padding:12px;font:inherit;border:1px solid #cbd5e1;border-radius:13px"></textarea>
+    </div>
+    <button id="planBtn" class="submit" onclick="予定登録()">予定を登録</button>
+    <div id="planResult" class="result"></div>
+    <button id="planUndo" class="undo" style="display:none" onclick="予定取消()">↩️ この予定を取り消す</button>
+      <div style="height:18px"></div>
+      <h2 style="margin-top:8px">この車両の予定</h2>
+      <div id="activePlans" class="note">車両を選択すると予定を表示します</div>
+  </div>
+</div>
+<script>
+let cars=[],drivers=[],planTypes=[],selCar1='',selCar2='',selCar3='',selDriver='',selDriverNewCar='',selVehicleNewDriver='',selVehicleEdit='',selVehicleEditDriver='',undo={};
+let lastCreatedDriver=null;
+let GF_閲覧車両ID_80='',GF_閲覧DriverID_80='',GF_閲覧車両番号_80=0,GF_閲覧免許証番号_80=0;
+let GF_閲覧車両候補読込中_80=false,GF_閲覧ドライバー候補読込中_80=false;
+let ドライバー詳細読込中=false,ドライバー詳細読込番号=0;
+let selActualVehicle='',実績送信中=false,車両詳細読込中=false,車両詳細読込番号=0,実績確認データ=null,実績受付連番=0;
+// その場撮影用（iPhone等ではカメラ撮影は1回につき1枚のため、画面側で保持）
+let 免許証選択ファイル=[];
+let 新規ドライバー免許証選択ファイル=[];
+let 車両書類撮影ファイル=[];
+const $=id=>document.getElementById(id);
+document.addEventListener('DOMContentLoaded',()=>{
+  検索枠('carSearch1','carQ1','carList1','例：71-47');
+  検索枠('carSearch2','carQ2','carList2','例：71-47');
+  検索枠('carSearch3','carQ3','carList3','例：71-47');
+  検索枠('driverSearch','driverQ','driverList','氏名を入力');
+  検索枠('driverNewCarSearch','driverNewCarQ','driverNewCarList','例：71-47');
+  スマホ初期データを読み込む();
+});
+function スマホ初期データを読み込む(){
+  const select=$('planType');
+  const note=$('planTypeNote');
+  if(select){
+    select.disabled=true;
+    select.innerHTML='<option value="">予定種類を読み込み中…</option>';
+  }
+  google.script.run
+    .withSuccessHandler(data=>{
+      data=data||{};
+      cars=Array.isArray(data.cars)?data.cars:[];
+      drivers=Array.isArray(data.drivers)?data.drivers:[];
+      planTypes=Array.isArray(data.planTypes)?data.planTypes:[];
+      GF_写真書類候補を再表示する_80();
+      GF_閲覧候補の表示を更新する_80('車両');
+      GF_閲覧候補の表示を更新する_80('ドライバー');
+      if(select){
+        select.innerHTML='<option value="">選択してください</option>';
+        planTypes.forEach(x=>{
+          const option=document.createElement('option');
+          option.value=x.予定種類ID || x.予定種類名;
+          option.textContent=x.予定種類名;
+          select.appendChild(option);
+        });
+        select.disabled=false;
+      }
+      if(note){
+        note.textContent=planTypes.length
+          ? planTypes.length+'種類の予定を選択できます'
+          : '表示できる予定種類がありません';
+      }
+      const ym=String(data.scheduleYm||'');
+      if(ym){
+        const items=Array.isArray(data.schedule)?data.schedule:[];
+        予定月キャッシュ[ym]=items;
+        予定ブラウザキャッシュ保存(ym,items);
+      }
+    })
+    .withFailureHandler(e=>{
+      // 初期まとめ取得が失敗した場合は、従来方式へフォールバック
+      google.script.run
+        .withSuccessHandler(x=>cars=x||[])
+        .スマホ用車両一覧を取得する();
+      google.script.run
+        .withSuccessHandler(x=>drivers=x||[])
+        .スマホ用ドライバー一覧を取得する();
+      予定種類を読み込む();
+      予定一覧を先読みする();
+    })
+    .スマホ初期データを取得する();
+}
+function 予定種類を読み込む(){
+  const select=$('planType');
+  const note=$('planTypeNote');
+  select.disabled=true;
+  select.innerHTML='<option value="">予定種類を読み込み中…</option>';
+  google.script.run
+    .withSuccessHandler(list=>{
+      planTypes=Array.isArray(list)?list:[];
+      select.innerHTML='<option value="">選択してください</option>';
+      planTypes.forEach(x=>{
+        const option=document.createElement('option');
+        option.value=x.予定種類ID || x.予定種類名;
+        option.textContent=x.予定種類名;
+        select.appendChild(option);
+      });
+      select.disabled=false;
+      note.textContent=planTypes.length
+        ? planTypes.length+'種類の予定を選択できます'
+        : '表示できる予定種類がありません';
+    })
+    .withFailureHandler(e=>{
+      select.innerHTML='<option value="">読込に失敗しました</option>';
+      note.textContent='予定種類の読込に失敗しました：'+(e&&e.message?e.message:e);
+      show('planResult','予定種類の読込に失敗しました。','err');
+    })
+    .スマホ用予定種類一覧を取得する();
+}
+function 切替(n){['photo','lic','docs'].forEach(x=>$(x).classList.toggle('on',x===n));$('tPhoto').classList.toggle('on',n==='photo');$('tLic').classList.toggle('on',n==='lic');$('tDocs').classList.toggle('on',n==='docs')}
+function 選択欄を空にする(qid,lid){
+  const q=$(qid);
+  if(!q || q.disabled || (qid==='actualVehicleQ' && 実績送信中))return;
+  q.value='';
+  // 文字だけでなく、既存の入力処理を使って選択IDも解除する。
+  q.dispatchEvent(new Event('input',{bubbles:true}));
+  if(qid==='driverEditQ'){
+    編集中DriverID='';
+    ドライバー詳細読込番号++;
+    ['driverEditBody','driverEditRetry','driverEditResult'].forEach(id=>{if($(id))$(id).style.display='none';});
+    if($('driverEditSelected'))$('driverEditSelected').textContent='';
+  }
+  if(qid==='vehicleEditQ'){
+    selVehicleEdit='';selVehicleEditDriver='';
+    車両詳細読込番号++;
+    ['vehicleEditFormArea','vehicleEditRetry','vehicleEditResult'].forEach(id=>{if($(id))$(id).style.display='none';});
+  }
+  if(qid==='actualVehicleQ'){
+    GF_貸出情報表示を消す_80('actualLoanView');
+    selActualVehicle='';実績確認データ=null;
+    if($('actualConfirm')&&$('actualConfirm').open)GF_実績確認を閉じる_80();
+    if($('actualResult'))$('actualResult').style.display='none';
+  }
+  if(qid==='carQ3'){
+    GF_貸出情報表示を消す_80('planLoanView');GF_貸出先入力をクリアする_80('plan');
+    if($('activePlans')){$('activePlans').className='note';$('activePlans').textContent='車両を選択すると予定を表示します';}
+    if($('planResult'))$('planResult').style.display='none';
+    if($('planUndo'))$('planUndo').style.display='none';
+  }
+  q.focus({preventScroll:true});
+  if(qid==='driverEditQ')編集ドライバー候補を描画する();
+  else 候補(qid,lid);
+}
+function 検索枠(host,qid,lid,ph){$(host).innerHTML='<label>選択</label><div class="search"><input id="'+qid+'" placeholder="'+ph+'" autocomplete="off"><button class="searchClear" type="button" aria-label="選択を解除">×</button><div class="arrow">▼</div><div id="'+lid+'" class="list"></div></div><div class="note">入力して候補を絞り込めます</div>';setTimeout(()=>{const q=$(qid),box=$(lid);q.onfocus=()=>候補(qid,lid);q.oninput=()=>{if(qid==='actualVehicleQ'){GF_貸出情報表示を消す_80('actualLoanView');GF_車両取消表示を初期化_80();}if(qid==='carQ3'){GF_貸出情報表示を消す_80('planLoanView');GF_貸出先入力をクリアする_80('plan');}if(qid==='savedVehicleQ')GF_貸出情報表示を消す_80('savedLoanView');if(qid==='carQ1')selCar1='';if(qid==='carQ2')selCar2='';if(qid==='carQ3')selCar3='';if(qid==='driverQ')selDriver='';if(qid==='driverNewCarQ')selDriverNewCar='';if(qid==='driverManualCarQ')手入力車両ID='';if(qid==='vehicleNewDriverQ')selVehicleNewDriver='';if(qid==='vehicleEditQ')selVehicleEdit='';if(qid==='vehicleEditDriverQ')selVehicleEditDriver='';if(qid==='actualVehicleQ')selActualVehicle='';if(qid==='savedVehicleQ')GF_閲覧選択を解除する_80('車両');if(qid==='savedDriverQ')GF_閲覧選択を解除する_80('ドライバー');候補(qid,lid)};q.parentElement.querySelector('.arrow').onclick=()=>候補(qid,lid);const clear=q.parentElement.querySelector('.searchClear');clear.onpointerdown=e=>e.preventDefault();clear.onclick=()=>選択欄を空にする(qid,lid)},0)}
+function 氏名表記を整える(value){
+  return String(value==null?'':value).trim().replace(/[\s\u3000]+/g,' ');
+}
+function 姓名の区切りを確認する(value){
+  let name=氏名表記を整える(value);
+  if(name && !name.includes(' ')){
+    const answer=prompt('姓と名の間にスペースを入れてください。例：信戸 航太',name);
+    if(answer===null)return null;
+    name=氏名表記を整える(answer);
+    if(!name.includes(' ')){alert('姓と名の間にスペースを入れてください。');return null;}
+  }
+  return name;
+}
+function norm(v){return String(v||'').toLowerCase().replace(/\s+/g,'').replace(/[－ー―‐]/g,'-')}
+function 候補(qid,lid){
+  const q=$(qid);
+  const box=$(lid);
+  if(qid==='vehicleEditQ' && 車両詳細読込中)return;
+  const isD=qid==='driverQ'||qid==='vehicleNewDriverQ'||qid==='vehicleEditDriverQ'||qid==='savedDriverQ';
+  const s=norm(q.value);
+  const arr=(isD?drivers:cars).filter(x=>
+    !s || (
+      isD
+        ? (norm(x.氏名).includes(s)||norm(x.フリガナ).includes(s)||norm(x.電話番号).includes(s)||norm(x.DriverID).includes(s))
+        : (norm(x.車番).includes(s)||norm(x.管轄).includes(s)||norm(x.現在使用者).includes(s))
+    )
+  );
+  box.innerHTML='';
+  if(!arr.length){
+    const loading=(qid==='savedVehicleQ'&&GF_閲覧車両候補読込中_80)||(qid==='savedDriverQ'&&GF_閲覧ドライバー候補読込中_80);
+    box.innerHTML='<div class="none">'+(loading?'候補を読み込んでいます…':'候補がありません')+'</div>';
+  }else{
+    arr.forEach(x=>{
+      const r=document.createElement('div');
+      r.className='row';
+      const m=document.createElement('div');
+      m.className='main';
+      m.textContent = isD
+  ? x.氏名
+  : [x.管轄, x.車番].filter(Boolean).join(' ｜ ');
+      const sub=document.createElement('div');
+      sub.className='sub';
+      sub.textContent=isD
+        ? [x.フリガナ,x.電話番号].filter(Boolean).join(' ｜ ')
+        : '現在使用者：'+(x.現在使用者||'なし');
+      r.append(m,sub);
+      r.onclick=()=>{
+        if(qid==='savedVehicleQ'){
+          q.value=x.表示名||[x.管轄,x.車番,x.現在使用者].filter(Boolean).join(' ｜ ');
+          GF_保存車両書類を読み込む_80(x.VehicleID);
+        }else if(qid==='savedDriverQ'){
+          q.value=x.表示名||x.氏名||'';
+          GF_保存免許証を読み込む_80(x.DriverID);
+        }else if(isD){
+          if(qid==='vehicleNewDriverQ')selVehicleNewDriver=x.DriverID;
+          else if(qid==='vehicleEditDriverQ')selVehicleEditDriver=x.DriverID;
+          else selDriver=x.DriverID;
+          q.value=x.表示名 || x.氏名 || '';
+        }else if(qid==='actualVehicleQ'){
+          selActualVehicle=x.VehicleID;GF_貸出情報を読む_80(x.VehicleID,'actualLoanView');
+          q.value=x.表示名||[x.管轄,x.車番,x.現在使用者].filter(Boolean).join(' ｜ ');
+        }else if(qid==='vehicleEditQ'){
+          selVehicleEdit=x.VehicleID;
+          q.value=[x.管轄,x.車番].filter(Boolean).join(' ｜ ');
+          box.classList.remove('show');
+          既存車両を読み込む(x.VehicleID);
+          return;
+        }else if(qid==='carQ1'){
+          selCar1=x.VehicleID;
+          q.value=x.表示名;
+        }else if(qid==='carQ2'){
+          selCar2=x.VehicleID;
+          q.value=x.表示名;
+        }else if(qid==='driverNewCarQ'){
+             selDriverNewCar=x.VehicleID;
+             q.value=x.表示名;
+           }else if(qid==='driverManualCarQ'){
+             手入力車両ID=x.VehicleID;
+             q.value=x.表示名;
+           }else{
+          selCar3=x.VehicleID;GF_貸出情報を読む_80(x.VehicleID,'planLoanView');GF_貸出先入力をクリアする_80('plan');
+          q.value=x.表示名;
+          車両予定を読み込む();
+        }
+        box.classList.remove('show');
+      };
+      box.appendChild(r);
+    });
+  }
+  box.classList.add('show');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.search'))document.querySelectorAll('.list').forEach(x=>x.classList.remove('show'))});
+function img(file){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result||''),i=s.indexOf(',');i<0?no(new Error('画像を読み込めませんでした')):ok({ファイル名:file.name,MIMEタイプ:file.type||'image/jpeg',Base64:s.slice(i+1)})};r.onerror=()=>no(new Error('画像読込失敗'));r.readAsDataURL(file)})}
+/*
+ * 免許証・車両書類専用。
+ * スマホ写真が縦向き（書類が横倒しになりやすい状態）なら、
+ * 保存前に90度回転して横長画像へ直す。
+ *
+ * 車両状態写真などには使わない。
+ */
+function img書類(file, 回転角度=0){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('書類画像の読込に失敗しました'));
+    reader.onload=()=>{
+      const raw=String(reader.result||'');
+      const angle=[0,90,180,270].includes(Number(回転角度))
+        ? Number(回転角度)
+        : 0;
+      const image=new Image();
+      image.onerror=()=>reject(new Error('書類画像を開けませんでした'));
+      image.onload=()=>{
+        try{
+          /*
+           * 保存/PDF用は高解像度優先。
+           * AI用の軽量化は imgAI() 側だけで行う。
+           *
+           * ここでは:
+           * 1. 元解像度のままEXIF正規化・必要な回転
+           * 2. 外側余白だけトリミング
+           * 3. 縮小しない
+           * 4. JPEG再圧縮を避け、PNGで書き出す
+           */
+          const srcW=Math.max(1,image.naturalWidth||image.width);
+          const srcH=Math.max(1,image.naturalHeight||image.height);
+          const swap=angle===90||angle===270;
+          const rotated=document.createElement('canvas');
+          rotated.width=swap?srcH:srcW;
+          rotated.height=swap?srcW:srcH;
+          const rctx=rotated.getContext('2d',{
+            willReadFrequently:true
+          });
+          if(!rctx)throw new Error('画像回転を準備できませんでした');
+          if(angle===90){
+            rctx.translate(rotated.width,0);
+            rctx.rotate(Math.PI/2);
+          }else if(angle===180){
+            rctx.translate(rotated.width,rotated.height);
+            rctx.rotate(Math.PI);
+          }else if(angle===270){
+            rctx.translate(0,rotated.height);
+            rctx.rotate(-Math.PI/2);
+          }
+          rctx.drawImage(image,0,0);
+          // 元解像度のまま、外側余白だけを切る
+          const output=書類画像の外側余白を切る_(rotated);
+          /*
+           * 重要:
+           * 長辺の縮小はしない＝元解像度を維持。
+           * PNGはスマホ写真3枚だと通信量が巨大になり、
+           * 登録キューが「画像待ち」のまま止まりやすいため使わない。
+           * JPEG 0.90で文字の視認性と通信量のバランスを取る。
+           */
+          // 登録用書類は解像度を落とさず、容量が大きい場合だけJPEG品質を段階調整。
+          // 文字の判読性を優先し、品質0.85より下げない。
+          let dataURL=output.toDataURL('image/jpeg',0.90);
+          let bytes=Math.floor(Math.max(0,dataURL.length-dataURL.indexOf(',')-1)*3/4);
+          if(bytes>1500000){
+            const reduced=output.toDataURL('image/jpeg',0.85);
+            const reducedBytes=Math.floor(Math.max(0,reduced.length-reduced.indexOf(',')-1)*3/4);
+            if(reducedBytes<bytes){dataURL=reduced;bytes=reducedBytes;}
+          }
+          console.info('[書類画像容量] '+String(file.name||'書類')+' / 約'+(bytes/1048576).toFixed(2)+'MB / '+srcW+'×'+srcH+'px');
+          const comma=dataURL.indexOf(',');
+          if(comma<0){
+            throw new Error('書類画像をJPEG化できませんでした');
+          }
+          resolve({
+            ファイル名:String(file.name||'書類')
+              .replace(/\.[^.]+$/,'')+'_正位置_高画質.jpg',
+            MIMEタイプ:'image/jpeg',
+            Base64:dataURL.slice(comma+1)
+          });
+        }catch(e){
+          reject(e);
+        }
+      };
+      image.src=raw;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+/*
+ * 書類画像の外側余白を自動トリミングする。
+ *
+ * ・元解像度は落とさない
+ * ・四隅から外側背景を推定
+ * ・文字1本やノイズだけでは境界扱いしない
+ * ・検出範囲の外へ約3%の安全余白を戻す
+ * ・判定が怪しい画像は切らずにそのまま返す
+ */
+function 書類画像の外側余白を切る_(source){
+  const w=source.width;
+  const h=source.height;
+  if(w<200||h<200){
+    return source;
+  }
+  const ctx=source.getContext('2d',{
+    willReadFrequently:true
+  });
+  if(!ctx){
+    return source;
+  }
+  const data=ctx.getImageData(0,0,w,h).data;
+  function pixel(x,y){
+    x=Math.max(0,Math.min(w-1,Math.round(x)));
+    y=Math.max(0,Math.min(h-1,Math.round(y)));
+    const i=(y*w+x)*4;
+    return [
+      data[i],
+      data[i+1],
+      data[i+2]
+    ];
+  }
+  const insetX=Math.max(2,Math.round(w*0.015));
+  const insetY=Math.max(2,Math.round(h*0.015));
+  const samples=[
+    pixel(insetX,insetY),
+    pixel(w-1-insetX,insetY),
+    pixel(insetX,h-1-insetY),
+    pixel(w-1-insetX,h-1-insetY),
+    pixel(w*0.05,h*0.05),
+    pixel(w*0.95,h*0.05),
+    pixel(w*0.05,h*0.95),
+    pixel(w*0.95,h*0.95)
+  ];
+  function median(values){
+    const a=values.slice().sort((a,b)=>a-b);
+    return a[Math.floor(a.length/2)];
+  }
+  const bg=[
+    median(samples.map(v=>v[0])),
+    median(samples.map(v=>v[1])),
+    median(samples.map(v=>v[2]))
+  ];
+  function isForeground(x,y){
+    const p=pixel(x,y);
+    const dr=Math.abs(p[0]-bg[0]);
+    const dg=Math.abs(p[1]-bg[1]);
+    const db=Math.abs(p[2]-bg[2]);
+    return (
+      Math.max(dr,dg,db)>38 ||
+      (dr+dg+db)/3>24
+    );
+  }
+  // 判定だけ間引く。出力画像そのものは縮小しない。
+  const stepX=Math.max(2,Math.floor(w/500));
+  const stepY=Math.max(2,Math.floor(h/500));
+  const rowScore=[];
+  const colScore=[];
+  for(let y=0;y<h;y+=stepY){
+    let fg=0;
+    let total=0;
+    for(let x=0;x<w;x+=stepX){
+      total++;
+      if(isForeground(x,y))fg++;
+    }
+    rowScore.push({
+      pos:y,
+      rate:total?fg/total:0
+    });
+  }
+  for(let x=0;x<w;x+=stepX){
+    let fg=0;
+    let total=0;
+    for(let y=0;y<h;y+=stepY){
+      total++;
+      if(isForeground(x,y))fg++;
+    }
+    colScore.push({
+      pos:x,
+      rate:total?fg/total:0
+    });
+  }
+  const requiredRate=0.04;
+  const rows=rowScore.filter(v=>v.rate>=requiredRate);
+  const cols=colScore.filter(v=>v.rate>=requiredRate);
+  if(!rows.length||!cols.length){
+    return source;
+  }
+  let top=rows[0].pos;
+  let bottom=rows[rows.length-1].pos;
+  let left=cols[0].pos;
+  let right=cols[cols.length-1].pos;
+  const padX=Math.round(w*0.03);
+  const padY=Math.round(h*0.03);
+  left=Math.max(0,left-padX);
+  right=Math.min(w-1,right+padX);
+  top=Math.max(0,top-padY);
+  bottom=Math.min(h-1,bottom+padY);
+  const cropW=right-left+1;
+  const cropH=bottom-top+1;
+  // 誤検出時は元画像を守る
+  if(
+    cropW<w*0.20 ||
+    cropH<h*0.20
+  ){
+    return source;
+  }
+  if(
+    cropW>w*0.96 &&
+    cropH>h*0.96
+  ){
+    return source;
+  }
+  const out=document.createElement('canvas');
+  out.width=Math.max(1,Math.round(cropW));
+  out.height=Math.max(1,Math.round(cropH));
+  const octx=out.getContext('2d');
+  if(!octx){
+    return source;
+  }
+  octx.drawImage(
+    source,
+    left,top,cropW,cropH,
+    0,0,out.width,out.height
+  );
+  return out;
+}
+function imgAI(file){
+  return new Promise((ok,no)=>{
+    const r=new FileReader();
+    r.onerror=()=>no(new Error('AI用画像読込失敗'));
+    r.onload=()=>{
+      const im=new Image();
+      im.onerror=()=>no(new Error('AI用画像変換失敗'));
+      im.onload=()=>{
+        try{
+          const maxSide=1600;
+          let w=im.naturalWidth||im.width,h=im.naturalHeight||im.height;
+          if(!w||!h)throw new Error('画像サイズを取得できません');
+          const scale=Math.min(1,maxSide/Math.max(w,h));
+          w=Math.max(1,Math.round(w*scale));
+          h=Math.max(1,Math.round(h*scale));
+          const c=document.createElement('canvas');
+          c.width=w;c.height=h;
+          const ctx=c.getContext('2d');
+          ctx.drawImage(im,0,0,w,h);
+          const dataUrl=c.toDataURL('image/jpeg',0.90);
+          const i=dataUrl.indexOf(',');
+          ok({ファイル名:'AI_'+(file.name||'license.jpg'),MIMEタイプ:'image/jpeg',Base64:dataUrl.slice(i+1)});
+        }catch(e){no(e)}
+      };
+      im.src=String(r.result||'');
+    };
+    r.readAsDataURL(file);
+  });
+}
+function show(id,text,cls){const e=$(id);if(!e)return;e.className='result '+cls;e.textContent=text;e.style.display=text?'block':'none'}
+async function 写真登録() {
+  const fs = Array.from($('photos').files || []);
+  const 撮影日 = $('photoDate').value;
+  if (!selCar1) {
+    return show(
+      'photoResult',
+      '車両を選択してください',
+      'err'
+    );
+  }
+  if (!撮影日) {
+    return show(
+      'photoResult',
+      '撮影日を選択してください',
+      'err'
+    );
+  }
+  if (!fs.length) {
+    return show(
+      'photoResult',
+      '写真を選択してください',
+      'err'
+    );
+  }
+  if (fs.length > 40) {
+    return show(
+      'photoResult',
+      '写真は最大40枚までです',
+      'err'
+    );
+  }
+  const btn = $('photoBtn');
+  btn.disabled = true;
+  $('photoUndo').style.display = 'none';
+  show(
+    'photoResult',
+    '写真を準備しています…',
+    'wait'
+  );
+  try {
+    const 全ファイルID = [];
+    let 完了枚数 = 0;
+    // 5枚ずつ処理
+    for (
+      let 開始 = 0;
+      開始 < fs.length;
+      開始 += 5
+    ) {
+      const グループ = fs.slice(
+        開始,
+        開始 + 5
+      );
+      const 画像一覧 = [];
+      for (const f of グループ) {
+        画像一覧.push(await img(f));
+      }
+      show(
+        'photoResult',
+        完了枚数 +
+          ' / ' +
+          fs.length +
+          '枚 完了　次の写真を登録中…',
+        'wait'
+      );
+      const 結果 = await new Promise(
+        (resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)
+            .スマホから車両状態写真を登録する(
+              selCar1,
+              画像一覧,
+              撮影日
+            );
+        }
+      );
+      完了枚数 += 結果.保存枚数 || グループ.length;
+      const ids =
+        結果.取消情報 &&
+        Array.isArray(
+          結果.取消情報.ファイルID一覧
+        )
+          ? 結果.取消情報.ファイルID一覧
+          : [];
+      全ファイルID.push(...ids);
+      show(
+        'photoResult',
+        完了枚数 +
+          ' / ' +
+          fs.length +
+          '枚 登録完了',
+        完了枚数 === fs.length
+          ? 'ok'
+          : 'wait'
+      );
+    }
+    // 全グループ分をまとめて取消できるようにする
+    undo.photo = {
+  種類: '車両写真',
+  VehicleID: selCar1,
+  撮影日: 撮影日,
+  ファイルID一覧: 全ファイルID
+};
+    $('photoUndo').style.display =
+      全ファイルID.length
+        ? 'block'
+        : 'none';
+    show(
+      'photoResult',
+      '✅ ' +
+        完了枚数 +
+        '枚すべて登録しました',
+      'ok'
+    );
+  } catch (e) {
+    show(
+      'photoResult',
+      '登録できませんでした：' +
+        (e && e.message ? e.message : e),
+      'err'
+    );
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function 免許登録(){
+  if(!selDriver)return show('licResult','ドライバーを選択してください','err');
+  const fs=免許証選択ファイル.slice();
+  if(fs.length!==2){
+  return show('licResult','免許証は表・裏の2枚を選択してください','err');
+}
+  $('licBtn').disabled=true;show('licResult','2枚をまとめて登録中です…','wait');
+  (async()=>{
+    try{
+      const a=[];for(const f of fs)a.push(await img書類(f));
+      google.script.run.withSuccessHandler(r=>{
+        $('licBtn').disabled=false;undo.lic=r.取消情報;$('licUndo').style.display='block';
+        show('licResult','登録しました！ 2枚 → 免許証.pdf','ok');
+      }).withFailureHandler(e=>{$('licBtn').disabled=false;show('licResult',e.message||e,'err')})
+      .スマホから免許証をまとめて登録する(selDriver,a);
+    }catch(e){$('licBtn').disabled=false;show('licResult',e.message,'err')}
+  })();
+}
+let GF_車検更新画像_90=null,GF_車検更新車両_90='';
+async function GF_車検更新AI確認_90(){
+  if(!selCar2)return show('docsResult','車両を選択してください','err');
+  const fs=車両書類撮影ファイル.slice();
+  if(fs.length!==3)return show('docsResult','書類を3枚選択してください','err');
+  const id=selCar2,btn=$('docsAiBtn');btn.disabled=true;btn.textContent='読取り中…';
+  $('docsAiPanel').style.display='none';show('docsResult','書類を読み取っています…','wait');
+  try{
+    const a=[];for(const f of fs)a.push(await img書類(f));
+    google.script.run.withSuccessHandler(r=>{
+      btn.disabled=false;btn.textContent='車検満了日・使用者を確認';
+      if(selCar2!==id)return show('docsResult','車両が変更されました。もう一度読み取ってください。','err');
+      if(!r||!r.成功)return show('docsResult',r&&r.メッセージ||'読み取れませんでした','err');
+      GF_車検更新画像_90=a;GF_車検更新車両_90=id;
+      $('docsAiExpiry').value=r.車検満了日||'';
+      $('docsAiOldExpiry').textContent='台帳の現在の満了日：'+(r.台帳満了日||'未登録');
+      $('docsAiUser').textContent=r.使用者氏名||'読み取れませんでした';
+      $('docsAiCurrentUser').textContent='台帳の現在使用者：'+(r.台帳使用者||'未登録')+(r.使用者相違?'（記載が異なります）':'');
+      $('docsAiChangeUser').checked=false;$('docsAiChangeUser').disabled=!r.使用者氏名;
+      $('docsAiPanel').style.display='block';show('docsResult','読み取りが終わりました。内容を確認してください。','ok');
+    }).withFailureHandler(e=>{btn.disabled=false;btn.textContent='車検満了日・使用者を確認';show('docsResult',e.message||String(e),'err')})
+    .GF_車検更新AI確認_90(id,a);
+  }catch(e){btn.disabled=false;btn.textContent='車検満了日・使用者を確認';show('docsResult',e.message||String(e),'err')}
+}
+function GF_車検更新を確定_90(){
+  const id=GF_車検更新車両_90,a=GF_車検更新画像_90;
+  if(!id||!a||id!==selCar2)return show('docsResult','車両を選び直したため、もう一度読み取ってください。','err');
+  const expiry=$('docsAiExpiry').value,change=$('docsAiChangeUser').checked,user=$('docsAiUser').textContent;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(expiry))return show('docsResult','新しい車検満了日を確認してください。','err');
+  if(change&&(!user||user==='読み取れませんでした'))return show('docsResult','使用者を読み取れないため変更できません。','err');
+  if(!confirm('車検満了日を '+expiry+' に更新し、書類3枚を保存します。'+(change?'現在使用者も「'+user+'」に変更します。':'現在使用者は変更しません。')+' よろしいですか？'))return;
+  $('docsAiSaveBtn').disabled=true;$('docsAiBtn').disabled=true;$('docsBtn').disabled=true;$('docsRepairBtn').disabled=true;
+  show('docsResult','書類と車検情報を保存中です…','wait');
+  google.script.run.withSuccessHandler(r=>{
+    $('docsAiSaveBtn').disabled=false;$('docsAiBtn').disabled=false;$('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;
+    $('docsAiPanel').style.display='none';GF_車検更新画像_90=null;
+    $('docsUndo').style.display='none';
+    show('docsResult',r&&r.メッセージ||'車検更新を登録しました','ok');
+  }).withFailureHandler(e=>{
+    $('docsAiSaveBtn').disabled=false;$('docsAiBtn').disabled=false;$('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;
+    show('docsResult',e.message||String(e),'err');
+  }).GF_車検更新確定_90(id,a,expiry,change,user);
+}
+async function 書類登録(){
+  if(!selCar2)return show('docsResult','車両を選択してください','err');
+  const fs=車両書類撮影ファイル.slice();
+  if(fs.length!==3){
+    return show('docsResult','車両書類を3枚選択してください。撮影した写真は1枚ずつ追加できます。','err');
+  }
+  $('docsBtn').disabled=true;$('docsRepairBtn').disabled=true;show('docsResult','3枚をまとめて登録中です…','wait');
+  try{
+    const a=[];for(const f of fs)a.push(await img書類(f));
+    google.script.run.withSuccessHandler(r=>{
+      $('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;undo.docs=r.取消情報;$('docsUndo').style.display='block';
+      show('docsResult','登録しました！ 3枚 → 車両書類一式.pdf','ok');
+    }).withFailureHandler(e=>{$('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;show('docsResult',e.message||e,'err')})
+    .スマホから車両書類をまとめて登録する(selCar2,a);
+  }catch(e){$('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;show('docsResult',e.message,'err')}
+}
+async function GF_登録時の書類を送り直す_80(){
+  if($('docsRepairBtn').disabled || $('docsBtn').disabled)return;
+  const vehicleID=selCar2;
+  if(!vehicleID)return show('docsResult','登録済み車両を選択してください','err');
+  const files=車両書類撮影ファイル.slice();
+  if(files.length!==3)return show('docsResult','書類3枚を撮影するか、写真ライブラリから3枚選択してください','err');
+  if(!confirm('選択した車両に、登録時の書類3枚を送り直します。よろしいですか？'))return;
+  $('docsBtn').disabled=true;$('docsRepairBtn').disabled=true;
+  $('docsUndo').style.display='none';
+  show('docsResult','書類3枚を保存しています…画面を閉じずにお待ちください。','wait');
+  try{
+    const images=[];for(const f of files)images.push(await img書類(f));
+    const result=await GF_ドライバーRPC_80('GF_スマホから登録時の車両書類を再送する_97',vehicleID,images);
+    if(!result || result.成功!==true)throw new Error('受付結果を確認できませんでした。');
+    show('docsResult',result.受付済み ? 'この車両の書類はすでに受付中です。写真は追加保存していません。' : '書類3枚の再送を受け付けました！ リンクは順次反映されます。','ok');
+  }catch(e){
+    show('docsResult','再送の完了を確認できませんでした。写真を残したまま同じボタンで再送してください。進まない場合は管理担当者に確認してください。','err');
+  }finally{
+    $('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;
+  }
+}
+$('licenseFiles').addEventListener('change',()=>{
+  const input=$('licenseFiles');
+  const 今回選択=Array.from(input.files||[]);
+  // 写真ライブラリから2枚まとめて選んだ場合
+  if(今回選択.length===2){
+    免許証選択ファイル=今回選択.slice(0,2);
+  }else{
+    // カメラで1枚ずつ撮った場合は前の写真に追加
+    今回選択.forEach(file=>{
+      if(免許証選択ファイル.length>=2){
+        return;
+      }
+      const 同じ写真=免許証選択ファイル.some(old=>
+        old.name===file.name &&
+        old.size===file.size &&
+        old.lastModified===file.lastModified
+      );
+      if(!同じ写真){
+        免許証選択ファイル.push(file);
+      }
+    });
+  }
+  const dt=new DataTransfer();
+  免許証選択ファイル
+    .slice(0,2)
+    .forEach(file=>{
+      dt.items.add(file);
+    });
+  input.files=dt.files;
+  const n=免許証選択ファイル.length;
+  $('licenseCount').textContent=
+    n ? n+'枚選択済み' : '表・裏2枚を選択してください';
+});
+const driverEditLicenseFiles = $('driverEditLicenseFiles');
+if (driverEditLicenseFiles) {
+  driverEditLicenseFiles.addEventListener('change', () => {
+    const n = driverEditLicenseFiles.files.length;
+    if($('driverEditLicenseCount')){
+      $('driverEditLicenseCount').textContent =
+        n === 2 ? '2枚選択済み ✓' : n + '枚選択済み ※表・裏の2枚を選択してください';
+    }
+  });
+}
+const newDriverLicenseFiles = $('newDriverLicenseFiles');
+if (newDriverLicenseFiles) {
+  newDriverLicenseFiles.addEventListener('change', () => {
+    const 今回選択 = Array.from(newDriverLicenseFiles.files || []);
+    // 写真ライブラリから2枚まとめて選択した場合
+    if (今回選択.length === 2) {
+      新規ドライバー免許証選択ファイル = 今回選択.slice(0, 2);
+    } else {
+      // カメラで1枚ずつ撮影した場合
+      // 今までの写真に追加
+      今回選択.forEach(file => {
+        if (新規ドライバー免許証選択ファイル.length >= 2) {
+          return;
+        }
+        const 同じ写真 =
+          新規ドライバー免許証選択ファイル.some(old =>
+            old.name === file.name &&
+            old.size === file.size &&
+            old.lastModified === file.lastModified
+          );
+        if (!同じ写真) {
+          新規ドライバー免許証選択ファイル.push(file);
+        }
+      });
+    }
+    // input.filesにも2枚を戻す
+    const dt = new DataTransfer();
+    新規ドライバー免許証選択ファイル
+      .slice(0, 2)
+      .forEach(file => {
+        dt.items.add(file);
+      });
+    newDriverLicenseFiles.files = dt.files;
+    const n = 新規ドライバー免許証選択ファイル.length;
+    $('newDriverLicenseCount').textContent =
+      n === 2
+        ? '2枚選択済み ✓'
+        : n + '枚選択済み';
+  });
+}
+function GF_車両書類選択をクリアする_80(){
+  if($('docsBtn').disabled||$('docsRepairBtn').disabled)return;
+  GF_車検更新画像_90=null;$('docsAiPanel').style.display='none';
+  車両書類撮影ファイル=[];$('documentFiles').value='';
+  $('documentCount').textContent='0 / 3枚 選択済み';
+}
+$('documentFiles').addEventListener('change',()=>{
+  const input=$('documentFiles'),picked=Array.from(input.files||[]);
+  if(!picked.length)return;
+  if($('docsBtn').disabled||$('docsRepairBtn').disabled){input.value='';return;}
+  if(picked.length>3){input.value='';$('documentCount').textContent='3枚まで選択してください。現在 '+車両書類撮影ファイル.length+' / 3枚';return;}
+  GF_車検更新画像_90=null;$('docsAiPanel').style.display='none';
+  if(picked.length===3)車両書類撮影ファイル=picked.slice();
+  else if(車両書類撮影ファイル.length+picked.length<=3)車両書類撮影ファイル.push(...picked);
+  else{$('documentCount').textContent='3枚選択済みです。変更する場合はクリアしてください。';input.value='';return;}
+  input.value='';$('documentCount').textContent=車両書類撮影ファイル.length+' / 3枚 選択済み'+(車両書類撮影ファイル.length===3?' ✓':'（続けて追加できます）');
+});
+const vehicleAiFiles=$('vehicleAiFiles');
+if(vehicleAiFiles){
+  vehicleAiFiles.addEventListener('change',()=>{
+    const 今回選択=Array.from(vehicleAiFiles.files||[]);
+    // ライブラリから3枚まとめて選んだ場合
+    if(今回選択.length===3){
+      新規車両書類選択=今回選択.slice(0,3);
+    }else{
+      // カメラで1枚ずつ撮った場合は前の写真に追加
+      今回選択.forEach(file=>{
+        if(新規車両書類選択.length>=3){
+          return;
+        }
+        const 同じ写真=新規車両書類選択.some(old=>
+          old.name===file.name &&
+          old.size===file.size &&
+          old.lastModified===file.lastModified
+        );
+        if(!同じ写真){
+          新規車両書類選択.push(file);
+        }
+      });
+    }
+    // input.files自体を、今まで撮った写真全部に作り直す
+    const dt=new DataTransfer();
+    新規車両書類選択
+      .slice(0,3)
+      .forEach(file=>{
+        dt.items.add(file);
+      });
+    vehicleAiFiles.files=dt.files;
+    const n=新規車両書類選択.length;
+    $('vehicleAiCount').textContent=
+      n ? n+'枚選択済み' : '';
+    新規車両AI書類あり=false;
+    GF_車両事前画像を無効化_80();
+    if($('vehicleFormArea')){
+      $('vehicleFormArea').style.display='none';
+    }
+  });
+}
+// 車両写真：選択枚数を表示
+$('photos').addEventListener('change', () => {
+  const n = $('photos').files.length;
+  $('photoCount').textContent =
+    n + '枚選択済み' +
+    (n > 40 ? ' ※最大40枚までです' : '');
+});
+// 車両写真：撮影日の初期値を今日にする
+const photoDate = $('photoDate');
+if (photoDate && !photoDate.value) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  photoDate.value = y + '-' + m + '-' + d;
+}
+// ==================================================
+// 🗓️ 予定を見る
+// ==================================================
+let 予定表示月 = new Date();
+let 予定基準日 = new Date();
+let 予定表示モード = '今日';
+let 予定選択日 = '';
+let 予定一覧キャッシュ = [];
+let 予定表示種別 = 'すべて';
+let 予定読込世代 = 0;
+const 予定月キャッシュ = {};
+function 予定年月キーFromDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function 予定年月キー(){return 予定年月キーFromDate(予定表示月);}
+function 予定日キー(d){return 予定年月キーFromDate(d)+'-'+String(d.getDate()).padStart(2,'0');}
+function 予定日付を読む(s){const m=String(s||'').match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);return m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])):null;}
+function 予定ブラウザキャッシュ読込(ym){try{const d=JSON.parse(sessionStorage.getItem('GF_SCHEDULE_'+ym)||'null');return Array.isArray(d)?d:null;}catch(e){return null;}}
+function 予定ブラウザキャッシュ保存(ym,data){try{sessionStorage.setItem('GF_SCHEDULE_'+ym,JSON.stringify(data||[]));}catch(e){}}
+function 予定ブラウザキャッシュ削除(){try{Object.keys(sessionStorage).forEach(k=>{if(k.indexOf('GF_SCHEDULE_')===0)sessionStorage.removeItem(k);});}catch(e){} Object.keys(予定月キャッシュ).forEach(k=>delete 予定月キャッシュ[k]);}
+function 予定月取得(ym,generation=予定読込世代){return new Promise((resolve,reject)=>{google.script.run.withSuccessHandler(data=>{const items=Array.isArray(data)?data:[];if(generation===予定読込世代){予定月キャッシュ[ym]=items;予定ブラウザキャッシュ保存(ym,items);}resolve(items);}).withFailureHandler(reject).スマホ用統合予定一覧を取得する(ym);});}
+function 予定一覧を先読みする(){const ym=予定年月キーFromDate(new Date());const saved=予定ブラウザキャッシュ読込(ym);if(saved!==null){予定月キャッシュ[ym]=saved;return;}if(予定月キャッシュ[ym])return;setTimeout(()=>予定月取得(ym).catch(()=>{}),300);}
+function 予定一覧画面を開く(){予定基準日=new Date();予定表示月=new Date(予定基準日.getFullYear(),予定基準日.getMonth(),1);予定選択日=予定日キー(予定基準日);予定表示モード='今日';画面を開く('scheduleArea');予定一覧を読み込む();}
+function 予定表示切替(mode){予定詳細を閉じる();予定表示モード=mode;予定基準日=new Date();予定表示月=new Date(予定基準日.getFullYear(),予定基準日.getMonth(),1);予定選択日=予定日キー(予定基準日);予定一覧を読み込む();}
+function 予定表示範囲(){
+ if(予定表示モード==='月別')return [new Date(予定表示月.getFullYear(),予定表示月.getMonth(),1),new Date(予定表示月.getFullYear(),予定表示月.getMonth()+1,0)];
+ const from=new Date(予定基準日.getFullYear(),予定基準日.getMonth(),予定基準日.getDate());
+ if(予定表示モード==='今週')from.setDate(from.getDate()-((from.getDay()+6)%7));
+ const to=new Date(from);if(予定表示モード==='今週')to.setDate(to.getDate()+6);return [from,to];
+}
+function 予定月移動(n){予定詳細を閉じる();
+ if(予定表示モード==='月別'){予定表示月=new Date(予定表示月.getFullYear(),予定表示月.getMonth()+n,1);予定選択日=予定日キー(予定表示月);}
+ else {予定基準日.setDate(予定基準日.getDate()+n*(予定表示モード==='今週'?7:1));予定表示月=new Date(予定基準日.getFullYear(),予定基準日.getMonth(),1);}
+ 予定一覧を読み込む();
+}
+function 予定今日へ(){予定詳細を閉じる();予定基準日=new Date();予定表示月=new Date(予定基準日.getFullYear(),予定基準日.getMonth(),1);予定選択日=予定日キー(予定基準日);予定一覧を読み込む();}
+function 予定月タイトルを更新する(){const range=予定表示範囲();const short=d=>(d.getMonth()+1)+'/'+d.getDate();$('scheduleMonthTitle').textContent=予定表示モード==='月別'?予定表示月.getFullYear()+'年 '+(予定表示月.getMonth()+1)+'月':予定表示モード==='今週'?short(range[0])+' – '+short(range[1]):range[0].getFullYear()+'年 '+short(range[0]);document.querySelectorAll('[data-schedule-mode]').forEach(b=>{const on=b.dataset.scheduleMode===予定表示モード;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});$('scheduleCalendar').style.display=予定表示モード==='月別'?'flex':'none';document.body.classList.toggle('scheduleMonthly',予定表示モード==='月別');$('scheduleList').style.display=予定表示モード==='月別'?'none':'block';}
+async function 予定一覧を読み込む(){
+ const generation=++予定読込世代;予定月タイトルを更新する();const [from,to]=予定表示範囲();
+ const months=[予定年月キーFromDate(from)];const last=予定年月キーFromDate(to);if(last!==months[0])months.push(last);
+ months.forEach(ym=>{if(!Object.prototype.hasOwnProperty.call(予定月キャッシュ,ym)){const saved=予定ブラウザキャッシュ読込(ym);if(saved!==null)予定月キャッシュ[ym]=saved;}});
+ const cached=months.every(ym=>Object.prototype.hasOwnProperty.call(予定月キャッシュ,ym));
+ 予定一覧キャッシュ=months.flatMap(ym=>予定月キャッシュ[ym]||[]);予定一覧を描画する();
+ $('scheduleLoading').style.display='block';$('scheduleLoading').textContent=cached?'最新の予定を確認しています…':'予定を読み込んでいます…';
+ const results=await Promise.allSettled(months.map(ym=>予定月取得(ym,generation)));
+ if(generation!==予定読込世代)return;
+ 予定一覧キャッシュ=months.flatMap(ym=>予定月キャッシュ[ym]||[]);予定一覧を描画する();
+ const failed=results.some(r=>r.status==='rejected');$('scheduleLoading').style.display=failed?'block':'none';
+ if(failed)$('scheduleLoading').textContent='一部の予定を取得できませんでした。「更新」を押してください。'+(cached?' 保存済みの予定を表示しています。':'');
+}
+function 予定一覧を取得して保存する(){予定一覧を読み込む();}
+function 予定絞り込み(){予定一覧を描画する();}
+function 予定対象一覧(){const [from,to]=予定表示範囲(),a=予定日キー(from),b=予定日キー(to);return (予定一覧キャッシュ||[]).filter(x=>x.種別!=='シフト').map(x=>{const d=予定日付を読む(x.日付);return d?{...x,_date:予定日キー(d)}:null;}).filter(x=>x&&x._date>=a&&x._date<=b).sort((x,y)=>x._date.localeCompare(y._date));}
+function 予定カードHTML(item){return '<div class="scheduleItem"><div class="scheduleType">'+予定アイコン(item.予定種類)+' '+escapeScheduleHtml(item.予定種類||'予定')+'</div><div class="scheduleSub">'+escapeScheduleHtml(item.車番||'')+(item.名前?'　'+escapeScheduleHtml(item.名前):'')+'</div>'+(item.状態?'<div class="scheduleSub">'+escapeScheduleHtml(item.状態)+'</div>':'')+(item.メモ?'<div class="scheduleSub" style="white-space:pre-line">'+escapeScheduleHtml(item.メモ)+'</div>':'')+'</div>';}
+function 予定日見出し(key){const d=予定日付を読む(key);return (d.getMonth()+1)+'/'+d.getDate()+'（'+['日','月','火','水','木','金','土'][d.getDay()]+'）';}
+function 予定一覧を描画する(){
+ const items=予定対象一覧(),grouped={};items.forEach(item=>{(grouped[item._date]||(grouped[item._date]=[])).push(item);});
+ if(予定表示モード==='月別'){予定カレンダーを描画する(grouped);return;}
+ $('scheduleList').innerHTML=items.length?Object.keys(grouped).sort().map(day=>'<section class="scheduleDay"><div class="scheduleDayTitle">'+予定日見出し(day)+' <span class="scheduleCount">'+grouped[day].length+'件</span></div>'+grouped[day].map(予定カードHTML).join('')+'</section>').join(''):'<div class="scheduleEmpty">この'+(予定表示モード==='今週'?'週':'日')+'の車両予定はありません。</div>';
+}
+function 予定カレンダーを描画する(grouped){
+ const year=予定表示月.getFullYear(),month=予定表示月.getMonth(),first=new Date(year,month,1),days=new Date(year,month+1,0).getDate(),offset=first.getDay(),weeks=Math.ceil((offset+days)/7),today=予定日キー(new Date());
+ let html='';for(let i=0;i<weeks*7;i++){
+  const number=i-offset+1;if(number<1||number>days){html+='<div class="scheduleBlank" aria-hidden="true"></div>';continue;}
+  const key=予定日キー(new Date(year,month,number)),list=grouped[key]||[];
+  html+='<button type="button" class="scheduleCell'+(key===today?' today':'')+(key===予定選択日?' selected':'')+(i%7===0?' sunday':i%7===6?' saturday':'')+'" onclick="予定日を選択する(\''+key+'\')" aria-label="'+予定日見出し(key)+' '+list.length+'件" aria-pressed="'+(key===予定選択日)+'"><span class="scheduleDateNum">'+number+'</span><span class="scheduleCellEvents">'+list.slice(0,2).map(item=>'<span class="scheduleChip '+(item.予定種類==='車検満了'?'expiry':'')+'">'+escapeScheduleHtml(item.車番||'')+' '+escapeScheduleHtml(item.予定種類||'予定')+'</span>').join('')+(list.length>2?'<span class="scheduleMore">ほか'+(list.length-2)+'件</span>':'')+'</span></button>';
+ }
+ $('scheduleGrid').style.gridTemplateRows='repeat('+weeks+',minmax(0,1fr))';$('scheduleGrid').innerHTML=html;
+ const selected=grouped[予定選択日]||[];
+ $('scheduleDetailTitle').textContent=予定日見出し(予定選択日)+(予定選択日===today?' 今日':'')+' ／ '+selected.length+'件';
+ $('scheduleDayDetail').innerHTML=(selected.length?selected.map(予定カードHTML).join(''):'<div class="scheduleDayEmpty">この日の車両予定はありません。</div>');
+}
+let 予定詳細戻り先=null;
+function 予定日を選択する(key){予定詳細戻り先=document.activeElement;予定選択日=key;予定一覧を描画する();$('scheduleDetailOverlay').hidden=false;document.body.classList.add('scheduleDetailOpen');$('scheduleDetailClose').focus();}
+function 予定詳細を閉じる(){const overlay=$('scheduleDetailOverlay');if(!overlay||overlay.hidden)return;overlay.hidden=true;document.body.classList.remove('scheduleDetailOpen');const button=document.querySelector('.scheduleCell.selected');if(button)button.focus();else if(予定詳細戻り先&&予定詳細戻り先.isConnected)予定詳細戻り先.focus();}
+document.addEventListener('keydown',function(event){const overlay=$('scheduleDetailOverlay');if(!overlay||overlay.hidden)return;if(event.key==='Escape'){event.preventDefault();予定詳細を閉じる();}else if(event.key==='Tab'){event.preventDefault();$('scheduleDetailClose').focus();}});
+function 予定アイコン(type){return {'納車':'🚗','返却':'↩️','代車':'🚙','代車返却':'↩️','車検':'🧾','車検満了':'🧾','名変':'📝','板金':'🛠️','整備':'🔧','12点検':'🔍'}[type]||'📌';}
+function escapeScheduleHtml(value){return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+
+const 新規ドライバー入力項目 = [
+  ['氏名','氏名','text',true],
+  ['フリガナ','フリガナ','text',false],
+  ['電話番号','電話番号','tel',false],
+  ['紹介元','紹介元','text',false],
+  ['所属会社名','所属会社名','text',false],
+  ['稼働エリア','稼働エリア','text',false],
+  ['契約者メールアドレス','契約者メールアドレス','email',false],
+  ['緊急連絡先氏名','緊急連絡先氏名','text',false],
+  ['緊急連絡先メールアドレス','緊急連絡先メールアドレス','email',false],
+  ['備考','備考','textarea',false]
+];
+let 新規ドライバー先行登録 = null;
+let 新規ドライバー免許証下書き = null;
+let 新規ドライバー免許画像 = [];
+let 新規ドライバー免許回転 = 0;
+let 編集中DriverID = '';
+let 手入力車両ID = '';
+function ドライバー入力フォームHTML_(prefix){
+  return 新規ドライバー入力項目.map(f=>{
+    const [key,label,type,required]=f;
+    const id=prefix+'_'+key.replace(/[^a-zA-Z0-9ぁ-んァ-ヶ一-龠]/g,'_');
+    const input=type==='textarea'
+      ? '<textarea id="'+id+'" data-driver-key="'+key+'"></textarea>'
+      : '<input id="'+id+'" data-driver-key="'+key+'" type="'+type+'"'+(required?' required':'')+'>';
+    return '<div class="vehicleField"><label>'+label+
+      (required?'<span class="requiredMark">必須</span>':'')+
+      '</label>'+input+'</div>';
+  }).join('');
+}
+function 新規ドライバーフォームを作る(){
+  const box=$('driverNewForm');
+  if(!box || box.dataset.ready==='1')return;
+  box.innerHTML=ドライバー入力フォームHTML_('newDriver');
+  box.dataset.ready='1';
+}
+function 手入力ドライバーフォームを作る(){
+  const box=$('driverManualForm');
+  if(!box || box.dataset.ready==='1')return;
+  box.innerHTML=ドライバー入力フォームHTML_('manualDriver');
+  box.dataset.ready='1';
+  if($('driverManualCarSearch') && !$('driverManualCarSearch').dataset.ready){
+    検索枠('driverManualCarSearch','driverManualCarQ','driverManualCarList','例：71-47');
+    $('driverManualCarSearch').dataset.ready='1';
+  }
+}
+function 編集ドライバーフォームを作る(){
+  const box=$('driverEditForm');
+  if(!box || box.dataset.ready==='1')return;
+  box.innerHTML=ドライバー入力フォームHTML_('editDriver');
+  box.dataset.ready='1';
+}
+function ドライバー管理メニューを初期化する(){
+  if($('driverModeMenu'))$('driverModeMenu').style.display='block';
+  if($('driverCreateArea'))$('driverCreateArea').style.display='none';
+  if($('driverEditArea'))$('driverEditArea').style.display='none';
+}
+function ドライバー管理メニューへ戻る(){
+  ドライバー管理メニューを初期化する();
+  window.scrollTo(0,0);
+}
+function 次のドライバーのボタンを隠す_(){
+  ['driverLicenseNextBtn','driverInfoNextBtn','driverManualNextBtn'].forEach(id=>{
+    if($(id))$(id).style.display='none';
+  });
+}
+function 次のドライバーを登録する(mode){
+  if(($('driverNewBtn')&&$('driverNewBtn').disabled)||
+     ($('driverManualSaveBtn')&&$('driverManualSaveBtn').disabled))return;
+  次のドライバーのボタンを隠す_();
+  新規ドライバー先行登録=null;
+  新規ドライバー免許証下書き=null;
+  $('driverNewBtn').textContent='ドライバーと免許証を登録';
+  新規ドライバー免許画像=[];
+  新規ドライバー免許回転=0;
+  新規ドライバー免許証選択ファイル=[];
+  lastCreatedDriver=null;
+  新規ドライバーフォームを空にする();
+  手入力車両ID='';
+  document.querySelectorAll('#driverNewForm [data-driver-key], #driverManualForm [data-driver-key]').forEach(el=>{
+    el.value='';el.readOnly=false;
+  });
+  if($('driverManualCarQ'))$('driverManualCarQ').value='';
+  if($('driverManualCarList'))$('driverManualCarList').classList.remove('show');
+  if($('newDriverLicenseFiles'))$('newDriverLicenseFiles').value='';
+  if($('newDriverLicenseCount'))$('newDriverLicenseCount').textContent='2枚まとめて選択してください';
+  ['newDriverReadResult','driverNewResult','driverManualResult'].forEach(id=>{
+    if($(id)){$(id).textContent='';$(id).style.display='none';}
+  });
+  ['continueDriverInfoBtn','licenseAfterInfoArea','driverToVehicleBtn'].forEach(id=>{
+    if($(id))$(id).style.display='none';
+  });
+  if($('newDriverReadBtn')){
+    $('newDriverReadBtn').disabled=false;
+    $('newDriverReadBtn').textContent='免許証から氏名を読み取る';
+  }
+  新規登録方法を選ぶ(mode==='manual'?'manual':'license');
+  const area=$(mode==='manual'?'driverManualMode':'driverLicenseMode');
+  if(area)area.scrollIntoView({behavior:'smooth',block:'start'});
+  if(mode==='manual'){
+    const name=document.querySelector('#driverManualForm [data-driver-key="氏名"]');
+    if(name)name.focus({preventScroll:true});
+  }
+}
+function 新規ドライバー画面を開く(){
+  $('driverModeMenu').style.display='none';
+  $('driverEditArea').style.display='none';
+  $('driverCreateArea').style.display='block';
+  if($('driverLicenseMode'))$('driverLicenseMode').style.display='none';
+  if($('driverManualMode'))$('driverManualMode').style.display='none';
+  window.scrollTo(0,0);
+}
+function ドライバー編集画面を開く(){
+  $('driverModeMenu').style.display='none';
+  $('driverCreateArea').style.display='none';
+  $('driverEditArea').style.display='block';
+  編集ドライバーフォームを作る();
+  編集中DriverID='';
+  if($('driverEditBody'))$('driverEditBody').style.display='none';
+  if($('driverEditSelected'))$('driverEditSelected').textContent='';
+  if($('driverEditQ')){
+    $('driverEditQ').value='';
+    $('driverEditQ').onfocus=()=>編集ドライバー候補を描画する();
+    $('driverEditQ').oninput=()=>{編集中DriverID='';編集ドライバー候補を描画する();};
+  }
+  window.scrollTo(0,0);
+}
+function 新規登録方法を選ぶ(mode){
+  $('driverLicenseMode').style.display=mode==='license'?'block':'none';
+  $('driverManualMode').style.display=mode==='manual'?'block':'none';
+  if(mode==='license'){
+    新規ドライバーフォームを作る();
+    if($('driverNewCarSearch') && !$('driverNewCarSearch').dataset.ready){
+      検索枠('driverNewCarSearch','driverNewCarQ','driverNewCarList','例：71-47');
+      $('driverNewCarSearch').dataset.ready='1';
+    }
+  }else{
+    手入力ドライバーフォームを作る();
+  }
+}
+function 免許証登録後の追加情報を開く(){
+  次のドライバーのボタンを隠す_();
+  新規ドライバーフォームを作る();
+  // 既存の人は保存済みの連絡先を先に読み、空欄で上書きしない。
+  if(新規ドライバー先行登録 && 新規ドライバー先行登録.既存){
+    const id=新規ドライバー先行登録.DriverID;
+    $('driverNewBtn').disabled=true;
+    $('continueDriverInfoBtn').style.display='none';
+    show('newDriverReadResult','登録済みの追加情報を読み込んでいます…','wait');
+    google.script.run.withSuccessHandler(data=>{
+      if(!新規ドライバー先行登録 || 新規ドライバー先行登録.DriverID!==id)return;
+      if(!data || String(data.DriverID||'')!==String(id)){
+        $('driverNewBtn').disabled=false;
+        $('licenseAfterInfoArea').style.display='none';
+        $('continueDriverInfoBtn').style.display='block';
+        show('newDriverReadResult','登録済みの情報を確認できませんでした。もう一度お試しください。','err');
+        return;
+      }
+      document.querySelectorAll('#driverNewForm [data-driver-key]').forEach(el=>{
+        const v=data&&data[el.dataset.driverKey];el.value=v===undefined||v===null?'':v;
+        if(el.dataset.driverKey==='氏名')el.readOnly=true;
+      });
+      $('driverNewBtn').disabled=false;
+      $('licenseAfterInfoArea').style.display='block';
+      show('newDriverReadResult','登録済みの情報を読み込みました。','ok');
+      $('licenseAfterInfoArea').scrollIntoView({behavior:'smooth',block:'start'});
+    }).withFailureHandler(e=>{
+      if(!新規ドライバー先行登録 || 新規ドライバー先行登録.DriverID!==id)return;
+      $('driverNewBtn').disabled=false;
+      $('licenseAfterInfoArea').style.display='none';
+      $('continueDriverInfoBtn').style.display='block';
+      show('newDriverReadResult','追加情報を読み込めませんでした。もう一度お試しください。','err');
+    }).スマホ用ドライバー詳細を取得する(id);
+    return;
+  }
+  $('licenseAfterInfoArea').style.display='block';
+  const nameInput=document.querySelector('#driverNewForm [data-driver-key="氏名"]');
+  if(nameInput && 新規ドライバー先行登録){
+    nameInput.value=新規ドライバー先行登録.氏名||'';
+    nameInput.readOnly=true;
+  }
+  $('continueDriverInfoBtn').style.display='none';
+  setTimeout(()=>$('licenseAfterInfoArea').scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+function 新規ドライバー車両選択を空にする(){
+  selDriverNewCar='';
+  if($('driverNewCarQ'))$('driverNewCarQ').value='';
+  if($('driverNewCarList'))$('driverNewCarList').classList.remove('show');
+}
+function 新規ドライバーフォームを空にする(){
+  document.querySelectorAll('#driverNewForm [data-driver-key]').forEach(el=>el.value='');
+  新規ドライバー車両選択を空にする();
+}
+/** 同姓同名は登録サーバーが判定。キャンセルでは発番・画像送信しない。 */
+async function GF_同姓同名を確認して登録する_80(data,license){
+  let decision={};
+  while(true){
+    const result=await new Promise((resolve,reject)=>{
+      const runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      if(license)runner.スマホ免許証ドライバーを先に登録する(data.氏名,decision);
+      else runner.スマホから新規ドライバーを登録する(Object.assign({},data,decision));
+    });
+    if(!result)throw new Error('登録結果を確認できませんでした。');
+    if(!result.同姓同名確認){
+      if(!result.成功||!result.DriverID)throw new Error(result.メッセージ||'登録できませんでした。');
+      return result;
+    }
+    const choice=await GF_同姓同名の確認画面を開く_80(result,license);
+    if(!choice)return null;
+    decision=choice;
+  }
+}
+function GF_同姓同名の確認画面を開く_80(result,license){
+  return new Promise(resolve=>{
+    const dialog=document.createElement('dialog');
+    dialog.style.cssText='border:0;border-radius:18px;padding:22px;width:92%;max-width:480px;max-height:85vh;overflow:auto';
+    dialog.setAttribute('aria-label','同じ氏名のドライバーを確認');
+    const title=document.createElement('h2');title.textContent='同じ氏名の登録があります';
+    const note=document.createElement('p');note.textContent='「'+(result.氏名||'')+'」は登録済みです。本人か、同姓同名の別人かを確認してください。判断できない場合はキャンセルして管理担当者へ確認してください。';
+    dialog.append(title,note);
+    let settled=false;
+    const finish=value=>{
+      if(settled)return;settled=true;
+      if(dialog.open)dialog.close();dialog.remove();resolve(value);
+    };
+    const candidates=Array.isArray(result.候補)?result.候補:[];
+    candidates.forEach(person=>{
+      const box=document.createElement('div');box.style.cssText='border:1px solid #cbd5e1;border-radius:12px;padding:14px;margin:12px 0';
+      const name=document.createElement('strong');name.textContent=person.氏名||'';
+      const detail=document.createElement('div');detail.className='note';detail.style.whiteSpace='pre-line';
+      detail.textContent='DriverID：'+person.DriverID+'\nフリガナ：'+(person.フリガナ||'未登録')+'\n電話番号：'+(person.電話番号||'未登録')+'\n状態：'+(person.ステータス||'未登録');
+      const use=document.createElement('button');use.type='button';use.className='submit';use.style.marginTop='12px';
+      use.textContent=license?'この人に免許証を追加・更新する':'この人の登録情報を確認・編集する';
+      use.onclick=()=>finish({既存DriverID:person.DriverID});
+      box.append(name,detail,use);dialog.append(box);
+    });
+    if(license){const warning=document.createElement('p');warning.className='note';warning.textContent='登録済みの人を選ぶと、その人の免許証を追加・更新します。';dialog.append(warning);}
+    const separate=document.createElement('button');separate.type='button';separate.className='submit';
+    separate.textContent='同姓同名の別人として新規登録する';
+    separate.onclick=()=>{
+      if(!window.confirm('登録済みの人とは別人であることを確認しましたか？'))return;
+      finish({同姓同名を別人として登録:true,確認済みDriverID一覧:candidates.map(x=>x.DriverID)});
+    };
+    const cancel=document.createElement('button');cancel.type='button';cancel.className='undo';cancel.textContent='キャンセル';cancel.onclick=()=>finish(null);
+    dialog.append(separate,cancel);
+    dialog.addEventListener('cancel',e=>{e.preventDefault();finish(null);});
+    dialog.addEventListener('close',()=>finish(null));
+    document.body.appendChild(dialog);dialog.showModal();
+  });
+}
+async function 新規ドライバー免許証から氏名を読む(){
+  if(新規ドライバー先行登録 && 新規ドライバー先行登録.DriverID){
+    return show('newDriverReadResult','この免許証は登録済みです。DriverID：'+新規ドライバー先行登録.DriverID,'ok');
+  }
+  const fs=新規ドライバー免許証選択ファイル.slice();
+if(fs.length!==2){
+  return show(
+    'newDriverReadResult',
+    '免許証の表・裏2枚を選択してください。',
+    'err'
+  );
+}
+  const btn=$('newDriverReadBtn');
+  btn.disabled=true;
+  btn.textContent='氏名を読み取り中…';
+  show('newDriverReadResult','免許証から氏名を読み取っています…','wait');
+  let aiImages;
+  try{
+    // 表裏を並列で軽量化。AI通信は1回だけ。
+    aiImages=await Promise.all([imgAI(fs[0]),imgAI(fs[1])]);
+  }catch(e){
+    btn.disabled=false;
+    btn.textContent='免許証から氏名を読み取る';
+    return show('newDriverReadResult','免許証画像を読み込めませんでした。もう一度選択してください。','err');
+  }
+  google.script.run
+    .withSuccessHandler(aiRes=>{
+      const rawName=(aiRes&&typeof aiRes==='object')?aiRes.氏名:aiRes;
+      const name=姓名の区切りを確認する(rawName);
+      if(name===null){btn.disabled=false;btn.textContent='免許証から氏名を読み取る';show('newDriverReadResult','氏名の確認をキャンセルしました。','');return;}
+      const rotations=Array.isArray(aiRes&&aiRes.回転一覧)
+        ? aiRes.回転一覧.map(x=>[0,90,180,270].includes(Number(x))?Number(x):0)
+        : [Number((aiRes&&aiRes.回転)||0),0];
+      const aiDiag=String((aiRes&&aiRes.AI内訳)||'').trim();
+      if(!name){
+        btn.disabled=false;
+        btn.textContent='免許証から氏名を読み取る';
+        return show('newDriverReadResult','氏名を読み取れませんでした。','err');
+      }
+      show('newDriverReadResult','登録済みの氏名を確認しています…','wait');
+      GF_免許証読取後の確認_80(name,fs,rotations).catch(e=>{
+        新規ドライバー免許証下書き=null;
+        btn.disabled=false;btn.textContent='免許証から氏名を読み取る';
+        show('newDriverReadResult','登録前の確認ができませんでした。もう一度お試しください。','err');
+        console.error(e);
+      });
+    })
+    .withFailureHandler(e=>{
+      btn.disabled=false;
+      btn.textContent='免許証から氏名を読み取る';
+      show('newDriverReadResult','氏名の読み取りに失敗しました：'+(e&&e.message?e.message:e),'err');
+    })
+    .スマホから免許証氏名を読み取る(aiImages);
+}
+async function 免許証を裏で保存キューへ渡す_(DriverID,氏名,files,rotations){
+  let jobId='',imgs=null;
+  const 送る=async()=>{
+    show('newDriverReadResult','免許証の写真を保存しています。画面を開いておいてください。','wait');
+    try{
+      if(!jobId){
+        const q=await new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).スマホ免許証登録を先に受付する({DriverID,氏名}));
+        jobId=q.JobID;
+      }
+      if(!imgs){imgs=[];for(let i=0;i<files.length;i++)imgs.push(await img書類(files[i],(rotations&&rotations[i])||0));}
+      await new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).スマホ免許証登録キューへ書類を保存する(jobId,imgs));
+      show('newDriverReadResult','✓ 登録を受け付けました　DriverID：'+DriverID+' ／ 氏名：'+氏名+' ／ 免許証PDFは順番に作成します','ok');
+      $('continueDriverInfoBtn').style.display='none';
+      $('licenseAfterInfoArea').style.display='none';
+      $('driverNewBtn').disabled=false;
+      if($('driverLicenseNextBtn'))$('driverLicenseNextBtn').style.display='block';
+      ドライバー一覧を即時更新する_();
+    }catch(e){if(imgs&&imgs.length!==files.length)imgs=null;console.error('免許証写真保存:',e);GF_写真送信の再試行を表示する_('newDriverReadResult',送る);}
+  };
+  await 送る();
+}
+function GF_写真送信の再試行を表示する_(resultId,retry){
+  show(resultId,'登録済みですが、写真の保存完了を確認できませんでした。新規登録をやり直さず、写真だけ再送してください。再送しても進まない場合は管理担当者に確認してください。','err');
+  const host=$(resultId),button=document.createElement('button');
+  button.type='button';button.className='submit';button.textContent='写真だけ再送する';
+  button.onclick=()=>{button.disabled=true;retry();};host.appendChild(button);
+}
+function ドライバー一覧を即時更新する_(){
+  google.script.run
+    .withSuccessHandler(()=>{
+      google.script.run
+        .withSuccessHandler(x=>{
+          drivers=x||[];
+        })
+        .スマホ用ドライバー一覧を取得する();
+    })
+    .スマホ用一覧キャッシュを更新する();
+}
+async function GF_車両追加を確認する_80(data, driverID){
+  const check=await GF_ドライバーRPC_80('スマホでドライバーの所有車両を確認する',{
+    DriverID:driverID || data.DriverID || '', 氏名:data.現在使用者 || data.氏名 || '', VehicleID:data.VehicleID || ''
+  });
+  if(!check || check.成功!==true)throw new Error('車両を確認できませんでした。');
+  if(check.会社 || (check.DriverID && !driverID)){data.DriverID=check.DriverID || '';if('現在使用者' in data)data.現在使用者=check.氏名;}
+  if(!check.複数車両確認)return true;
+  if(!await GF_複数車両の確認画面_80(check))return false;
+  data.複数車両確認済み=check.確認キー;
+  return true;
+}
+function GF_複数車両の確認画面_80(check){
+  return new Promise(resolve=>{
+    const dialog=document.createElement('dialog');
+    dialog.style.cssText='width:92%;max-width:480px;max-height:85vh;overflow:auto;border:0;border-radius:16px;padding:22px;box-sizing:border-box';
+    const title=document.createElement('h3');title.textContent='複数台の登録を確認';dialog.appendChild(title);
+    const text=document.createElement('p');text.style.whiteSpace='pre-wrap';
+    text.textContent=check.氏名+'さんには、すでに次の車両が登録されています。\n\n'+check.車両.map(v=>'・'+v.車番+'（'+v.VehicleID+'）').join('\n')+'\n\n今回の車両を追加すると、合計'+check.登録後台数+'台になります。登録してよろしいですか？';
+    dialog.appendChild(text);
+    let done=false;const finish=value=>{if(done)return;done=true;dialog.close();dialog.remove();resolve(value);};
+    for(const [label,value] of [['追加して登録',true],['キャンセル',false]]){
+      const button=document.createElement('button');button.type='button';button.className='submit';button.textContent=label;button.onclick=()=>finish(value);dialog.appendChild(button);
+    }
+    dialog.addEventListener('cancel',e=>{e.preventDefault();finish(false);});
+    document.body.appendChild(dialog);dialog.showModal();
+  });
+}
+async function GF_複数確認付き更新_80(method,driverID,data){
+  while(true){
+    const result=await GF_ドライバーRPC_80(method,driverID,data);
+    if(!result || !result.複数車両確認)return result;
+    if(!await GF_複数車両の確認画面_80(result))return null;
+    data.複数車両確認済み=result.確認キー;
+  }
+}
+function GF_ドライバーRPC_80(method,...args){
+  return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[method](...args));
+}
+async function GF_免許証読取後の確認_80(name,files,rotations){
+  const result=await GF_ドライバーRPC_80('スマホ免許証登録前に同名を確認する',name);
+  if(!result || result.成功!==true)throw new Error('登録前確認に失敗');
+  const decision=result.同姓同名確認 ? await GF_同姓同名の確認画面を開く_80(result,true) : {};
+  if(!decision){
+    $('newDriverReadBtn').disabled=false;
+    $('newDriverReadBtn').textContent='免許証から氏名を読み取る';
+    show('newDriverReadResult','登録をキャンセルしました。写真は選択したままです。','');
+    return;
+  }
+  新規ドライバー免許証下書き={氏名:name,files,rotations,decision};
+  await GF_免許証登録前の入力を開く_80();
+}
+async function GF_免許証登録前の入力を開く_80(){
+  const draft=新規ドライバー免許証下書き;
+  if(!draft)return;
+  $('licenseAfterInfoArea').style.display='none';
+  $('continueDriverInfoBtn').style.display='none';
+  新規ドライバーフォームを作る();
+  $('driverNewBtn').disabled=true;
+  const existing=draft.decision.既存DriverID;
+  let values={氏名:draft.氏名};
+  if(existing){
+    show('newDriverReadResult','登録済みの追加情報を読み込んでいます…','wait');
+    values=await GF_ドライバーRPC_80('スマホ用ドライバー詳細を取得する',existing);
+    if(!values || values.DriverID!==existing)throw new Error('登録済み情報を確認できません');
+  }
+  document.querySelectorAll('#driverNewForm [data-driver-key]').forEach(el=>{
+    el.value=values[el.dataset.driverKey]||'';
+    if(el.dataset.driverKey==='氏名')el.readOnly=true;
+  });
+  $('newDriverReadBtn').disabled=true;
+  $('newDriverReadBtn').textContent='氏名確認済み';
+  $('driverNewBtn').disabled=false;
+  $('driverNewBtn').textContent=existing?'このドライバーの情報と免許証を更新':'ドライバーと免許証を登録';
+  $('licenseAfterInfoArea').style.display='block';
+  show('newDriverReadResult','氏名を確認しました。連絡先などを入力し、下の登録ボタンを押してください。まだ保存していません。','ok');
+  $('licenseAfterInfoArea').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function 新規ドライバーを登録する(){
+  const draft=新規ドライバー免許証下書き;
+  const btn=$('driverNewBtn');
+  if(btn.disabled)return;
+  if(!draft)return show('driverNewResult','先に免許証から氏名を読み取ってください。','err');
+  const data={};
+  document.querySelectorAll('#driverNewForm [data-driver-key]').forEach(el=>{
+    const key=el.dataset.driverKey;
+    data[key]=key==='氏名'||key==='緊急連絡先氏名'?氏名表記を整える(el.value):el.value;
+  });
+  data.VehicleID=selDriverNewCar;
+  btn.disabled=true;btn.textContent='登録中…';
+  show('driverNewResult','氏名を再確認して登録しています…','wait');
+  try{
+    if(data.VehicleID && draft.decision.既存DriverID){
+      if(!await GF_車両追加を確認する_80(data,draft.decision.既存DriverID)){btn.disabled=false;btn.textContent='ドライバーと免許証を登録';show('driverNewResult','登録をキャンセルしました。','');return;}
+    }
+    // 保存時にも同名確認。確認中に別のスマホから追加された場合は再確認する。
+    const reg=await GF_ドライバーRPC_80('スマホから新規ドライバーを登録する',Object.assign({},data,draft.decision));
+    if(reg && reg.同姓同名確認){
+      const choice=await GF_同姓同名の確認画面を開く_80(reg,true);
+      btn.disabled=false;btn.textContent='ドライバーと免許証を登録';
+      if(!choice){show('driverNewResult','登録をキャンセルしました。まだ保存していません。','');return;}
+      draft.decision=choice;
+      if(choice.既存DriverID){await GF_免許証登録前の入力を開く_80();}
+      show('driverNewResult','選択した内容を確認して、もう一度登録ボタンを押してください。','');
+      return;
+    }
+    if(!reg || !reg.成功 || !reg.DriverID)throw new Error('登録結果を確認できません');
+    // 既存の場合は保存済み連絡先を表示したフォームからだけ更新する。
+    if(reg.既存){
+      const saved=await GF_複数確認付き更新_80('スマホからドライバー追加情報を更新する',reg.DriverID,data);
+      if(!saved){btn.disabled=false;btn.textContent='ドライバーと免許証を登録';show('driverNewResult','登録をキャンセルしました。','');return;}
+    }
+    新規ドライバー先行登録={DriverID:reg.DriverID,氏名:reg.氏名,既存:reg.既存===true};
+    新規ドライバー免許証下書き=null;
+    btn.textContent='登録受付済み';
+    show('driverNewResult','情報を保存しました。免許証の写真を送信しています…','wait');
+    await 免許証を裏で保存キューへ渡す_(reg.DriverID,reg.氏名,draft.files,draft.rotations);
+  }catch(e){
+    btn.disabled=false;btn.textContent='ドライバーと免許証を登録';
+    if(!新規ドライバー先行登録){$('newDriverReadBtn').disabled=false;$('newDriverReadBtn').textContent='免許証から氏名を読み取る';}
+    show('driverNewResult','登録を完了できませんでした。入力内容を確認して再度お試しください。','err');
+    console.error(e);
+  }
+}
+function 追加情報だけ保存する_(data){
+  次のドライバーのボタンを隠す_();
+  const btn=$('driverNewBtn');
+  btn.disabled=true;
+  btn.textContent='保存中…';
+  show('driverNewResult','追加情報を保存しています…','wait');
+  google.script.run
+    .withSuccessHandler(res=>{
+      btn.disabled=false;
+      btn.textContent='追加情報を保存';
+      show('driverNewResult',
+        '✓ 追加情報を保存しました　DriverID：'+新規ドライバー先行登録.DriverID+
+        (res&&res.車番?' ／ 車番 '+res.車番:''),'ok');
+      if($('driverInfoNextBtn'))$('driverInfoNextBtn').style.display='block';
+      ドライバー一覧を即時更新する_();
+      google.script.run.withSuccessHandler(x=>cars=x||[]).スマホ用車両一覧を取得する();
+    })
+    .withFailureHandler(e=>{
+      btn.disabled=false;
+      btn.textContent='追加情報を保存';
+      show('driverNewResult','追加情報を保存できませんでした：'+(e&&e.message?e.message:e),'err');
+    })
+    .スマホからドライバー追加情報を更新する(新規ドライバー先行登録.DriverID,data);
+}
+function 手入力で新規ドライバーを登録する(){
+  次のドライバーのボタンを隠す_();
+  手入力ドライバーフォームを作る();
+  const data={};
+  document.querySelectorAll('#driverManualForm [data-driver-key]').forEach(el=>{
+    const key=el.dataset.driverKey;
+    data[key]=key==='氏名'||key==='緊急連絡先氏名'?氏名表記を整える(el.value):el.value;
+    if(key==='氏名'||key==='緊急連絡先氏名')el.value=data[key];
+  });
+  const 確認氏名=姓名の区切りを確認する(data.氏名);
+  if(確認氏名===null)return;
+  data.氏名=確認氏名;
+  data.VehicleID=手入力車両ID;
+  if(!String(data.氏名||'').trim())return show('driverManualResult','氏名を入力してください。','err');
+  const btn=$('driverManualSaveBtn');
+  btn.disabled=true;
+  btn.textContent='登録中…';
+  show('driverManualResult','ドライバーを登録しています…','wait');
+  GF_同姓同名を確認して登録する_80(data,false)
+    .then(res=>{
+      if(!res){btn.disabled=false;btn.textContent='手入力で登録';show('driverManualResult','登録をキャンセルしました。','');return;}
+      if(res.既存){
+        btn.disabled=false;btn.textContent='手入力で登録';
+        ドライバー編集画面を開く();
+        $('driverEditQ').value=res.氏名||'';
+        編集ドライバーを読み込む(res.DriverID);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(()=>{
+          btn.disabled=false;
+          btn.textContent='手入力で登録';
+          show('driverManualResult',
+            '✓ 登録しました　DriverID：'+res.DriverID+
+            '　※免許証はあとから「登録済みドライバーを編集」で追加できます。','ok');
+          if($('driverManualNextBtn'))$('driverManualNextBtn').style.display='block';
+          ドライバー一覧を即時更新する_();
+          google.script.run.withSuccessHandler(x=>cars=x||[]).スマホ用車両一覧を取得する();
+        })
+        .withFailureHandler(e=>{
+          btn.disabled=false;
+          btn.textContent='手入力で登録';
+          show('driverManualResult',
+            '基本登録は完了しました（DriverID：'+res.DriverID+'）。フォルダ準備のみ失敗：'+(e&&e.message?e.message:e),'err');
+        })
+        .スマホ新規ドライバー登録後処理を実行する(res.DriverID,res.氏名,res.車両行||0);
+    })
+    .catch(e=>{
+      btn.disabled=false;
+      btn.textContent='手入力で登録';
+      show('driverManualResult','登録できませんでした：'+(e&&e.message?e.message:e),'err');
+    });
+}
+function 編集ドライバー候補を描画する(){
+  if(ドライバー詳細読込中)return;
+  const q=$('driverEditQ'),box=$('driverEditList');
+  if(!q||!box)return;
+  const s=norm(q.value);
+  const arr=(drivers||[]).filter(x=>
+    !s || norm([x.氏名,x.フリガナ,x.電話番号,x.DriverID].join(' ')).includes(s)
+  );
+  box.innerHTML='';
+  if(!arr.length){
+    box.innerHTML='<div class="none">候補がありません</div>';
+  }else{
+    arr.forEach(x=>{
+      const row=document.createElement('div');
+      row.className='row';
+      const main=document.createElement('div');
+      main.className='main';
+      main.textContent=x.氏名||'';
+      const sub=document.createElement('div');
+      sub.className='sub';
+      sub.textContent=[x.フリガナ,x.電話番号,x.DriverID].filter(Boolean).join(' ｜ ');
+      row.append(main,sub);
+      row.onclick=()=>{
+        box.classList.remove('show');
+        q.value=x.表示名||x.氏名||'';
+        編集ドライバーを読み込む(x.DriverID);
+      };
+      box.appendChild(row);
+    });
+  }
+  box.classList.add('show');
+}
+function 編集ドライバーを読み込む(DriverID){
+  if(ドライバー詳細読込中)return;
+  編集中DriverID=String(DriverID||'').trim();
+  if(!編集中DriverID)return;
+  const token=++ドライバー詳細読込番号;
+  ドライバー詳細読込中=true;
+  $('driverEditQ').disabled=true;
+  $('driverEditList').classList.remove('show');
+  $('driverEditBody').style.display='none';
+  $('driverEditRetry').style.display='none';
+  show('driverEditResult','🔄 ドライバー情報を読み込んでいます…','wait');
+  function finish(){ドライバー詳細読込中=false;$('driverEditQ').disabled=false;clearTimeout(timer);}
+  function fail(e){
+    if(token!==ドライバー詳細読込番号)return;
+    finish();
+    show('driverEditResult','ドライバー情報を読み込めませんでした：'+(e&&e.message?e.message:e),'err');
+    $('driverEditRetry').style.display='block';
+  }
+  const timer=setTimeout(()=>{
+    fail(new Error('応答に時間がかかっています。もう一度お試しください。'));
+    ドライバー詳細読込番号++;
+  },45000);
+  try{
+    google.script.run.withSuccessHandler(data=>{
+      if(token!==ドライバー詳細読込番号)return;
+      try{
+        if(!data || typeof data!=='object' || !Object.keys(data).length)throw new Error('ドライバー情報が見つかりません。');
+        編集ドライバーフォームを作る();
+        document.querySelectorAll('#driverEditForm [data-driver-key]').forEach(el=>{
+          const v=data[el.dataset.driverKey];
+          el.value=v===null||v===undefined?'':v;
+        });
+        $('driverEditBody').style.display='block';
+        $('driverEditSelected').textContent='選択中：'+(data.氏名||'')+' ｜ '+編集中DriverID;
+        finish();
+        show('driverEditResult','','');
+      }catch(e){fail(e);}
+    }).withFailureHandler(fail).スマホ用ドライバー詳細を取得する(編集中DriverID);
+  }catch(e){fail(e);}
+}
+function 既存ドライバー情報を保存する(){
+  if(!編集中DriverID)return show('driverEditResult','ドライバーを選択してください。','err');
+  const data={};
+  document.querySelectorAll('#driverEditForm [data-driver-key]').forEach(el=>{
+    const key=el.dataset.driverKey;
+    data[key]=key==='氏名'||key==='緊急連絡先氏名'?氏名表記を整える(el.value):el.value;
+    if(key==='氏名'||key==='緊急連絡先氏名')el.value=data[key];
+  });
+  const 確認氏名=姓名の区切りを確認する(data.氏名);
+  if(確認氏名===null)return;
+  data.氏名=確認氏名;
+  const btn=$('driverEditSaveBtn');
+  btn.disabled=true;
+  btn.textContent='保存中…';
+  show('driverEditResult','変更を保存しています…','wait');
+  google.script.run
+    .withSuccessHandler(()=>{
+      btn.disabled=false;
+      btn.textContent='変更を保存';
+      show('driverEditResult','✓ 変更を保存しました','ok');
+      ドライバー一覧を即時更新する_();
+    })
+    .withFailureHandler(e=>{
+      btn.disabled=false;
+      btn.textContent='変更を保存';
+      show('driverEditResult','保存できませんでした：'+(e&&e.message?e.message:e),'err');
+    })
+    .スマホからドライバー追加情報を更新する(編集中DriverID,data);
+}
+async function 既存ドライバー免許証を登録する(){
+  if(!編集中DriverID)return show('driverEditLicenseResult','ドライバーを選択してください。','err');
+  const input=$('driverEditLicenseFiles');
+  const fs=Array.from((input&&input.files)||[]);
+  if(fs.length!==2)return show('driverEditLicenseResult','免許証の表・裏2枚を選択してください。','err');
+  const btn=$('driverEditLicenseBtn');
+  btn.disabled=true;
+  btn.textContent='登録中…';
+  show('driverEditLicenseResult','免許証を登録しています…','wait');
+  try{
+    const a=[];
+    for(const f of fs)a.push(await img書類(f));
+    google.script.run
+      .withSuccessHandler(()=>{
+        btn.disabled=false;
+        btn.textContent='免許証を登録・更新';
+        show('driverEditLicenseResult','✓ 免許証を登録しました','ok');
+      })
+      .withFailureHandler(e=>{
+        btn.disabled=false;
+        btn.textContent='免許証を登録・更新';
+        show('driverEditLicenseResult','登録できませんでした：'+(e&&e.message?e.message:e),'err');
+      })
+      .スマホから免許証をまとめて登録する(編集中DriverID,a);
+  }catch(e){
+    btn.disabled=false;
+    btn.textContent='免許証を登録・更新';
+    show('driverEditLicenseResult','画像を読み込めませんでした：'+(e&&e.message?e.message:e),'err');
+  }
+}
+const 新規車両入力項目 = [
+  ['車番','車番','text',true],
+  ['所在地','所在地','text',false],
+  ['稼働拠点','稼働拠点','text',false],
+  ['車検満了日','車検満了日','date',false],
+  ['管轄','管轄','text',false],
+  ['駆動','駆動','text',false],
+  ['所有者','所有者','text',false],
+  ['仕入れ日/会場','仕入れ日／会場','text',false],
+  ['名義変更日','名義変更日','date',false],
+  ['スペア','スペア','text',false],
+  ['カギNo.','カギNo.','text',false],
+  ['タイヤサイズ','タイヤサイズ','text',false],
+  ['走行距離(km)','走行距離(km)','number',false],
+  ['仕入れ値','仕入れ値','number',false],
+  ['GPS番号','GPS番号','text',false],
+  ['GPS有無','GPS有無','gps',false],
+  ['車体番号','車体番号','text',false],
+  ['車種','車種','text',false],
+  ['カラー','カラー','text',false],
+  ['備考','備考','textarea',false]
+];
+function 続けてこの人の車両を登録する(){
+  if(!lastCreatedDriver || !lastCreatedDriver.DriverID){
+    return show('driverNewResult','登録したドライバー情報を取得できませんでした。','err');
+  }
+  // 車両登録画面へ移動。画面生成後、今登録した人を選択済みにする。
+  画面を開く('vehicleNewArea');
+  selVehicleNewDriver=lastCreatedDriver.DriverID;
+  const q=$('vehicleNewDriverQ');
+  if(q){
+    q.value=lastCreatedDriver.表示名 ||
+      [lastCreatedDriver.氏名,lastCreatedDriver.電話番号,lastCreatedDriver.DriverID]
+        .filter(Boolean).join(' ｜ ');
+  }
+  if($('vehicleNewDriverList'))$('vehicleNewDriverList').classList.remove('show');
+}
+let 新規車両登録モード='';
+let 新規車両AI書類あり=false;
+let 新規車両書類回転=[0,0,0];
+let 新規車両書類選択=[];
+let GF_車両事前画像_80=null;
+let GF_車両事前画像世代_80=0;
+function GF_車両事前画像を無効化_80(){
+  GF_車両事前画像世代_80++;
+  GF_車両事前画像_80=null;
+}
+function GF_車両事前画像を準備_80(){
+  GF_車両事前画像を無効化_80();
+  const files=Array.from(($('vehicleAiFiles')&&$('vehicleAiFiles').files)||[]);
+  if(files.length!==3 || !新規車両AI書類あり)return;
+  const angles=新規車両書類回転.slice(0,3);
+  const generation=GF_車両事前画像世代_80;
+  const cache={files,angles,images:null,promise:null};
+  GF_車両事前画像_80=cache;
+  // AI結果を確認・修正している間に保存用画像を作る。通信やDriveへの保存はしない。
+  cache.promise=(async()=>{
+    const images=[];
+    for(let i=0;i<files.length;i++)images.push(await img書類(files[i],angles[i]||0));
+    if(generation===GF_車両事前画像世代_80)cache.images=images;
+  })().catch(e=>{
+    console.warn('車両書類の事前準備に失敗（登録時に再試行）',e);
+    if(generation===GF_車両事前画像世代_80)GF_車両事前画像_80=null;
+  });
+}
+function GF_車両事前画像が一致_80(cache,files,angles){
+  return !!cache && files.length===3 && cache.files.length===3 &&
+    files.every((f,i)=>f===cache.files[i] && (angles[i]||0)===(cache.angles[i]||0));
+}
+
+function 新規車両登録画面を初期化する(){
+  GF_車両事前画像を無効化_80();
+  if($('vehicleNextBtn'))$('vehicleNextBtn').style.display='none';
+  新規車両登録モード='';
+  新規車両AI書類あり=false;
+  新規車両書類回転=[0,0,0];
+  新規車両書類選択=[];
+  if($('vehicleAiFiles')){
+    $('vehicleAiFiles').value='';
+  }
+  if($('vehicleAiCount')){
+    $('vehicleAiCount').textContent='';
+  }
+  if($('vehicleAiArea'))$('vehicleAiArea').style.display='none';
+  if($('vehicleFormArea'))$('vehicleFormArea').style.display='none';
+  if($('vehicleAiResult')){
+    $('vehicleAiResult').style.display='none';
+    $('vehicleAiResult').textContent='';
+  }
+  if($('vehicleNewResult')){
+    $('vehicleNewResult').style.display='none';
+    $('vehicleNewResult').textContent='';
+  }
+}
+function 新規車両メニューを開く(){
+  if($('vehicleEditArea'))$('vehicleEditArea').style.display='none';
+  if($('vehicleNewMenuArea'))$('vehicleNewMenuArea').style.display='block';
+  新規車両登録画面を初期化する();
+}
+function 新規車両登録方法を選ぶ(mode){
+  新規車両登録モード=mode;
+  新規車両フォームを作る();
+  if($('vehicleEditArea'))$('vehicleEditArea').style.display='none';
+  if(mode==='ai'){
+    $('vehicleAiArea').style.display='block';
+    $('vehicleFormArea').style.display='none';
+    新規車両AI書類あり=false;
+    if($('vehicleFormTitle'))$('vehicleFormTitle').textContent='確認・修正';
+  }else{
+    $('vehicleAiArea').style.display='none';
+    $('vehicleFormArea').style.display='block';
+    新規車両AI書類あり=false;
+    if($('vehicleFormTitle'))$('vehicleFormTitle').textContent='手入力で登録';
+    新規車両フォームを空にする();
+  }
+}
+function 次の車両を登録する(){
+  const next=$('vehicleNextBtn');
+  if(!next || next.style.display==='none')return;
+  const mode=新規車両登録モード==='ai'?'ai':'manual';
+  新規車両登録画面を初期化する();
+  新規車両フォームを空にする();
+  新規車両登録方法を選ぶ(mode);
+  const area=$(mode==='ai'?'vehicleAiArea':'vehicleFormArea');
+  if(area)area.scrollIntoView({behavior:'smooth',block:'start'});
+  if(mode==='manual'){
+    const first=document.querySelector('#vehicleNewForm [data-key]');
+    if(first)first.focus({preventScroll:true});
+  }
+}
+function 新規車両AI結果をフォームへ入れる(res){
+  const values={
+    '管轄':res.管轄||'',
+    '車番':res.車番||'',
+    '車体番号':res.車体番号||'',
+    '車検満了日':res.車検満了日||'',
+    '所有者':res.所有者||'',
+    '車種':res.車種||'',
+    '所在地':res.所在地||'',
+    '稼働拠点':res.稼働拠点||'',
+    '走行距離(km)':res['走行距離(km)']||'',
+    // 記録事項右上の「記録年月日」＝名義変更日
+    '名義変更日':res.記録年月日||''
+  };
+  document
+    .querySelectorAll('#vehicleNewForm [data-key]')
+    .forEach(el=>{
+      const key=el.dataset.key;
+      if(Object.prototype.hasOwnProperty.call(values,key)){
+        el.value=values[key];
+      }
+    });
+}
+async function 新規車両書類をAIで読む(){
+  const fs=Array.from(
+    ($('vehicleAiFiles')&&$('vehicleAiFiles').files)||[]
+  );
+  if(fs.length!==3){
+    return show(
+      'vehicleAiResult',
+      '車両書類は3枚まとめて選択してください。',
+      'err'
+    );
+  }
+  const btn=$('vehicleAiReadBtn');
+  btn.disabled=true;
+  btn.textContent='読み取り中…';
+  show(
+    'vehicleAiResult',
+    '記録事項を読み取っています…',
+    'wait'
+  );
+  try{
+    // 選択順は自由。3枚とも軽量化して送り、記録事項を内容で判別する。
+    const 読取用画像=[];
+    for(const f of fs){
+      読取用画像.push(
+        await imgAI車検証(f)
+      );
+    }
+    google.script.run
+      .withSuccessHandler(res=>{
+        btn.disabled=false;
+        btn.textContent='記録事項から読み取る';
+        if(!res || !res.成功){
+          新規車両AI書類あり=false;
+          return show(
+            'vehicleAiResult',
+            (res&&res.メッセージ)||
+              '車検証を読み取れませんでした。',
+            'err'
+          );
+        }
+        新規車両書類回転=Array.isArray(res.画像回転)
+          ? res.画像回転.map(x=>[0,90,180,270].includes(Number(x))?Number(x):0)
+          : [0,0,0];
+        新規車両フォームを作る();
+        新規車両AI結果をフォームへ入れる(res);
+        // 記録事項の使用者氏名と既存ドライバー氏名が一致したら自動選択。
+        // プルダウンは今まで通り残し、あとから手動変更もできる。
+        const ai使用者名=氏名表記を整える(res.使用者氏名);
+        selVehicleNewDriver='';
+        if(ai使用者名){
+          const norm=s=>String(s||'').replace(/[\s　]+/g,'').trim();
+          const hit=(drivers||[]).find(
+            d=>norm(d.氏名)===norm(ai使用者名)
+          );
+          if(hit){
+            selVehicleNewDriver=String(hit.DriverID||'').trim();
+            if($('vehicleNewDriverQ')){
+              $('vehicleNewDriverQ').value=hit.氏名||ai使用者名;
+            }
+         }else if($('vehicleNewDriverQ')){
+  // 未登録でも氏名を保持する。
+  // 車両登録時に「現在使用者」として送り、
+  // 30側でDriverID・ドライバーマスター・Driveを自動作成する。
+  $('vehicleNewDriverQ').value=ai使用者名;
+}
+        }
+        新規車両AI書類あり=true;
+        GF_車両事前画像を準備_80();
+        $('vehicleFormArea').style.display='block';
+        show(
+          'vehicleAiResult',
+          '✅ 読み取り完了',
+          'ok'
+        );
+        $('vehicleFormArea').scrollIntoView({
+          behavior:'smooth',
+          block:'start'
+        });
+      })
+      .withFailureHandler(e=>{
+        btn.disabled=false;
+        btn.textContent='記録事項から読み取る';
+        新規車両AI書類あり=false;
+        show(
+          'vehicleAiResult',
+          '読み取れませんでした：'+
+            (e&&e.message?e.message:e),
+          'err'
+        );
+      })
+      .スマホから車検証を読み取る(読取用画像);
+  }catch(e){
+    btn.disabled=false;
+    btn.textContent='記録事項から読み取る';
+    新規車両AI書類あり=false;
+    show(
+      'vehicleAiResult',
+      '画像を準備できませんでした：'+
+        (e&&e.message?e.message:e),
+      'err'
+    );
+  }
+}
+// 車検証は細かい文字が多いため長辺2200px。
+// Drive保存には使わず、AI送信用だけ軽量化する。
+function imgAI車検証(file){
+  return new Promise((ok,no)=>{
+    const r=new FileReader();
+    r.onerror=()=>no(
+      new Error('AI用画像読込失敗')
+    );
+    r.onload=()=>{
+      const im=new Image();
+      im.onerror=()=>no(
+        new Error('AI用画像変換失敗')
+      );
+      im.onload=()=>{
+        try{
+          const maxSide=2200;
+          let w=im.naturalWidth||im.width;
+          let h=im.naturalHeight||im.height;
+          if(!w||!h){
+            throw new Error(
+              '画像サイズを取得できません'
+            );
+          }
+          const scale=Math.min(
+            1,
+            maxSide/Math.max(w,h)
+          );
+          w=Math.max(
+            1,
+            Math.round(w*scale)
+          );
+          h=Math.max(
+            1,
+            Math.round(h*scale)
+          );
+          const c=document.createElement('canvas');
+          c.width=w;
+          c.height=h;
+          const ctx=c.getContext('2d');
+          ctx.drawImage(im,0,0,w,h);
+          const dataUrl=
+            c.toDataURL(
+              'image/jpeg',
+              0.90
+            );
+          const i=dataUrl.indexOf(',');
+          ok({
+            ファイル名:
+              'AI_'+
+              (file.name||'shakensho.jpg'),
+            MIMEタイプ:'image/jpeg',
+            Base64:dataUrl.slice(i+1)
+          });
+        }catch(e){
+          no(e);
+        }
+      };
+      im.src=String(r.result||'');
+    };
+    r.readAsDataURL(file);
+  });
+}
+function 既存車両編集を開く(){
+  新規車両登録モード='';
+  if($('vehicleNewMenuArea'))$('vehicleNewMenuArea').style.display='none';
+  if($('vehicleAiArea'))$('vehicleAiArea').style.display='none';
+  if($('vehicleFormArea'))$('vehicleFormArea').style.display='none';
+  const area=$('vehicleEditArea');
+  if(area)area.style.display='block';
+  if(!$('vehicleEditQ')){
+    検索枠('vehicleEditSearch','vehicleEditQ','vehicleEditList','車番・管轄・現在使用者');
+  }
+  if($('vehicleEditFormArea'))$('vehicleEditFormArea').style.display='none';
+  if($('vehicleEditResult')){$('vehicleEditResult').style.display='none';$('vehicleEditResult').textContent='';}
+  selVehicleEdit='';
+  selVehicleEditDriver='';
+  // 車両台帳・ドライバーマスターを正本として、その場で最新化。
+  google.script.run
+    .withSuccessHandler(()=>{
+      google.script.run.withSuccessHandler(x=>{cars=x||[];候補('vehicleEditQ','vehicleEditList');}).スマホ用車両一覧を取得する();
+      google.script.run.withSuccessHandler(x=>{drivers=x||[];}).スマホ用ドライバー一覧を取得する();
+    })
+    .スマホ用一覧キャッシュを更新する();
+  setTimeout(()=>{if($('vehicleEditQ'))$('vehicleEditQ').focus();},50);
+}
+function 既存車両編集フォームを作る(){
+  const box=$('vehicleEditForm');
+  if(!box || box.dataset.ready==='1')return;
+  box.innerHTML=新規車両入力項目.map(f=>{
+    const [key,label,type]=f;
+    const id='editVehicle_'+key.replace(/[^a-zA-Z0-9ぁ-んァ-ヶ一-龠]/g,'_');
+    let input='';
+    if(type==='gps'){
+      input='<select id="'+id+'" data-key="'+key+'"><option value="">選択してください</option><option value="有">有</option><option value="無">無</option></select>';
+    }else if(type==='textarea'){
+      input='<textarea id="'+id+'" data-key="'+key+'"></textarea>';
+    }else{
+      input='<input id="'+id+'" data-key="'+key+'" type="'+type+'">';
+    }
+    return '<div class="vehicleField"><label>'+label+'</label>'+input+'</div>';
+  }).join('');
+  box.dataset.ready='1';
+}
+function 既存車両を読み込む(VehicleID){
+  if(!VehicleID || 車両詳細読込中)return;
+  selVehicleEdit=VehicleID;
+  const token=++車両詳細読込番号;
+  車両詳細読込中=true;
+  $('vehicleEditQ').disabled=true;
+  $('vehicleEditList').classList.remove('show');
+  $('vehicleEditFormArea').style.display='none';
+  $('vehicleEditRetry').style.display='none';
+  show('vehicleEditResult','🔄 車両情報を読み込んでいます…','wait');
+  function finish(){車両詳細読込中=false;$('vehicleEditQ').disabled=false;clearTimeout(timer);}
+  function fail(e){
+    if(token!==車両詳細読込番号)return;
+    finish();
+    show('vehicleEditResult','車両情報を読み込めませんでした：'+(e&&e.message?e.message:e),'err');
+    $('vehicleEditRetry').style.display='block';
+  }
+  const timer=setTimeout(()=>{
+    fail(new Error('応答に時間がかかっています。もう一度お試しください。'));
+    車両詳細読込番号++;
+  },45000);
+  try{
+    google.script.run.withSuccessHandler(res=>{
+      if(token!==車両詳細読込番号)return;
+      try{
+        if(!res || !res.VehicleID)throw new Error('車両台帳に対象車両が見つかりません。');
+        既存車両編集フォームを作る();
+        document.querySelectorAll('#vehicleEditForm [data-key]').forEach(el=>{
+          let v=res[el.dataset.key];
+          if(v===null||v===undefined)v='';
+          if(el.type==='date' && v)v=String(v).replace(/\//g,'-').slice(0,10);
+          el.value=v;
+        });
+        if(!$('vehicleEditDriverQ'))検索枠('vehicleEditDriverSearch','vehicleEditDriverQ','vehicleEditDriverList','氏名・フリガナ・電話番号');
+        selVehicleEditDriver=String(res.DriverID||'');
+        $('vehicleEditDriverQ').value=String(res.現在使用者||'');
+        finish();
+        $('vehicleEditFormArea').style.display='block';
+        show('vehicleEditResult','','');
+      }catch(e){fail(e);}
+    }).withFailureHandler(fail).スマホ用車両編集詳細を安全取得する(VehicleID);
+  }catch(e){fail(e);}
+}
+
+function 文字を安全にする_(value){
+  return String(value==null?'':value)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;')
+    .replace(/\n/g,'<br>');
+}
+async function 既存車両を保存する(){
+  if($('vehicleEditSaveBtn').disabled)return;
+  const notice=document.getElementById('vehicleEditFixedNotice');
+  function 表示する(html,種類){
+    if(!notice)return;
+    notice.style.display='block';
+    notice.innerHTML=html;
+    if(種類==='ok'){
+      notice.style.background='#eef8f0';
+      notice.style.color='#176b2c';
+    }else if(種類==='err'){
+      notice.style.background='#fff1f0';
+      notice.style.color='#b42318';
+    }else{
+      notice.style.background='#eef6ff';
+      notice.style.color='#174ea6';
+    }
+  }
+  if(!selVehicleEdit){
+    表示する('❌ 編集する車両を選択してください。','err');
+    return;
+  }
+  const data={VehicleID:selVehicleEdit};
+  document.querySelectorAll('#vehicleEditForm [data-key]').forEach(el=>{
+    data[el.dataset.key]=el.value;
+  });
+  data.DriverID=selVehicleEditDriver||'';
+  data.現在使用者=document.getElementById('vehicleEditDriverQ')
+    ? String(document.getElementById('vehicleEditDriverQ').value||'').trim()
+    : '';
+  const btn=document.getElementById('vehicleEditSaveBtn');
+  btn.disabled=true;
+  btn.textContent='保存中…';
+  try {
+    if(!await GF_車両追加を確認する_80(data)){btn.disabled=false;btn.textContent='変更を保存';表示する('保存をキャンセルしました。','');return;}
+  }catch(e){btn.disabled=false;btn.textContent='変更を保存';表示する(文字を安全にする_(e.message || '車両を確認できませんでした。'),'err');return;}
+  表示する('🔄 車両台帳へ変更を保存しています…','wait');
+  google.script.run
+    .withSuccessHandler(res=>{
+      btn.disabled=false;
+      btn.textContent='変更を保存';
+      表示する(
+        '✅ 保存しました。<br>車両台帳と関連情報の更新が完了しました。',
+        'ok'
+      );
+      google.script.run
+        .withSuccessHandler(()=>{
+          google.script.run
+            .withSuccessHandler(x=>cars=x||[])
+            .スマホ用車両一覧を取得する();
+          google.script.run
+            .withSuccessHandler(x=>drivers=x||[])
+            .スマホ用ドライバー一覧を取得する();
+        })
+        .スマホ用一覧キャッシュを更新する();
+    })
+    .withFailureHandler(e=>{
+      btn.disabled=false;
+      btn.textContent='変更を保存';
+      const msg=(e&&e.message)
+        ? e.message
+        : String(e||'不明なエラー');
+      表示する(
+        '❌ 保存できませんでした。<br>'+msg,
+        'err'
+      );
+    })
+    .スマホから既存車両を更新する(data);
+}
+function 新規車両フォームを作る(){
+  const box=$('vehicleNewForm');
+  if(!box || box.dataset.ready==='1')return;
+  box.innerHTML=新規車両入力項目.map(f=>{
+    const [key,label,type,required]=f;
+    const id='newVehicle_'+key.replace(/[^a-zA-Z0-9ぁ-んァ-ヶ一-龠]/g,'_');
+    let input='';
+    if(type==='gps'){
+      input='<select id="'+id+'" data-key="'+key+'"><option value="">選択してください</option><option value="有">有</option><option value="無">無</option></select>';
+    }else if(type==='textarea'){
+      input='<textarea id="'+id+'" data-key="'+key+'"></textarea>';
+    }else{
+      input='<input id="'+id+'" data-key="'+key+'" type="'+type+'"'+(required?' required':'')+'>';
+    }
+    return '<div class="vehicleField"><label>'+label+(required?'<span class="requiredMark">必須</span>':'')+'</label>'+input+'</div>';
+  }).join('');
+  // 車番のすぐ下に既存ドライバー選択（任意）
+  const firstField=box.querySelector('.vehicleField');
+  if(firstField){
+    const driverWrap=document.createElement('div');
+    driverWrap.id='vehicleNewDriverWrap';
+    driverWrap.innerHTML=
+      '<div class="vehicleField"><label>ドライバーを選択 <span class="note">任意</span></label>'+
+      '<div id="vehicleNewDriverSearch"></div>'+
+      '<div class="note">登録済みドライバーを検索して選択できます。選ばなくても車両登録できます。</div></div>';
+    firstField.insertAdjacentElement('afterend',driverWrap);
+    検索枠('vehicleNewDriverSearch','vehicleNewDriverQ','vehicleNewDriverList','氏名・フリガナ・電話番号');
+  }
+  box.dataset.ready='1';
+}
+function 新規車両フォームを空にする(){
+  document.querySelectorAll('#vehicleNewForm [data-key]').forEach(el=>el.value='');
+  selVehicleNewDriver='';
+  lastCreatedDriver=null;
+  if($('driverToVehicleBtn'))$('driverToVehicleBtn').style.display='none';
+  if($('vehicleNewDriverQ'))$('vehicleNewDriverQ').value='';
+  if($('vehicleNewDriverList'))$('vehicleNewDriverList').classList.remove('show');
+}
+async function 新規車両を登録する(){
+  const GF_速度開始_80=performance.now();
+  const GF_速度記録_80=(段階)=>console.info("[車両登録速度] "+段階+" / 経過 "+((performance.now()-GF_速度開始_80)/1000).toFixed(2)+"秒");
+  GF_速度記録_80("登録ボタン押下");
+  if($('vehicleNewBtn').disabled)return;
+  if($('vehicleNextBtn'))$('vehicleNextBtn').style.display='none';
+  const noticeEl=document.getElementById('vehicleRegisterNotice');
+  if(noticeEl){
+    noticeEl.style.display='none';
+    noticeEl.innerHTML='';
+  }
+  新規車両フォームを作る();
+  const data={};
+  document
+    .querySelectorAll('#vehicleNewForm [data-key]')
+    .forEach(el=>{
+      data[el.dataset.key]=el.value;
+    });
+  if(!String(data['車番']||'').trim()){
+    return show('vehicleNewResult','車番を入力してください。','err');
+  }
+  const 書類あり=
+    新規車両登録モード==='ai' &&
+    新規車両AI書類あり;
+  // Fileオブジェクトをここで別配列に保持する。
+  // このあと画面のfile inputを空にしても、この登録分は保持される。
+  const 今回の書類=書類あり
+    ? Array.from(
+        ($('vehicleAiFiles')&&$('vehicleAiFiles').files)||[]
+      )
+    : [];
+  if(書類あり && 今回の書類.length!==3){
+    return show(
+      'vehicleNewResult',
+      '車両書類3枚を選択してください。',
+      'err'
+    );
+  }
+  // この車両分の回転角度もここで固定する。
+  // 受付後に次の車両登録を始めても、この3枚の向きが変わらないようにする。
+  const 今回の書類回転=Array.isArray(新規車両書類回転)
+    ? 新規車両書類回転.slice(0,3)
+    : [0,0,0];
+  let selectedDriverID=selVehicleNewDriver;
+// 登録済みドライバーを選択していない場合でも、
+// AI読取や直接入力で表示されている氏名を現在使用者として渡す。
+const selectedDriverName=$('vehicleNewDriverQ')
+  ? 氏名表記を整える($('vehicleNewDriverQ').value)
+  : '';
+if(selectedDriverName){
+  data['現在使用者']=selectedDriverName;
+}
+if(selectedDriverID){
+  data['DriverID']=selectedDriverID;
+}
+const btn=$('vehicleNewBtn');
+  btn.disabled=true;
+  btn.textContent='受付中…';
+  const ボタンを戻す=()=>{
+    btn.disabled=false;
+    btn.textContent='車両台帳へ登録';
+  };
+  try {
+    if(!await GF_車両追加を確認する_80(data)) { ボタンを戻す();show('vehicleNewResult','登録をキャンセルしました。','');return; }
+    GF_速度記録_80("事前確認完了");
+    selectedDriverID=('DriverID' in data)?data.DriverID:selectedDriverID;
+  } catch(e) { ボタンを戻す();show('vehicleNewResult',e.message || '車両を確認できませんでした。','err');return; }
+  const 受付完了表示=(res)=>{
+    GF_速度記録_80("写真受付保存完了・次の登録が可能");
+    show(
+      'vehicleNewResult',
+      '✅ 登録を受け付けました！ '+res.VehicleID+' ／ '+res.車番+
+      '\nこのまま次の車両を登録できます。',
+      'ok'
+    );
+    const n=document.getElementById('vehicleRegisterNotice');
+    if(n){
+      n.style.display='block';
+      n.style.background='#eef9f0';
+      n.style.color='#176b2c';
+      n.innerHTML=
+        '✅ 登録を受け付けました！<br>'+
+        res.VehicleID+' ／ '+res.車番+
+        '<br><strong>このまま次の車両を登録できます。</strong>'+
+        '<br><span style="font-size:.92em">書類保存・各シートへの反映は自動で行われます。</span>';
+    }
+    新規車両フォームを空にする();
+    if($('vehicleAiFiles'))$('vehicleAiFiles').value='';
+    if($('vehicleAiCount'))$('vehicleAiCount').textContent='';
+    新規車両AI書類あり=false;
+    GF_車両事前画像を無効化_80();
+    ボタンを戻す();
+    if($('vehicleNextBtn'))$('vehicleNextBtn').style.display='block';
+    google.script.run
+      .withSuccessHandler(x=>cars=x||[])
+      .スマホ用車両一覧を取得する();
+  };
+  // STEP 1：車両台帳への基本登録
+  show(
+    'vehicleNewResult',
+    '🔄 登録しています…',
+    'wait'
+  );
+  const n=document.getElementById('vehicleRegisterNotice');
+  if(n){
+    n.style.display='block';
+    n.style.background='#eef6ff';
+    n.style.color='#174ea6';
+    n.innerHTML='🔄 登録しています…';
+  }
+  google.script.run
+    .withSuccessHandler(res=>{
+      GF_速度記録_80("車両台帳への基本登録応答");
+      if(res && res.複数車両確認){
+        ボタンを戻す();
+        GF_複数車両の確認画面_80(res).then(ok=>show('vehicleNewResult',ok?'車両の登録状況が変わりました。内容を確認して、もう一度登録ボタンを押してください。':'登録をキャンセルしました。',''));
+        return;
+      }
+
+      if(res && res.重複){
+        ボタンを戻す();
+        const plate=String(res.車番 || data['車番'] || '').trim();
+        const x=document.getElementById('vehicleRegisterNotice');
+        if(x){
+          x.style.display='block';
+          x.style.background='#fff1f0';
+          x.style.color='#b42318';
+          x.innerHTML=
+            '⚠️ この車両はすでに登録されています。<br>'+
+            '車番：'+plate+'<br>'+
+            '新規登録は行いませんでした。';
+        }
+        show(
+          'vehicleNewResult',
+          'この車両はすでに登録されています。',
+          'err'
+        );
+        return;
+      }
+      // STEP 2：画像を送る前に「受付行」だけ作る。
+      // ここは画像無しの軽い通信。
+      google.script.run
+        .withSuccessHandler(q=>{
+          GF_速度記録_80("登録キュー受付行作成応答");
+          if(!書類あり){受付完了表示(res);return;}
+          btn.textContent='写真を保存しています…';
+          show('vehicleNewResult','写真を保存しています。完了するまでこの画面を開いておいてください。','wait');
+          let 保存画像=null;
+          const 写真を送る=async()=>{
+            show('vehicleNewResult','写真を保存しています。完了するまでこの画面を開いておいてください。','wait');
+            try{
+              if(!保存画像){
+                const cache=GF_車両事前画像_80;
+                if(GF_車両事前画像が一致_80(cache,今回の書類,今回の書類回転)){
+                  if(cache.promise)await cache.promise;
+                  if(cache.images && cache.images.length===3)保存画像=cache.images;
+                }
+                if(!保存画像){
+                  保存画像=[];
+                  for(let i=0;i<今回の書類.length;i++)保存画像.push(await img書類(今回の書類[i],今回の書類回転[i]||0));
+                }
+              }
+              GF_速度記録_80("写真準備完了・送信開始");
+              google.script.run
+                .withSuccessHandler(()=>受付完了表示(res))
+                .withFailureHandler(e=>{
+                  GF_速度記録_80("写真送信失敗");
+                  console.error('車両写真保存:',e);
+                  GF_写真送信の再試行を表示する_('vehicleNewResult',写真を送る);
+                })
+                .スマホ車両登録キューへ書類を保存する(q.JobID,保存画像);
+            }catch(e){
+              保存画像=null;console.error('車両写真読込:',e);
+              GF_写真送信の再試行を表示する_('vehicleNewResult',写真を送る);
+            }
+          };
+          写真を送る();
+        })
+        .withFailureHandler(e=>{
+          ボタンを戻す();
+          const msg=e&&e.message?e.message:String(e||'');
+          show(
+            'vehicleNewResult',
+            '車両台帳への登録は完了しましたが、自動処理の受付に失敗しました：'+msg,
+            'err'
+          );
+          const x=document.getElementById('vehicleRegisterNotice');
+          if(x){
+            x.style.display='block';
+            x.style.background='#fff1f0';
+            x.style.color='#b42318';
+            x.textContent=
+              '車両本体は登録済みです。自動処理の受付だけ失敗しました：'+msg;
+          }
+        })
+        .スマホ車両登録を先に受付する({
+          VehicleID:res.VehicleID,
+          行番号:res.行番号,
+          車番:res.車番,
+          DriverID:selectedDriverID,
+          書類あり:書類あり
+        });
+    })
+    .withFailureHandler(e=>{
+      ボタンを戻す();
+      const msg=e&&e.message?e.message:String(e||'');
+      show(
+        'vehicleNewResult',
+        '登録できませんでした：'+msg,
+        'err'
+      );
+      const x=document.getElementById('vehicleRegisterNotice');
+      if(x){
+        x.style.display='block';
+        x.style.background='#fff1f0';
+        x.style.color='#b42318';
+        x.textContent='登録できませんでした：'+msg;
+      }
+    })
+    .スマホから新規車両を登録する(data);
+}
+function 画面を開く(id){
+  予定詳細を閉じる();
+  if(id!=='scheduleArea')document.body.classList.remove('scheduleMonthly');
+  document.body.classList.toggle('scheduleOpen',id==='scheduleArea');
+  document.querySelectorAll('.appSection').forEach(x=>x.classList.remove('on'));
+  $(id).classList.add('on');
+  // ドライバーマスター／車両台帳を正本にする。
+  // 登録・編集画面は既存の正本からの更新を維持する。
+  // 実績画面は読込済みの共通carsを即時利用し、キャッシュを作り直さない。
+  if(id==='vehicleNewArea' || id==='driverNewArea'){
+    google.script.run
+      .withSuccessHandler(()=>{
+        google.script.run
+          .withSuccessHandler(x=>{ drivers=x||[]; })
+          .スマホ用ドライバー一覧を取得する();
+        google.script.run
+          .withSuccessHandler(x=>{ cars=x||[]; })
+          .スマホ用車両一覧を取得する();
+      })
+      .スマホ用一覧キャッシュを更新する();
+  }
+  if(id==='vehicleNewArea'){
+    新規車両フォームを作る();
+    新規車両登録画面を初期化する();
+    if($('vehicleNewMenuArea'))$('vehicleNewMenuArea').style.display='none';
+    if($('vehicleEditArea'))$('vehicleEditArea').style.display='none';
+  }
+  if(id==='driverNewArea'){
+    ドライバー管理メニューを初期化する();
+  }
+  if(id==='savedDocumentsArea'){
+    if(!$('savedVehicleQ'))検索枠('savedVehicleSearch','savedVehicleQ','savedVehicleList','車番・管轄・現在使用者');
+    if(!$('savedDriverQ'))検索枠('savedDriverSearch','savedDriverQ','savedDriverList','氏名・電話番号');
+    GF_閲覧候補を読み込む_80('車両');
+    GF_閲覧候補を読み込む_80('ドライバー');
+  }
+  if(id==='mediaArea')GF_写真書類候補を更新する_80();
+  if(id==='actualArea'){
+    実績画面を初期化する();
+    GF_実績車両候補をキャッシュから更新する_80();
+  }
+  window.scrollTo(0,0);
+}
+let GF_写真書類候補取得中_80=false;
+function GF_写真書類候補を再表示する_80(){
+  [['carQ1','carList1'],['carQ2','carList2'],['driverQ','driverList']].forEach(([q,l])=>{const box=$(l);if(box&&box.classList.contains('show'))候補(q,l);});
+}
+function GF_写真書類候補を更新する_80(){
+  GF_写真書類候補を再表示する_80();
+  if(GF_写真書類候補取得中_80)return;
+  GF_写真書類候補取得中_80=true;
+  google.script.run.withSuccessHandler(list=>{
+    GF_写真書類候補取得中_80=false;
+    if(Array.isArray(list))cars=list;
+    GF_写真書類候補を再表示する_80();
+  }).withFailureHandler(()=>{GF_写真書類候補取得中_80=false;GF_写真書類候補を再表示する_80();}).スマホ用車両一覧を取得する();
+}
+function GF_閲覧候補の表示を更新する_80(kind){
+  const vehicle=kind==='車両',qid=vehicle?'savedVehicleQ':'savedDriverQ',lid=vehicle?'savedVehicleList':'savedDriverList';
+  const box=$(lid);
+  if($(qid)&&box&&box.classList.contains('show'))候補(qid,lid);
+}
+function GF_閲覧候補を読み込む_80(kind){
+  const vehicle=kind==='車両';
+  if(vehicle?GF_閲覧車両候補読込中_80:GF_閲覧ドライバー候補読込中_80)return;
+  if(vehicle)GF_閲覧車両候補読込中_80=true;else GF_閲覧ドライバー候補読込中_80=true;
+  const note=$(vehicle?'savedVehicleCandidateStatus':'savedDriverCandidateStatus');
+  if(note)note.textContent='候補を読み込んでいます…';
+  const finish=()=>{if(vehicle)GF_閲覧車両候補読込中_80=false;else GF_閲覧ドライバー候補読込中_80=false;};
+  const run=google.script.run.withSuccessHandler(list=>{
+    finish();
+    if(!Array.isArray(list)){if(note)note.textContent='候補を読み込めませんでした。「候補を更新」を押してください。';return;}
+    if(vehicle)cars=list;else drivers=list;
+    if(note)note.textContent=list.length?list.length+'件から選べます':'登録済みの候補がありません。';
+    GF_閲覧候補の表示を更新する_80(kind);
+  }).withFailureHandler(()=>{
+    finish();if(note)note.textContent='候補を読み込めませんでした。「候補を更新」を押してください。';
+    GF_閲覧候補の表示を更新する_80(kind);
+  });
+  if(vehicle)run.スマホ用車両一覧を取得する();else run.スマホ用ドライバー一覧を取得する();
+}
+function GF_閲覧選択を解除する_80(kind){
+  if(kind==='車両'){GF_閲覧車両ID_80='';GF_閲覧車両番号_80++;$('savedVehicleResult').textContent='車両を選択してください。';}
+  else{GF_閲覧DriverID_80='';GF_閲覧免許証番号_80++;$('savedDriverResult').textContent='ドライバーを選択してください。';}
+}
+function GF_保存書類を再読込する_80(kind){
+  if(kind==='車両'){if(GF_閲覧車両ID_80)GF_保存車両書類を読み込む_80(GF_閲覧車両ID_80);}
+  else if(GF_閲覧DriverID_80)GF_保存免許証を読み込む_80(GF_閲覧DriverID_80);
+}
+function GF_保存書類リンクを描画する_80(host,data,groups){
+  const box=$(host);box.textContent='';
+  const name=document.createElement('div');name.style.fontWeight='800';name.textContent=data.表示名||'';box.appendChild(name);
+  groups.forEach(([key,title])=>{
+    const group=document.createElement('div');group.style.marginTop='18px';
+    const heading=document.createElement('div');heading.style.fontWeight='800';heading.textContent=title;group.appendChild(heading);
+    const list=(Array.isArray(data[key])?data[key]:[]).filter(x=>x&&/^https:\/\/(?:drive|docs)\.google\.com\//i.test(String(x.URL||'')));
+    if(!list.length){const note=document.createElement('div');note.className='note';note.textContent='保存済みのリンクがありません。登録が反映中の場合は、後で表示を更新してください。';group.appendChild(note);}
+    list.forEach(x=>{
+      const link=document.createElement('a');link.className='submit';link.href=x.URL;link.target='_blank';link.rel='noopener noreferrer';
+      link.style.display='block';link.style.textAlign='center';link.style.textDecoration='none';link.style.marginTop='10px';
+      link.textContent=x.表示名||'開く';group.appendChild(link);
+    });box.appendChild(group);
+  });
+}
+function GF_保存車両書類を読み込む_80(id){
+  GF_貸出情報を読む_80(id,'savedLoanView');
+  GF_閲覧車両ID_80=String(id||'');const number=++GF_閲覧車両番号_80;
+  $('savedVehicleResult').textContent='保存済みの書類・写真を読み込んでいます…';
+  google.script.run.withSuccessHandler(data=>{
+    if(number!==GF_閲覧車両番号_80)return;
+    if(!data||!data.成功){$('savedVehicleResult').textContent='読み込めませんでした。表示を更新してください。';return;}
+    GF_保存書類リンクを描画する_80('savedVehicleResult',data,[['車両書類','📄 車両書類'],['整備書類','🔧 整備書類'],['車両状態','📷 車両状態'],['免許証','🪪 現在使用者の免許証']]);
+  }).withFailureHandler(()=>{if(number===GF_閲覧車両番号_80)$('savedVehicleResult').textContent='読み込めませんでした。表示を更新するか、管理担当者に確認してください。';}).GF_スマホ車両の保存書類を取得する_27(GF_閲覧車両ID_80);
+}
+function GF_保存免許証を読み込む_80(id){
+  GF_閲覧DriverID_80=String(id||'');const number=++GF_閲覧免許証番号_80;
+  $('savedDriverResult').textContent='保存済みの免許証を読み込んでいます…';
+  google.script.run.withSuccessHandler(data=>{
+    if(number!==GF_閲覧免許証番号_80)return;
+    if(!data||!data.成功){$('savedDriverResult').textContent='読み込めませんでした。表示を更新してください。';return;}
+    GF_保存書類リンクを描画する_80('savedDriverResult',data,[['免許証','🪪 免許証']]);
+  }).withFailureHandler(()=>{if(number===GF_閲覧免許証番号_80)$('savedDriverResult').textContent='読み込めませんでした。表示を更新するか、管理担当者に確認してください。';}).GF_スマホドライバーの保存免許証を取得する_27(GF_閲覧DriverID_80);
+}
+function 実績画面を初期化する(){
+  if(!$('actualVehicleQ'))検索枠('actualVehicleSearch','actualVehicleQ','actualVehicleList','車番・管轄・現在使用者');
+}
+let GF_実績車両候補取得中_80=false;
+function GF_実績車両候補をキャッシュから更新する_80(){
+  if(GF_実績車両候補取得中_80)return;
+  GF_実績車両候補取得中_80=true;
+  google.script.run.withSuccessHandler(list=>{
+    GF_実績車両候補取得中_80=false;
+    if(!Array.isArray(list))return;
+    cars=list;
+    const box=$('actualVehicleList');
+    if(box&&box.classList.contains('show'))候補('actualVehicleQ','actualVehicleList');
+  }).withFailureHandler(()=>{
+    GF_実績車両候補取得中_80=false;
+    // 一時的な通信失敗時も読込済みの共通車両候補を保持する。
+  }).スマホ用車両一覧を取得する();
+}
+function 実績登録(種類){
+  if(実績送信中){show('actualResult','受付中です。完了までお待ちください。','wait');return;}
+  if(!selActualVehicle)return show('actualResult','候補から車両を選択してください。','err');
+  try{
+    const car=cars.find(x=>String(x.VehicleID)===String(selActualVehicle));
+    const dialog=$('actualConfirm'),dateInput=$('actualDate');
+    if(!dialog || !dateInput || !$('actualConfirmTitle') || !$('actualConfirmCar') || !$('actualConfirmQuestion'))throw new Error('実績確認の画面部品がありません。');
+    // 受付の重複防止用ID。ブラウザのcrypto APIには依存しない。
+    実績受付連番++;
+    実績確認データ={VehicleID:selActualVehicle,種類:種類,RequestID:Date.now().toString(36)+'-'+実績受付連番+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2)};
+    // 日本時間の今日。Intl/formatToPartsを使わず端末の時差に依存しない。
+    dateInput.value=new Date(Date.now()+9*60*60*1000).toISOString().slice(0,10);
+    $('actualConfirmTitle').textContent=種類+'の確認';
+    $('actualConfirmCar').textContent=car?(car.表示名||[car.管轄,car.車番,car.現在使用者].filter(Boolean).join(' ｜ ')):selActualVehicle;
+    $('actualMemoArea').style.display=['貸出開始','代車開始'].includes(種類)?'block':'none';
+    $('actualMemo').value='';$('actualMemo').disabled=false;$('actualBorrower').value='';$('actualAreaInput').value='';$('actualBorrower').disabled=false;$('actualAreaInput').disabled=false;
+    実績確認文を更新する();
+    show('actualConfirmStatus','','');
+    $('actualConfirmSend').textContent='この日付で登録する';
+    $('actualConfirmSend').style.display='';if($('actualUndo'))$('actualUndo').style.display='none';
+    $('actualDate').disabled=false;
+    if($('actualConfirmClose')){$('actualConfirmClose').disabled=false;$('actualConfirmClose').textContent='キャンセル';}
+    show('actualResult','','');
+    if($('actualVehicleQ'))$('actualVehicleQ').blur();
+    if(!dialog.open){
+      try{
+        if(typeof dialog.showModal!=='function')throw new Error('モーダル未対応');
+        dialog.showModal();
+      }catch(e){
+        // モーダルを使えない場合は画面内に同じ日付確認欄を表示する。
+        dialog.setAttribute('open','');
+        dialog.style.display='block';dialog.style.position='relative';dialog.style.margin='20px auto';
+      }
+    }
+    if(typeof dialog.scrollIntoView==='function')dialog.scrollIntoView({block:'center',behavior:'smooth'});
+  }catch(e){
+    実績確認データ=null;
+    console.error('実績確認画面エラー:',e);
+    show('actualResult','確認画面を開けませんでした。画面を再読み込みして、車両を候補から選び直してください。','err');
+  }
+}
+function GF_実績確認を閉じる_80(){
+  const dialog=$('actualConfirm');if(!dialog)return;
+  try{if(typeof dialog.close==='function')dialog.close();}catch(e){}
+  dialog.removeAttribute('open');
+  dialog.style.display='';dialog.style.position='';dialog.style.margin='';
+}
+function 実績確認文を更新する(){
+  if(!実績確認データ)return;
+  const d=$('actualDate').value;
+  const label=d?d.split('-').map(Number).join('/'):'日付未選択';
+  $('actualConfirmQuestion').textContent=label+'で「'+実績確認データ.種類+'」を登録していいですか？';
+}
+function 実績をキューへ送信する(){
+  if(実績送信中||!実績確認データ)return;
+  const date=$('actualDate').value;
+  if(!date)return alert('実施日を選択してください。');
+  const data=Object.assign({},実績確認データ,{実施日:date,貸出先:['貸出開始','代車開始'].includes(実績確認データ.種類)?$('actualBorrower').value.trim():'',貸出エリア:['貸出開始','代車開始'].includes(実績確認データ.種類)?$('actualAreaInput').value.trim():'',備考:['貸出開始','代車開始'].includes(実績確認データ.種類)?$('actualMemo').value.trim():''});
+  実績送信中=true;
+  if($('actualConfirmClose')){$('actualConfirmClose').disabled=true;$('actualConfirmClose').textContent='受付中…';}
+  $('actualConfirmSend').disabled=true;
+  $('actualConfirmSend').textContent='登録しています…';
+  $('actualDate').disabled=true;$('actualMemo').disabled=true;$('actualBorrower').disabled=true;$('actualAreaInput').disabled=true;
+  show('actualConfirmStatus','登録しています…そのままお待ちください。','wait');
+  $('actualConfirm').oncancel=e=>{if(実績送信中)e.preventDefault();};
+  document.querySelectorAll('#actualArea .submit').forEach(b=>b.disabled=true);
+  show('actualResult','登録しています…そのままお待ちください。','wait');
+  function finish(){実績送信中=false;document.querySelectorAll('#actualArea .submit').forEach(b=>b.disabled=false);$('actualDate').disabled=false;$('actualMemo').disabled=false;$('actualBorrower').disabled=false;$('actualAreaInput').disabled=false;$('actualConfirmSend').textContent='この日付で登録する';if($('actualConfirmClose')){$('actualConfirmClose').disabled=false;$('actualConfirmClose').textContent='キャンセル';}show('actualConfirmStatus','','');}
+  google.script.run.withSuccessHandler(r=>{
+    finish();
+    if(!r||!r.成功){
+      const guide=r&&r.メッセージ?r.メッセージ:'受付結果を確認できません。管理担当者に確認してください。';
+      show('actualConfirmStatus',guide,'err');show('actualResult',guide,'err');return;
+    }
+    const message='✓ '+data.実施日.replace(/-/g,'/')+'の「'+data.種類+'」を受付しました！反映まで少しお待ちください。';
+    $('actualConfirmTitle').textContent='受付しました！';
+    show('actualConfirmStatus',message,'ok');
+    show('actualResult',message,'ok');
+    $('actualConfirmSend').style.display='none';
+    $('actualDate').disabled=true;$('actualMemo').disabled=true;$('actualBorrower').disabled=true;$('actualAreaInput').disabled=true;
+    if($('actualConfirmClose'))$('actualConfirmClose').textContent='閉じる';
+    if($('actualUndo')){$('actualUndo').dataset.requestId=String(r.JobID||data.RequestID);$('actualUndo').style.display='';}
+    実績確認データ=null;
+  }).withFailureHandler(e=>{
+    finish();
+    console.error('実績受付エラー:',e);
+    const msg=String(e&&e.message?e.message:e||'');
+    const guide=msg.includes('現在使用者が登録されていません')?'この車両に使用者が登録されていません。管理担当者に確認してください。':msg.includes('反映待ち')?'この車両は反映中です。少し待ってからお試しください。':'現在登録できません。管理担当者に確認してください。';
+    show('actualConfirmStatus',guide,'err');
+    show('actualResult',guide,'err');
+  }).スマホ車両実績をキュー受付する(data);
+}
+function GF_今の実績を取り消す_80(){
+  const btn=$('actualUndo'),id=btn&&btn.dataset.requestId;
+  if(!id)return;
+  if(!confirm('この実績登録を取り消しますか？\n台帳反映中の場合は少し待ってから再操作してください。'))return;
+  btn.disabled=true;show('actualConfirmStatus','取消を確認しています…','wait');
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false;
+    if(!r||!r.成功){show('actualConfirmStatus',r&&r.メッセージ||'取消できませんでした。','err');return;}
+    btn.style.display='none';show('actualConfirmStatus',r.メッセージ,'ok');show('actualResult',r.メッセージ,'ok');
+  }).withFailureHandler(e=>{btn.disabled=false;show('actualConfirmStatus',String(e&&e.message||e),'err');}).GF_スマホ実績取消_26(id);
+}
+const GF_貸出表示世代_80={};
+function GF_貸出情報表示を消す_80(host){
+  GF_貸出表示世代_80[host]=(GF_貸出表示世代_80[host]||0)+1;
+  const el=$(host);if(el){el.textContent='';el.style.display='none';}
+  if(host==='actualLoanView')GF_車両取消表示を初期化_80();
+}
+function GF_貸出情報を読む_80(id,host){
+  const el=$(host);if(!el)return;
+  const generation=(GF_貸出表示世代_80[host]||0)+1;GF_貸出表示世代_80[host]=generation;
+  el.style.display='block';
+  if(!id){el.textContent='車両を選択してください。';return;}
+  el.textContent='貸出先を読み込んでいます…（他の操作はできます）';
+  // 取消ボタンは履歴の全件検索を待たずに表示。押した時だけ照合する。
+  if(host==='actualLoanView'){
+    GF_車両取消表示を初期化_80();
+    const box=$('actualVehicleUndoBox');if(box)box.style.display='block';
+    const msg=$('actualVehicleUndoMessage');if(msg)msg.textContent='取り消す場合はボタンを押して対象を確認します。';
+  }
+  setTimeout(()=>{
+    if(GF_貸出表示世代_80[host]!==generation)return;
+    if(el.textContent.indexOf('読み込んでいます')>=0)el.textContent='読み込みに時間がかかっています。登録操作はそのまま使えます。「代車貸出情報を更新」で再確認できます。';
+  },12000);
+  google.script.run.withSuccessHandler(data=>{
+    if(GF_貸出表示世代_80[host]!==generation)return;
+    if(!data||!data.成功){el.textContent='貸出情報を取得できませんでした。必要なら「代車貸出情報を更新」を押してください。';return;}
+    const lines=[data.車番+' ｜ '+data.ステータス,'現在使用者：'+(data.現在使用者||'未設定'),'代車貸出先：'+(data.貸出先||'未入力'),'代車貸出エリア：'+(data.貸出エリア||'未入力')];
+    if(data.開始日)lines.push('開始日：'+data.開始日);
+    if(data.返却予定日)lines.push('返却予定日：'+data.返却予定日);
+    if(data.備考)lines.push('備考：'+data.備考);
+    el.textContent=lines.join('\n');
+  }).withFailureHandler(()=>{
+    if(GF_貸出表示世代_80[host]===generation)el.textContent='貸出先を取得できませんでした。「代車貸出情報を更新」で再確認できます。';
+  }).GF_スマホ貸出先情報を取得する_25(id);
+}
+let GF_選択車両取消対象_80=null;
+let GF_車両取消照会世代_80=0;
+function GF_車両取消表示を初期化_80(){
+  GF_車両取消照会世代_80++;
+  GF_選択車両取消対象_80=null;
+  const box=$('actualVehicleUndoBox');if(box)box.style.display='none';
+}
+function GF_選択車両の実績を取り消す_80(){
+  const id=selActualVehicle;
+  if(!id)return;
+  const btn=$('actualVehicleUndoButton'),msg=$('actualVehicleUndoMessage');
+  if(!btn||btn.disabled)return;
+  const seq=++GF_車両取消照会世代_80;
+  btn.disabled=true;msg.textContent='取消対象を確認しています…';
+  google.script.run.withSuccessHandler(r=>{
+    if(seq!==GF_車両取消照会世代_80||selActualVehicle!==id){btn.disabled=false;return;}
+    if(!r||!r.成功||r.対象なし){btn.disabled=false;msg.textContent=(r&&r.メッセージ)||'取消可能な実績がありません。';return;}
+    const name=($('actualVehicleQ')&&$('actualVehicleQ').value)||id;
+    if(!confirm(name+' の「'+r.種類+'」（'+r.実施日+'）を取り消しますか？\n貸出情報と関連シートも更新します。')){
+      btn.disabled=false;msg.textContent='取消は行いませんでした。';return;
+    }
+    msg.textContent='取消を処理しています…';
+    google.script.run.withSuccessHandler(result=>{
+      btn.disabled=false;
+      if(selActualVehicle!==id)return;
+      if(!result||!result.成功){msg.textContent=(result&&result.メッセージ)||'取消できませんでした。';return;}
+      msg.textContent=result.メッセージ;
+      show('actualResult',result.メッセージ,'ok');
+      GF_貸出情報を読む_80(id,'actualLoanView');
+    }).withFailureHandler(e=>{btn.disabled=false;msg.textContent=String(e&&e.message||e);}).GF_スマホ実績取消_26(r.受付ID);
+  }).withFailureHandler(e=>{btn.disabled=false;msg.textContent='取消対象を確認できませんでした。'+String(e&&e.message||e);}).GF_車両の取消対象実績を取得_24(id);
+}
+function GF_予定貸出入力を切り替える_80(){
+  const select=$('planType'),item=(planTypes||[]).find(x=>String(x.予定種類ID||x.予定種類名)===String(select.value));
+  const name=item?item.予定種類名:'';const active=['納車','代車'].includes(name);$('planLoanFields').style.display=active?'block':'none';
+}
+function GF_貸出先入力をクリアする_80(prefix){[prefix+'Borrower',prefix==='actual'?'actualAreaInput':prefix+'Area',prefix==='actual'?'actualMemo':'planMemo'].forEach(id=>{if($(id))$(id).value='';});}
+
+function ホームへ(){画面を開く('home')}
+function 未実装(名前){alert(名前+' は次の工程で接続します。')}
+function 予定登録(){
+  const 種類=$('planType').value,日付=$('planDate').value;
+  if(!selCar3)return show('planResult','車両を選択してください','err');
+  if(!種類)return show('planResult','予定種類を選択してください','err');
+  if(!日付)return show('planResult','予定日を選択してください','err');
+  $('planBtn').disabled=true;
+  $('planBtn').textContent='送信済み・反映中…';
+  show('planResult','送信しました。反映しています…','wait');
+  google.script.run.withSuccessHandler(r=>{
+    $('planBtn').disabled=false;$('planBtn').textContent='予定を登録';$('planUndo').style.display='block';
+    show('planResult',r.メッセージ||'予定を登録しました！','ok');
+    車両予定を読み込む();
+    if(r&&r.予定ID){
+      google.script.run
+        .withSuccessHandler(()=>{})
+        .withFailureHandler(e=>console.error('予定登録後処理:',e))
+        .スマホ予定登録後処理を実行する(r.予定ID);
+    }
+  }).withFailureHandler(e=>{
+    $('planBtn').disabled=false;$('planBtn').textContent='予定を登録';show('planResult',e&&e.message?e.message:e,'err');
+  }).スマホから車両予定を登録する(selCar3,種類,日付,$('planLoanFields').style.display==='none'?null:{貸出先:$('planBorrower').value.trim(),貸出エリア:$('planArea').value.trim(),備考:$('planMemo').value.trim()});
+}
+function 予定取消(){
+  const 種類=$('planType').value;
+  if(!selCar3)return show('planResult','車両を選択してください','err');
+  if(!種類)return show('planResult','予定種類を選択してください','err');
+  $('planUndo').disabled=true;$('planUndo').textContent='取り消し中…';
+  show('planResult','予定を取り消しています…','wait');
+  google.script.run.withSuccessHandler(r=>{
+    $('planUndo').disabled=false;$('planUndo').textContent='↩️ この予定を取り消す';
+    $('planUndo').style.display='none';$('planDate').value='';
+    show('planResult',r.メッセージ||'予定を取り消しました。','ok');車両予定を読み込む();
+  }).withFailureHandler(e=>{
+    $('planUndo').disabled=false;$('planUndo').textContent='↩️ この予定を取り消す';
+    show('planResult','取消に失敗しました：'+(e&&e.message?e.message:e),'err');
+  }).スマホから車両予定を取り消す(selCar3,種類);
+}
+function 車両予定を読み込む(){
+  const host=$('activePlans');
+  if(!selCar3){host.className='note';host.textContent='車両を選択すると予定を表示します';return;}
+  host.className='note';
+  host.textContent='予定を読み込み中…';
+  google.script.run
+    .withSuccessHandler(list=>予定カードを描画(Array.isArray(list)?list:[]))
+    .withFailureHandler(e=>{
+      host.className='result err';
+      host.textContent='予定の読込に失敗しました：'+(e&&e.message?e.message:e);
+    })
+    .スマホ用車両予定一覧を取得する(selCar3);
+}
+function 予定カードを描画(list){
+  const host=$('activePlans');
+  host.innerHTML='';
+  host.className='';
+  if(!list.length){
+    host.className='note';
+    host.textContent='現在、未完了の予定はありません。';
+    return;
+  }
+  list.forEach(p=>{
+    const card=document.createElement('div');
+    card.style.cssText='border:1px solid #d8dee8;border-radius:14px;padding:14px;margin-top:10px;background:#fafbfc';
+    const title=document.createElement('div');
+    title.style.cssText='font-size:17px;font-weight:900';
+    title.textContent=(p.予定日||'日付なし')+' ｜ '+p.予定種類名;
+    const state=document.createElement('div');
+    state.className='note';
+    state.textContent='状態：'+p.状態;
+    const buttons=document.createElement('div');
+    buttons.className='grid';
+    buttons.style.marginTop='10px';
+    if(p.状態==='予定' && p.開始操作を使う){
+      buttons.appendChild(予定操作ボタン(p.開始ボタン名||((p.予定種類名||'')+'開始'),btn=>予定開始(p.予定ID,btn)));
+    }
+    buttons.appendChild(予定操作ボタン(p.完了ボタン名||((p.予定種類名||'')+'完了'),btn=>予定完了(p.予定ID,btn)));
+    const cancel=予定操作ボタン('取消',btn=>予定ID取消(p.予定ID,btn));
+    cancel.style.background='#fff';
+    cancel.style.color='#b42318';
+    cancel.style.border='1px solid #f0b4ae';
+    buttons.appendChild(cancel);
+    card.append(title,state);
+    if(p.備考){const memo=document.createElement('div');memo.className='note';memo.style.whiteSpace='pre-line';memo.textContent=p.備考;card.appendChild(memo);}
+    card.appendChild(buttons);
+    host.appendChild(card);
+  });
+}
+function 予定操作ボタン(text,fn){
+  const b=document.createElement('button');
+  b.type='button';
+  b.className='submit';
+  b.style.cssText='margin-top:0;position:relative;z-index:2;pointer-events:auto;touch-action:manipulation;cursor:pointer';
+  b.textContent=text;
+  b.onclick=function(){
+    fn(b);
+    return false;
+  };
+  return b;
+}
+function 予定開始(id,btn){
+  if(!id)return show('planResult','予定IDが取得できません。','err');
+  const 元ラベル=btn ? btn.textContent : '開始';
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='処理中…';
+  }
+  show('planResult','開始処理中です…','wait');
+  google.script.run
+    .withSuccessHandler(r=>{
+      show('planResult',r.メッセージ||'開始しました。','ok');
+      車両予定を読み込む();
+      if(r&&r.VehicleID){
+        google.script.run
+          .withSuccessHandler(()=>{})
+          .withFailureHandler(e=>console.error('予定開始後処理:',e))
+          .スマホ予定完了後処理を実行する(r.VehicleID);
+      }
+    })
+    .withFailureHandler(e=>{
+      if(btn){
+        btn.disabled=false;
+        btn.textContent=元ラベル;
+      }
+      show('planResult','開始に失敗しました：'+(e&&e.message?e.message:e),'err');
+    })
+    .スマホから予定を開始する(id);
+}
+function 予定完了(id,btn){
+  if(!id)return show('planResult','予定IDが取得できません。','err');
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='完了中…';
+  }
+  show('planResult','完了処理中です…','wait');
+  google.script.run
+    .withSuccessHandler(r=>{
+      show('planResult',r.メッセージ||'完了しました。','ok');
+      車両予定を読み込む();
+      if(r&&r.VehicleID){
+        google.script.run
+          .withSuccessHandler(()=>{})
+          .withFailureHandler(e=>console.error('予定完了後処理:',e))
+          .スマホ予定完了後処理を実行する(r.VehicleID);
+      }
+    })
+    .withFailureHandler(e=>{
+      if(btn){
+        btn.disabled=false;
+        btn.textContent='完了';
+      }
+      show('planResult','完了に失敗しました：'+(e&&e.message?e.message:e),'err');
+    })
+    .スマホから予定を完了する(id);
+}
+function 予定ID取消(id,btn){
+  if(!confirm('この予定を取り消しますか？'))return;
+  show('planResult','取消処理中です…','wait');
+  google.script.run
+    .withSuccessHandler(r=>{show('planResult',r.メッセージ||'取り消しました。','ok');車両予定を読み込む();})
+    .withFailureHandler(e=>show('planResult','取消に失敗しました：'+(e&&e.message?e.message:e),'err'))
+    .スマホから予定IDで取り消す(id);
+}
+function 取消(k){
+  if(!undo[k]){
+    const resultId=k==='photo'?'photoResult':k==='lic'?'licResult':'docsResult';
+    show(resultId,'取り消せる直前の登録情報がありません。','err');
+    return;
+  }
+  const btnId=k==='photo'?'photoUndo':k==='lic'?'licUndo':'docsUndo';
+  const resultId=k==='photo'?'photoResult':k==='lic'?'licResult':'docsResult';
+  const btn=$(btnId);
+  btn.disabled=true;
+  btn.textContent='取り消し中…';
+  show(resultId,'今の登録を取り消しています…','wait');
+  const success=()=>{
+    btn.disabled=false;
+    btn.textContent='↩️ 今の登録を取り消す';
+    btn.style.display='none';
+    undo[k]=null;
+    show(resultId,'今の登録を取り消しました。','ok');
+  };
+  const fail=e=>{
+    btn.disabled=false;
+    btn.textContent='↩️ 今の登録を取り消す';
+    show(resultId,'取り消しに失敗しました：'+(e&&e.message?e.message:e),'err');
+  };
+  if(k==='photo'){
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(fail)
+      .スマホから車両写真登録を取り消す(undo[k]);
+  }else{
+    google.script.run
+      .withSuccessHandler(success)
+      .withFailureHandler(fail)
+      .スマホから直前登録を取り消す(undo[k]);
+  }
+}
+</script></body></html>
