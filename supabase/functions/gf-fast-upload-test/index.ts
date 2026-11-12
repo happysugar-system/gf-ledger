@@ -35,17 +35,29 @@ Deno.serve(async req=>{
    if(!["mail","upload"].includes(String(b.residentMethod)))return json(400,{error:"invalid_method"});
    // residentMethod is included in the GAS HMAC signature, never trusted separately.
    const hash=await requestKeyHash(String(b.requestId));
+   // Consume each signed nonce once, including failed/retried session issuance.
+   const {error:replayError}=await db.from("gf_fast_upload_nonces_test").insert({nonce:b.nonce});
+   if(replayError)return json(replayError.code==="23505"?409:503,{error:replayError.code==="23505"?"replayed_request":"nonce_store_failed"});
    const token=randomToken();
    const tokenHash=await sha(new TextEncoder().encode(token));
-   // nonce uniqueness and request id uniqueness are enforced by DB constraints.
-   // On retry, refuse to issue another token: never disclose an existing session.
+   // First issue: insert. On lost response: a NEW signed nonce can rotate
+   // the upload token for the SAME receipt, request ID and resident method.
    const {data,error}=await db.from("gf_fast_upload_sessions_test").insert({
       request_key_hash:hash,gas_receipt:b.receipt,nonce:b.nonce,token_hash:tokenHash,
       resident_method:b.residentMethod,
       expires_at:new Date(Date.now()+10*60*1000).toISOString()
    }).select("id").single();
-   if(error)return json(error.code==="23505"?409:503,{error:error.code==="23505"?"already_issued":"issue_failed"});
-   return json(201,{session_id:data.id,upload_token:token,expires_in_seconds:600});
+   if(!error)return json(201,{session_id:data.id,upload_token:token,expires_in_seconds:600});
+   if(error.code!=="23505")return json(503,{error:"issue_failed"});
+   const {data:existing,error:lookupError}=await db.from("gf_fast_upload_sessions_test")
+     .select("id,gas_receipt,resident_method").eq("request_key_hash",hash).maybeSingle();
+   if(lookupError||!existing||existing.gas_receipt!==b.receipt||existing.resident_method!==b.residentMethod)
+     return json(409,{error:"session_identity_conflict"});
+   const {data:renewed,error:renewError}=await db.from("gf_fast_upload_sessions_test")
+     .update({nonce:b.nonce,token_hash:tokenHash,expires_at:new Date(Date.now()+10*60*1000).toISOString()})
+     .eq("id",existing.id).select("id").single();
+   if(renewError||!renewed)return json(503,{error:"resume_failed"});
+   return json(200,{session_id:renewed.id,upload_token:token,expires_in_seconds:600,resumed:true});
  }
  if(action==="upload"){
    const token=(req.headers.get("authorization")||"").replace(/^Bearer /,"");
@@ -69,8 +81,14 @@ Deno.serve(async req=>{
    const {data:prior,error:pe}=await db.from("gf_fast_upload_documents_test")
       .select("sha256,bytes").eq("session_id",session.id).eq("document_type",kind).maybeSingle();
    if(pe)return json(503,{error:"metadata_lookup_failed"});
-   if(prior)return json(prior.sha256===digest&&prior.bytes===bytes.length?200:409,
-      prior.sha256===digest&&prior.bytes===bytes.length?{ok:true,duplicate:true}:{error:"document_conflict"});
+   if(prior){
+     if(prior.sha256!==digest||prior.bytes!==bytes.length)return json(409,{error:"document_conflict"});
+     const {data:stored,error:storedError}=await db.storage.from(bucket).download(path);
+     if(storedError||!stored)return json(503,{error:"stored_file_unavailable"});
+     const content=new Uint8Array(await stored.arrayBuffer());
+     if(content.length!==bytes.length||await sha(content)!==digest)return json(409,{error:"stored_file_mismatch"});
+     return json(200,{ok:true,duplicate:true,verified:true,document_type:kind});
+   }
    const {error:ue}=await db.storage.from(bucket).upload(path,bytes,{contentType:mime,upsert:false});
    if(ue){
      // Retry recovery: a previous attempt may have saved the file but failed
