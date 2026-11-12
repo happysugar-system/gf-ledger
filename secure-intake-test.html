@@ -1,7 +1,8 @@
-<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 書類保存テスト（管理者限定）</title><style>body{font:16px system-ui;max-width:640px;margin:30px auto;padding:16px;line-height:1.7}input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}button{background:#124e73;color:white;border:0;border-radius:8px}pre{white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px}small{color:#555}</style><h2>GOLD FIRST 書類保存テスト</h2><p>管理者限定。実際の免許証・住民票は使用しないでください。ここで作るのはダミー画像とダミーPDFだけです。</p><input id="email" type="email" placeholder="管理者のログインメール"><input id="password" type="password" placeholder="パスワード"><button id="login">管理者ログイン</button><button id="reset" type="button">パスワード再設定メールを送る</button><div id="newPasswordPanel" hidden><input id="newPassword" type="password" autocomplete="new-password" placeholder="新しいパスワード（12文字以上）"><button id="savePassword" type="button">新しいパスワードを保存</button></div><button id="run" disabled>ダミー3書類を保存・照合</button><pre id="log">未実行</pre><small>本番の受付フォームは変更しません。結果に verified:true が表示された場合、Storageへの保存と再取得・ハッシュ照合に成功しています。Google Driveへの転送は別途検証が必要です。</small><script type="module">
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 書類保存テスト（管理者限定）</title><style>body{font:16px system-ui;max-width:640px;margin:30px auto;padding:16px;line-height:1.7}input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}button{background:#124e73;color:white;border:0;border-radius:8px}pre{white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px}small{color:#555}</style><h2>GOLD FIRST 書類保存テスト</h2><p>管理者限定。実際の免許証・住民票は使用しないでください。ここで作るのはダミー画像とダミーPDFだけです。</p><input id="email" type="email" placeholder="管理者のログインメール"><input id="password" type="password" placeholder="パスワード"><button id="login">管理者ログイン</button><button id="reset" type="button">パスワード再設定メールを送る</button><div id="newPasswordPanel" hidden><input id="newPassword" type="password" autocomplete="new-password" placeholder="新しいパスワード（12文字以上）"><button id="savePassword" type="button">新しいパスワードを保存</button></div><button id="run" disabled>ダミー3書類を保存・照合</button><button id="download" disabled>Supabaseから3書類を取得・再照合</button><small>Drive転送はまだ実行しません。管理者限定の取得APIと内容一致を確認します。</small><pre id="log">未実行</pre><small>本番の受付フォームは変更しません。結果に verified:true が表示された場合、Storageへの保存と再取得・ハッシュ照合に成功しています。Google Driveへの転送は別途検証が必要です。</small><script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW');
-const log=document.querySelector('#log'),run=document.querySelector('#run');
+const log=document.querySelector('#log'),run=document.querySelector('#run'),download=document.querySelector('#download');
+let lastReceipt='STAGING-c565052e-3789-4860-a988-90520a3b212e';
 document.querySelector('#email').value='sachika_sato@happysugar.online';
 document.querySelector('#reset').onclick=async()=>{
  const email=document.querySelector('#email').value.trim();
@@ -24,7 +25,7 @@ document.querySelector('#login').onclick=async()=>{
   const {error}=await supabase.auth.signInWithPassword({email:document.querySelector('#email').value,password:document.querySelector('#password').value});
   document.querySelector('#password').value='';
   log.textContent=error?'ログイン失敗: '+error.message:'ログイン成功。管理者権限は保存時にサーバー側で検査します。';
-  run.disabled=!!error;
+  run.disabled=!!error;download.disabled=!!error;
   if(!error){const {data:{user}}=await supabase.auth.getUser();log.textContent+='\nログイン中: '+(user?.email||'不明');}
 };
 function imageBlob(){
@@ -48,5 +49,25 @@ run.onclick=async()=>{
   }
   log.textContent+='3書類すべて保存・再取得・ハッシュ一致 OK\n';
  }catch(e){log.textContent+='停止: '+e.message+'\n';}finally{run.disabled=false;}
+};
+download.onclick=async()=>{
+ download.disabled=true;log.textContent='Supabaseからの書類取得を確認中...\\n';
+ try{
+  const {data:{session}}=await supabase.auth.getSession();if(!session)throw Error('管理者ログインが必要です');
+  const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-secure-intake-test-download',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({receipt_id:lastReceipt})});
+  const payload=await response.json();
+  if(!response.ok)throw Error('取得API HTTP '+response.status+': '+JSON.stringify(payload));
+  if(payload.receipt_id!==lastReceipt||payload.documents?.length!==3)throw Error('受付番号または書類件数が不正');
+  for(const doc of payload.documents){
+   const result=await fetch(doc.url,{cache:'no-store'});
+   if(!result.ok)throw Error(doc.type+' の取得失敗 HTTP '+result.status);
+   const bytes=await result.arrayBuffer();
+   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+   if(hash!==doc.sha256||bytes.byteLength!==doc.bytes)throw Error(doc.type+' の内容照合に失敗');
+   log.textContent+=doc.type+': 取得・SHA256一致 ('+bytes.byteLength+' bytes) OK\\n';
+  }
+  log.textContent+='3書類取得・再照合成功。Drive転送は未実行。\\n';
+ }catch(e){log.textContent+='停止: '+e.message+'\\n';}
+ finally{download.disabled=false;}
 };
 </script></html>
