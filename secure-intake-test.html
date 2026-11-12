@@ -1,8 +1,8 @@
-<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 書類保存テスト（管理者限定）</title><style>body{font:16px system-ui;max-width:640px;margin:30px auto;padding:16px;line-height:1.7}input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}button{background:#124e73;color:white;border:0;border-radius:8px}pre{white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px}small{color:#555}</style><h2>GOLD FIRST 書類保存テスト</h2><p>管理者限定。実際の免許証・住民票は使用しないでください。ここで作るのはダミー画像とダミーPDFだけです。</p><input id="email" type="email" placeholder="管理者のログインメール"><input id="password" type="password" placeholder="パスワード"><button id="login">管理者ログイン</button><button id="reset" type="button">パスワード再設定メールを送る</button><div id="newPasswordPanel" hidden><input id="newPassword" type="password" autocomplete="new-password" placeholder="新しいパスワード（12文字以上）"><button id="savePassword" type="button">新しいパスワードを保存</button></div><button id="run" disabled>ダミー3書類を保存・照合</button><button id="download" disabled>Supabaseから3書類を取得・再照合</button><small>Drive転送はまだ実行しません。管理者限定の取得APIと内容一致を確認します。</small><pre id="log">未実行</pre><small>本番の受付フォームは変更しません。結果に verified:true が表示された場合、Storageへの保存と再取得・ハッシュ照合に成功しています。Google Driveへの転送は別途検証が必要です。</small><script type="module">
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 書類保存テスト（管理者限定）</title><style>body{font:16px system-ui;max-width:640px;margin:30px auto;padding:16px;line-height:1.7}input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}button{background:#124e73;color:white;border:0;border-radius:8px}pre{white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px}small{color:#555}</style><h2>GOLD FIRST 書類保存テスト</h2><p>管理者限定。実際の免許証・住民票は使用しないでください。ここで作るのはダミー画像とダミーPDFだけです。</p><input id="email" type="email" placeholder="管理者のログインメール"><input id="password" type="password" placeholder="パスワード"><button id="login">管理者ログイン</button><button id="reset" type="button">パスワード再設定メールを送る</button><div id="newPasswordPanel" hidden><input id="newPassword" type="password" autocomplete="new-password" placeholder="新しいパスワード（12文字以上）"><button id="savePassword" type="button">新しいパスワードを保存</button></div><button id="run" disabled>ダミー3書類を保存・照合</button><button id="download" disabled>Supabaseから3書類を取得・再照合</button><label for="receipt">転送対象のテスト受付番号</label><input id="receipt" value="STAGING-b4fd71bd-b0ba-40b9-b1f9-6c8fa4276c6f" spellcheck="false"><button id="transfer" disabled>テスト書類3点をDriveへ転送</button><iframe id="transferResult" name="gf136_transfer_result" title="Drive転送結果" style="width:100%;min-height:110px;border:1px solid #ddd;border-radius:8px"></iframe><small>Drive転送はテストドライバー D999999 のみ。転送後は下の結果欄を確認してください。</small><pre id="log">未実行</pre><small>本番の受付フォームは変更しません。結果に verified:true が表示された場合、Storageへの保存と再取得・ハッシュ照合に成功しています。Drive転送の成功表示と実際のDriveフォルダ内の3ファイルを照合してください。</small><script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW');
-const log=document.querySelector('#log'),run=document.querySelector('#run'),download=document.querySelector('#download');
-let lastReceipt='STAGING-c565052e-3789-4860-a988-90520a3b212e';
+const log=document.querySelector('#log'),run=document.querySelector('#run'),download=document.querySelector('#download'),transfer=document.querySelector('#transfer'),receiptInput=document.querySelector('#receipt');
+let lastReceipt=receiptInput.value;
 document.querySelector('#email').value='sachika_sato@happysugar.online';
 document.querySelector('#reset').onclick=async()=>{
  const email=document.querySelector('#email').value.trim();
@@ -25,7 +25,7 @@ document.querySelector('#login').onclick=async()=>{
   const {error}=await supabase.auth.signInWithPassword({email:document.querySelector('#email').value,password:document.querySelector('#password').value});
   document.querySelector('#password').value='';
   log.textContent=error?'ログイン失敗: '+error.message:'ログイン成功。管理者権限は保存時にサーバー側で検査します。';
-  run.disabled=!!error;download.disabled=!!error;
+  run.disabled=!!error;download.disabled=!!error;transfer.disabled=!!error;
   if(!error){const {data:{user}}=await supabase.auth.getUser();log.textContent+='\nログイン中: '+(user?.email||'不明');}
 };
 function imageBlob(){
@@ -40,7 +40,7 @@ run.onclick=async()=>{
  try {
   const {data:{session}}=await supabase.auth.getSession();if(!session)throw Error('ログインが必要です');
   const {data:{user}}=await supabase.auth.getUser();log.textContent+='ログイン中: '+(user?.email||'不明')+'\n';
-  const receipt='STAGING-'+crypto.randomUUID();log.textContent+='共通受付番号: '+receipt+'\n';
+  const receipt='STAGING-'+crypto.randomUUID();lastReceipt=receipt;receiptInput.value=receipt;log.textContent+='共通受付番号: '+receipt+'\n';
   const img=await imageBlob();if(!img)throw Error('ダミー画像生成失敗');
   for(const [kind,blob] of [['license_front',img],['license_back',img],['resident_pdf',pdfBlob()]]){
    const r=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-secure-intake-staging-test',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':blob.type,'x-document-type':kind,'x-test-receipt':receipt},body:blob});
@@ -54,10 +54,10 @@ download.onclick=async()=>{
  download.disabled=true;log.textContent='Supabaseからの書類取得を確認中...\\n';
  try{
   const {data:{session}}=await supabase.auth.getSession();if(!session)throw Error('管理者ログインが必要です');
-  const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-secure-intake-test-download',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({receipt_id:lastReceipt})});
+  const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-secure-intake-test-download',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({receipt_id:receiptInput.value.trim()})});
   const payload=await response.json();
   if(!response.ok)throw Error('取得API HTTP '+response.status+': '+JSON.stringify(payload));
-  if(payload.receipt_id!==lastReceipt||payload.documents?.length!==3)throw Error('受付番号または書類件数が不正');
+  if(payload.receipt_id!==receiptInput.value.trim()||payload.documents?.length!==3)throw Error('受付番号または書類件数が不正');
   for(const doc of payload.documents){
    const result=await fetch(doc.url,{cache:'no-store'});
    if(!result.ok)throw Error(doc.type+' の取得失敗 HTTP '+result.status);
@@ -69,5 +69,21 @@ download.onclick=async()=>{
   log.textContent+='3書類取得・再照合成功。Drive転送は未実行。\\n';
  }catch(e){log.textContent+='停止: '+e.message+'\\n';}
  finally{download.disabled=false;}
+};
+
+transfer.onclick=async()=>{
+ transfer.disabled=true;
+ try{
+  const id=receiptInput.value.trim();
+  if(!/^STAGING-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))throw Error('受付番号が不正です');
+  const {data:{session}}=await supabase.auth.getSession();if(!session)throw Error('管理者ログインが必要です');
+  log.textContent='管理者認証・署名付き転送指示を発行中...\\n';
+  const r=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf135-transfer-ticket-test',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({receipt_id:id})});
+  const ticket=await r.json();if(!r.ok||ticket.action!=='gf135_secure_transfer_test_v2'||!ticket.payload||!ticket.signature)throw Error('転送指示の発行失敗 HTTP '+r.status+' '+(ticket.error||''));
+  const form=document.createElement('form');form.method='POST';form.action='https://script.google.com/macros/s/AKfycbyl6ZvZMtbKNMBZZSgol-sI8BbRI9c3K_a0oGX6Z6hzekP5Lio_lLFOfKSPYUd4prbccw/exec';form.target='gf136_transfer_result';form.style.display='none';
+  for(const [name,value] of Object.entries({action:ticket.action,payload:ticket.payload,signature:ticket.signature})){const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input)}
+  document.body.appendChild(form);form.submit();form.remove();
+  log.textContent='GASへ転送指示を送信しました。下の結果欄に「GF136 SUCCESS: 3 files verified in Drive」が表示されたら成功です。\\n';
+ }catch(e){log.textContent='Drive転送停止: '+e.message+'\\n'}finally{transfer.disabled=false}
 };
 </script></html>
