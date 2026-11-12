@@ -8,7 +8,7 @@ export type GasEnvelope = {
   nonce: string;
   requestId: string;
   receipt: string;
-  lineUserId: string;
+  lineUserId: string;\n  residentMethod: 'upload' | 'mail';
   signature: string;
 };
 const encoder = new TextEncoder();
@@ -20,7 +20,7 @@ export const isValidEnvelope = (v: unknown): v is GasEnvelope => {
     typeof p.requestId === "string" && /^[0-9a-f]{64}$/i.test(p.requestId) &&
     typeof p.receipt === "string" && /^[A-Za-z0-9-]{4,100}$/.test(p.receipt) &&
     typeof p.lineUserId === "string" && /^U[0-9a-f]{32}$/i.test(p.lineUserId) &&
-    typeof p.signature === "string" && /^[0-9a-f]{64}$/i.test(p.signature);
+    (p.residentMethod === 'upload' || p.residentMethod === 'mail') &&\n    typeof p.signature === "string" && /^[0-9a-f]{64}$/i.test(p.signature);
 };
 const hex = (bytes: Uint8Array) => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
 const decodeHex = (s: string) => Uint8Array.from(s.match(/.{2}/g)!, b => parseInt(b, 16));
@@ -29,7 +29,7 @@ export async function verifyGasEnvelope(
 ): Promise<boolean> {
   if (!isValidEnvelope(raw) || secret.length < 48) return false;
   if (Math.abs(nowSeconds - raw.timestamp) > 120) return false;
-  const msg = [String(raw.timestamp), raw.nonce, raw.requestId, raw.receipt, raw.lineUserId].join("\n");
+  const msg = [String(raw.timestamp), raw.nonce, raw.requestId, raw.receipt, raw.lineUserId, raw.residentMethod].join("\n");
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
   return crypto.subtle.verify("HMAC", key, decodeHex(raw.signature), encoder.encode(msg));
 }
