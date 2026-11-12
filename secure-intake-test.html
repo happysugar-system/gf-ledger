@@ -1,6 +1,6 @@
 <!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 書類保存テスト（管理者限定）</title><style>body{font:16px system-ui;max-width:640px;margin:30px auto;padding:16px;line-height:1.7}input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}button{background:#124e73;color:white;border:0;border-radius:8px}pre{white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px}small{color:#555}</style><h2>GOLD FIRST 書類保存テスト</h2><p>管理者限定。実際の免許証・住民票は使用しないでください。ここで作るのはダミー画像とダミーPDFだけです。</p><input id="email" type="email" placeholder="管理者のログインメール"><input id="password" type="password" placeholder="パスワード"><button id="login">管理者ログイン</button><button id="run" disabled>ダミー3書類を保存・照合</button><pre id="log">未実行</pre><small>本番の受付フォームは変更しません。結果に verified:true が表示された場合、Storageへの保存と再取得・ハッシュ照合に成功しています。Google Driveへの転送は別途検証が必要です。</small><script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
-const supabase=createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','REPLACE_WITH_PUBLIC_ANON_KEY');
+const supabase=createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW');
 const log=document.querySelector('#log'),run=document.querySelector('#run');
 document.querySelector('#login').onclick=async()=>{
   const {error}=await supabase.auth.signInWithPassword({email:document.querySelector('#email').value,password:document.querySelector('#password').value});
