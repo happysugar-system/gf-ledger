@@ -389,10 +389,41 @@
     #save144Button, #candidateCheckButton, #serverVerifyHelp { display:none !important; }
     #liffStatus, #liffLoginButton { display:none !important; }
     #demoNotice { margin-bottom:18px; }
+    /* Keep genuine progress visible during the synchronous GAS handoff. */
+    #gfSubmitOverlay {
+      position:fixed;inset:0;z-index:99999;display:none;
+      background:rgba(248,250,249,.98);align-items:center;
+      justify-content:center;padding:22px;text-align:center;
+    }
+    #gfSubmitOverlay.is-open {display:flex}
+    #gfSubmitOverlay .gf-progress-card {
+      background:#fff;border:1px solid #dbe5e1;border-radius:18px;
+      padding:30px 22px;max-width:440px;width:100%;
+      box-shadow:0 12px 40px #102d2520;
+    }
+    #gfSubmitOverlay .gf-spinner {
+      width:40px;height:40px;margin:4px auto 20px;border:4px solid #e4ede8;
+      border-top-color:#1c8064;border-radius:50%;
+      animation:gf-submit-spin .85s linear infinite;
+    }
+    @keyframes gf-submit-spin {to {transform:rotate(360deg)}}
+    #gfSubmitOverlay h2 {font-size:22px;margin:0 0 12px;color:#174b3b}
+    #gfSubmitOverlay p {line-height:1.8;margin:0 0 12px}
+    #gfSubmitOverlay small {display:block;line-height:1.6;color:#52635e}
+
   </style>
 </head>
 
 <body>
+<div id="gfSubmitOverlay" role="status" aria-live="polite" aria-atomic="true">
+  <div class="gf-progress-card">
+    <div class="gf-spinner" aria-hidden="true"></div>
+    <h2 id="gfSubmitTitle">送信の準備をしています</h2>
+    <p id="gfSubmitProgressText">書類の準備を進めています。</p>
+    <small>受付完了は、次の画面に受付番号が表示された時点です。表示されるまでこの画面を閉じないでください。</small>
+    <small id="gfSubmitElapsed" style="margin-top:8px"></small>
+  </div>
+</div>
 <div class="wrap">
   <div id="entryGate" class="card" role="status" aria-live="polite" style="text-align:center;line-height:1.8">
     <h2 id="entryGateTitle">フォームを確認しています…</h2>
@@ -795,6 +826,7 @@
     const btn=document.querySelector('#docs146Panel button');btn.disabled=true;btn.textContent='書類を準備しています…';
     try {
       const resident=residentMethod==='upload'?await GF146_prepareResidentPdf(file,btn):'';
+      GF_submitProgress('準備した情報をGOLD FIRSTの受付へ送信しています…');
       const fields={demo_action:'save_146_docs_v1',id_token:token,receipt,front:licenseFrontData,back:licenseBackData,residentMethod,resident};
       if(fields.front.length>2800000||fields.back.length>2800000){alert('免許証画像が大きすぎます。撮り直してください（各2MB以内）');return;}
       const form=document.createElement('form');form.method='POST';form.action=LINE_VERIFY_TEST_URL;form.target='_blank';
@@ -1230,6 +1262,36 @@
   }
   window.addEventListener('DOMContentLoaded', GFVehicleEntryCheckOnOpen);
 
+  // This is progress feedback, NOT a fabricated receipt or proof of server success.
+  let gfProgressTick = null;
+  let gfProgressStarted = 0;
+  function GF_submitProgress(message) {
+    const overlay=document.getElementById('gfSubmitOverlay');
+    document.getElementById('gfSubmitProgressText').textContent=message;
+    overlay.classList.add('is-open');
+    gfProgressStarted=gfProgressStarted||Date.now();
+    if(!gfProgressTick){
+      gfProgressTick=setInterval(()=>{
+        const seconds=Math.floor((Date.now()-gfProgressStarted)/1000);
+        const el=document.getElementById('gfSubmitElapsed');
+        el.textContent=seconds>=10?'処理中：'+seconds+'秒経過': '';
+        // Request is still running; never call it completed before GAS confirms.
+        if(seconds>=30){
+          document.getElementById('gfSubmitTitle').textContent='安全に送信処理を続けています';
+          document.getElementById('gfSubmitProgressText').textContent=
+            '通信状況や書類の保存に時間がかかっています。受付番号の表示をお待ちください。';
+        }
+      },1000);
+    }
+  }
+  function GF_resetSubmitProgress() {
+    if(gfProgressTick)clearInterval(gfProgressTick);
+    gfProgressTick=null;gfProgressStarted=0;
+    document.getElementById('gfSubmitOverlay').classList.remove('is-open');
+    document.getElementById('gfSubmitTitle').textContent='送信の準備をしています';
+    document.getElementById('gfSubmitElapsed').textContent='';
+  }
+
   let gfSubmitting = false;
   async function demoSubmit() {
     if (!gfEntryVerified) { alert('公式LINEから「車両依頼」を開き直してください。'); return; }
@@ -1245,6 +1307,7 @@
     if (!licenseFrontData || !licenseBackData || !residentMethod) {alert('書類の入力を確認してください。');showPage(3);return;}
     const btn=document.querySelector('#page5 button.primary');
     gfSubmitting=true;btn.disabled=true;btn.textContent='送信の準備中…';
+    GF_submitProgress('入力内容と添付書類を送信できる形式にしています…');
     try {
       const file=document.getElementById('residentFile').files[0];
       if(residentMethod==='upload' && !file) throw new Error('住民票のPDFを選択してください。');
@@ -1260,8 +1323,11 @@
       if(fields.front.length>2800000||fields.back.length>2800000)throw new Error('免許証の画像が大きすぎます。撮り直してください。');
       const form=document.createElement('form');form.method='POST';form.action=GF_VEHICLE_SUBMIT_URL;form.target='_self';
       Object.entries(fields).forEach(([name,val])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=val;form.appendChild(input);});
-      form.style.display='none';document.body.appendChild(form);btn.textContent='送信中…';form.submit();
-    } catch(e) {alert(e.message||'送信の準備に失敗しました。');gfSubmitting=false;btn.disabled=false;btn.textContent='車両依頼を送信する';}
+      form.style.display='none';document.body.appendChild(form);btn.textContent='送信中…';
+      document.getElementById('gfSubmitTitle').textContent='車両依頼を送信しています';
+      GF_submitProgress('受付番号が表示されるまで、そのままお待ちください。');
+      form.submit();
+    } catch(e) {GF_resetSubmitProgress();alert(e.message||'送信の準備に失敗しました。');gfSubmitting=false;btn.disabled=false;btn.textContent='車両依頼を送信する';}
   }
 
   window.addEventListener('pagehide', stopCamera);
