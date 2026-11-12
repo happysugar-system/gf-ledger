@@ -1,7 +1,25 @@
-<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 書類保存テスト（管理者限定）</title><style>body{font:16px system-ui;max-width:640px;margin:30px auto;padding:16px;line-height:1.7}input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}button{background:#124e73;color:white;border:0;border-radius:8px}pre{white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px}small{color:#555}</style><h2>GOLD FIRST 書類保存テスト</h2><p>管理者限定。実際の免許証・住民票は使用しないでください。ここで作るのはダミー画像とダミーPDFだけです。</p><input id="email" type="email" placeholder="管理者のログインメール"><input id="password" type="password" placeholder="パスワード"><button id="login">管理者ログイン</button><button id="run" disabled>ダミー3書類を保存・照合</button><pre id="log">未実行</pre><small>本番の受付フォームは変更しません。結果に verified:true が表示された場合、Storageへの保存と再取得・ハッシュ照合に成功しています。Google Driveへの転送は別途検証が必要です。</small><script type="module">
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 書類保存テスト（管理者限定）</title><style>body{font:16px system-ui;max-width:640px;margin:30px auto;padding:16px;line-height:1.7}input,button{padding:12px;margin:6px 0;width:100%;box-sizing:border-box}button{background:#124e73;color:white;border:0;border-radius:8px}pre{white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px}small{color:#555}</style><h2>GOLD FIRST 書類保存テスト</h2><p>管理者限定。実際の免許証・住民票は使用しないでください。ここで作るのはダミー画像とダミーPDFだけです。</p><input id="email" type="email" placeholder="管理者のログインメール"><input id="password" type="password" placeholder="パスワード"><button id="login">管理者ログイン</button><button id="reset" type="button">パスワード再設定メールを送る</button><div id="newPasswordPanel" hidden><input id="newPassword" type="password" autocomplete="new-password" placeholder="新しいパスワード（12文字以上）"><button id="savePassword" type="button">新しいパスワードを保存</button></div><button id="run" disabled>ダミー3書類を保存・照合</button><pre id="log">未実行</pre><small>本番の受付フォームは変更しません。結果に verified:true が表示された場合、Storageへの保存と再取得・ハッシュ照合に成功しています。Google Driveへの転送は別途検証が必要です。</small><script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW');
 const log=document.querySelector('#log'),run=document.querySelector('#run');
+document.querySelector('#email').value='sachika_sato@happysugar.online';
+document.querySelector('#reset').onclick=async()=>{
+ const email=document.querySelector('#email').value.trim();
+ if(!email){log.textContent='メールアドレスを入力してください';return;}
+ const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+ log.textContent=error?'送信できませんでした: '+error.message+'（SupabaseのRedirect URLs設定も確認してください）':'再設定メールの送信を受け付けました。メール内のリンクを開いてください。届かない場合は迷惑メールも確認してください。';
+};
+supabase.auth.onAuthStateChange((event)=>{
+ if(event==='PASSWORD_RECOVERY'){document.querySelector('#newPasswordPanel').hidden=false;log.textContent='新しいパスワードを入力してください。';}
+});
+document.querySelector('#savePassword').onclick=async()=>{
+ const password=document.querySelector('#newPassword').value;
+ if(password.length<12){log.textContent='12文字以上のパスワードにしてください';return;}
+ const {error}=await supabase.auth.updateUser({password});
+ document.querySelector('#newPassword').value='';
+ log.textContent=error?'再設定失敗: '+error.message:'パスワードを再設定しました。管理者ログインを試してください。';
+ if(!error)document.querySelector('#newPasswordPanel').hidden=true;
+};
 document.querySelector('#login').onclick=async()=>{
   const {error}=await supabase.auth.signInWithPassword({email:document.querySelector('#email').value,password:document.querySelector('#password').value});
   document.querySelector('#password').value='';
