@@ -25,6 +25,7 @@ document.querySelector('#login').onclick=async()=>{
   document.querySelector('#password').value='';
   log.textContent=error?'ログイン失敗: '+error.message:'ログイン成功。管理者権限は保存時にサーバー側で検査します。';
   run.disabled=!!error;
+  if(!error){const {data:{user}}=await supabase.auth.getUser();log.textContent+='\nログイン中: '+(user?.email||'不明');}
 };
 function imageBlob(){
  const c=document.createElement('canvas');c.width=360;c.height=220;const x=c.getContext('2d');x.fillStyle='#ffffff';x.fillRect(0,0,360,220);x.fillStyle='#111111';x.font='20px sans-serif';x.fillText('DUMMY TEST IMAGE',24,100);
@@ -37,6 +38,7 @@ run.onclick=async()=>{
  run.disabled=true;log.textContent='開始...\n';
  try {
   const {data:{session}}=await supabase.auth.getSession();if(!session)throw Error('ログインが必要です');
+  const {data:{user}}=await supabase.auth.getUser();log.textContent+='ログイン中: '+(user?.email||'不明')+'\n';
   const img=await imageBlob();if(!img)throw Error('ダミー画像生成失敗');
   for(const [kind,blob] of [['license_front',img],['license_back',img],['resident_pdf',pdfBlob()]]){
    const r=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-secure-intake-staging-test',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':blob.type,'x-document-type':kind},body:blob});
