@@ -30,12 +30,12 @@ function GF_FAST_署名_(textValue) {
 }
 
 /** Server-to-server authentication envelope for a future verified intake API. */
-function GF_FAST_署名付き要求_(lineUserId, requestId, receipt) {
+function GF_FAST_署名付き要求_(lineUserId, requestId, receipt, residentMethod) {
   if (!/^U[0-9a-f]{32}$/i.test(lineUserId) ||
       !/^[a-f0-9]{64}$/i.test(requestId) ||
-      !/^[A-Za-z0-9-]{4,100}$/.test(receipt)) throw new Error('INVALID_INPUT');
+      !/^[A-Za-z0-9-]{4,100}$/.test(receipt) ||\n      !['upload','mail'].includes(residentMethod)) throw new Error('INVALID_INPUT');
   const timestamp = Math.floor(Date.now()/1000);
   const nonce = Utilities.getUuid();
-  const message = [String(timestamp),nonce,requestId,receipt,lineUserId].join('\n');
-  return {timestamp,nonce,requestId,receipt,lineUserId,signature:GF_FAST_署名_(message)};
+  const message = [String(timestamp),nonce,requestId,receipt,lineUserId,residentMethod].join('\n');
+  return {timestamp,nonce,requestId,receipt,lineUserId,residentMethod,signature:GF_FAST_署名_(message)};
 }
