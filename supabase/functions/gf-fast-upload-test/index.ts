@@ -32,7 +32,7 @@ Deno.serve(async req=>{
    if(!p||typeof p!=="object")return json(400,{error:"bad_request"});
    const b=p as Record<string,unknown>;
    if(!await verifyGasEnvelope(b,secret))return json(401,{error:"invalid_signature"});
-   if(!["mail","upload"].includes(String(b.residentMethod)))return json(400,{error:"invalid_method"});
+   if(!["mail","upload"].includes(String(b.residentMethod)))return json(400,{error:"invalid_method"});\n   // residentMethod is included in the GAS HMAC signature, never trusted separately.
    const hash=await requestKeyHash(String(b.requestId));
    const token=randomToken();
    const tokenHash=await sha(new TextEncoder().encode(token));
