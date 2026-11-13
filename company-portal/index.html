@@ -11,7 +11,7 @@
 <section class="panel" id="setup"><h2>接続設定待ち</h2><p class="muted">この画面は開発版です。デモ用Supabaseの公開可能なURLとpublishable keyを設定してからログインできます。秘密鍵は入力・配置しません。</p></section></main><footer>GOLD FIRST / Company Portal — Development</footer>
 <script type="module">
 import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/+esm";
-const CONFIG={url:"__SUPABASE_DEMO_URL__",publishableKey:"__SUPABASE_DEMO_PUBLISHABLE_KEY__"};
+const CONFIG={url:"https://zwprphmfgobkektzsuti.supabase.co",publishableKey:"sb_publishable__wtlccECQwOVd3-LvRVFYQ_2dCUlPVR"};
 const configured=!Object.values(CONFIG).some(v=>v.startsWith("__"));
 const el=id=>document.getElementById(id);
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
