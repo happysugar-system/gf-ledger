@@ -4,10 +4,12 @@
 // Auth: verified Supabase JWT. Never expose GEMINI_API_KEY in browser.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+const cors={"Access-Control-Allow-Origin":"https://happysugar-system.github.io","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const json = (status:number, value:unknown) => new Response(JSON.stringify(value),{
- status, headers:{"Content-Type":"application/json","Cache-Control":"no-store"}
+ status, headers:{"Content-Type":"application/json","Cache-Control":"no-store",...cors}
 });
 Deno.serve(async (req:Request)=>{
+ if(req.method==="OPTIONS") return new Response(null,{status:204,headers:cors});
  if(req.method!=="POST") return json(405,{error:"POST only"});
  const started=Date.now();
  try {
