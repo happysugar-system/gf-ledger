@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Redeploy company-specific single-use invitation flow
+      # Redeploy simplified free-text company registration and approval
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
