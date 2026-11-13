@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Redeploy to include company-scoped LINE vehicle viewing page
+      # Redeploy company-specific single-use invitation flow
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
