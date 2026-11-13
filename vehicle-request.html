@@ -691,6 +691,39 @@
     if (el) el.textContent = message;
   }
 
+  // Isolated demo: complete the one-time LINE verification issued by mypage.
+  // Never trust a browser-supplied LINE user ID or DriverID.
+  async function completeMypageLineLink(){
+    const challenge=new URLSearchParams(window.location.search).get('mypage_challenge');
+    if(!challenge)return false;
+    const note=document.getElementById('liffStatus');
+    const setNote=(message)=>{if(note){note.style.display='block';note.textContent=message;}};
+    if(!/^[A-Za-z0-9_-]{43}$/.test(challenge)){
+      setNote('LINE連携URLが無効です。マイページからやり直してください。');return true;
+    }
+    if(!window.liff || !liff.isLoggedIn()){
+      setNote('LINEにログインしてください。');
+      if(window.liff)liff.login();
+      return true;
+    }
+    const token=liff.getIDToken();
+    if(!token){setNote('LINE認証情報が取得できません。LINEから開き直してください。');return true;}
+    setNote('LINE本人確認中です。画面を閉じずにお待ちください。');
+    try{
+      const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-line-mypage-link',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'complete',challenge,line_id_token:token})
+      });
+      const result=await response.json();
+      if(!response.ok || result.linked!==true)throw new Error('本人情報を照合できませんでした。');
+      // Strip the one-time challenge from browser history before returning.
+      history.replaceState(null,'',window.location.pathname);
+      document.querySelector('.wrap').innerHTML=
+        '<div class="card"><h1>LINE本人確認が完了しました</h1><p>マイページへ戻って登録状況を確認してください。</p><a href="https://happysugar-system.github.io/gf-mypage-demo/mypage-prod-test.html" style="display:block;padding:16px;background:#166b56;color:white;border-radius:10px;text-align:center">マイページへ戻る</a></div>';
+    }catch(err){setNote('LINE本人確認を完了できませんでした。マイページから再度お試しください。');}
+    return true;
+  }
+
   async function initializeLiff() {
     if (!window.liff) {
       setLiffStatus('LINE連携ライブラリを読み込めませんでした。通信環境をご確認ください。（デモ入力は可能です）');
@@ -699,6 +732,7 @@
     try {
       await liff.init({ liffId: LIFF_ID });
       liffReady = true;
+      if(await completeMypageLineLink())return;
       if (liff.isLoggedIn()) {
         if (LINE_VERIFY_TEST_URL.startsWith('https://script.google.com/macros/s/')) {
           document.getElementById('serverVerifyButton').style.display = 'block';
