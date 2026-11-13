@@ -6,8 +6,8 @@
 </style></head><body><header><strong>GOLD FIRST</strong><small>法人用マイページ｜閲覧専用</small></header><main>
 <section id="login" class="panel"><h2>法人担当者ログイン</h2><p class="muted">登録された法人担当者のみ利用できます。会社はログイン情報から判定されます。</p><form id="loginForm"><label>メールアドレス<input type="email" id="email" autocomplete="username" required></label><label>パスワード<input type="password" id="password" autocomplete="current-password" required></label><button type="submit">ログイン</button></form><p id="message" role="alert"></p></section>
 <section id="portal" class="hide"><div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><small class="muted">ログイン中の所属会社</small><h2 id="companyName" style="margin:4px 0"></h2></div><button class="secondary" id="logout">ログアウト</button></div><p class="muted">会社切替・車両編集はできません。</p></div>
-<div class="panel"><div class="grid"><div class="metric">対象車両<strong id="total">0</strong></div><div class="metric">準備中<strong id="preparing">0</strong></div><div class="metric">利用中<strong id="active">0</strong></div></div></div>
-<div class="panel"><h2>車両一覧</h2><input id="search" placeholder="車番・利用者で検索"><p class="muted" id="resultInfo"></p><div id="vehicles"></div></div></section>
+<div class="panel"><div class="grid"><div class="metric">対象車両<strong id="total">0</strong></div><div class="metric">通常管理<strong id="preparing">0</strong></div><div class="metric">その他の管理区分<strong id="active">0</strong></div></div></div>
+<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>車両一覧</h2><button class="secondary" id="refresh" type="button">最新情報を取得</button></div><input id="search" placeholder="車番・利用者で検索"><p class="muted" id="resultInfo"></p><div id="vehicles"></div></div></section>
 <section class="panel" id="setup"><h2>接続設定待ち</h2><p class="muted">この画面は開発版です。デモ用Supabaseの公開可能なURLとpublishable keyを設定してからログインできます。秘密鍵は入力・配置しません。</p></section></main><footer>GOLD FIRST / Company Portal — Development</footer>
 <script type="module">
 import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/+esm";
@@ -40,12 +40,13 @@ function render(){
  const q=el("search").value.trim().toLowerCase();
  const filtered=items.filter(v=>[v.vehicle_number,v.driver_display_name].some(s=>String(s||"").toLowerCase().includes(q)));
  el("total").textContent=items.length;
- el("preparing").textContent=items.filter(v=>/準備|名変|登録|納車待ち/.test(v.status||"")).length;
- el("active").textContent=items.filter(v=>/利用中|稼働中|貸出中/.test(v.status||"")).length;
+ el("preparing").textContent=items.filter(v=>(v.status||"").trim()==="通常管理").length;
+ el("active").textContent=items.filter(v=>(v.status||"").trim()!=="通常管理").length;
  el("resultInfo").textContent=filtered.length+"台表示";
  el("vehicles").innerHTML=filtered.length?filtered.map(v=>`<article class="vehicle"><h3>${safe(v.vehicle_number||v.vehicle_id)} <span class="badge">${safe(v.status||"確認中")}</span></h3><div class="fields"><div><small>利用者</small>${safe(v.driver_display_name||"—")}</div><div><small>名変予定日</small>${safe(v.name_change_scheduled||"—")}</div><div><small>納車予定日</small>${safe(v.delivery_scheduled||"—")}</div><div><small>返却予定日</small>${safe(v.return_scheduled||"—")}</div></div></article>`).join(""):"<p class='muted'>表示できる車両がありません。</p>";
 }
 el("search").addEventListener("input",render);
+el("refresh").addEventListener("click",async()=>{el("refresh").disabled=true;try{await load();}catch(err){alert("更新できませんでした。再ログインしてください。");}finally{el("refresh").disabled=false;}});
 el("loginForm").addEventListener("submit",async e=>{e.preventDefault();if(!client)return;el("message").textContent="確認中…";const {error}=await client.auth.signInWithPassword({email:el("email").value,password:el("password").value});if(error){el("message").textContent="ログインできません。メールアドレスとパスワードをご確認ください。";return;}try{await load();el("message").textContent="";}catch(err){await client.auth.signOut();setView(false);el("message").textContent=err.message;}});
 el("logout").addEventListener("click",async()=>{if(client)await client.auth.signOut();items=[];setView(false);});
 if(client)load().catch(async err=>{await client.auth.signOut();setView(false);el("message").textContent=err.message;});
