@@ -1,0 +1,39 @@
+name: GOLD FIRST company portal - hourly vehicle sync
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gf-company-portal-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout reviewed sync implementation
+        uses: actions/checkout@v4
+        with:
+          ref: 25f461269a089233abe8d0aa8c185419554f42f1
+      - name: Check required connection secrets
+        env:
+          SOURCE: ${{ secrets.GF_SOURCE_DATABASE_URL }}
+          TARGET: ${{ secrets.GF_PORTAL_DATABASE_URL }}
+        run: |
+          if [ -z "$SOURCE" ] || [ -z "$TARGET" ]; then
+            echo "::error::Both database connection secrets are required."
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install database driver
+        run: python -m pip install 'psycopg[binary]==3.2.10'
+      - name: Synchronize allowlisted vehicles
+        env:
+          GF_SOURCE_DATABASE_URL: ${{ secrets.GF_SOURCE_DATABASE_URL }}
+          GF_PORTAL_DATABASE_URL: ${{ secrets.GF_PORTAL_DATABASE_URL }}
+          GF_SYNC_APPLY: 'true'
+        run: python scripts/sync_company_portal.py
