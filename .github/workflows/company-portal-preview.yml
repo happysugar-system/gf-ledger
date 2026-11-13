@@ -1,4 +1,4 @@
-name: Deploy company portal preview
+name: Deploy GOLD FIRST site and company portal
 on:
   push:
     branches: [feature/company-portal-20261113]
@@ -19,10 +19,27 @@ jobs:
       name: github-pages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout existing production site from main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site
+      - name: Checkout new company portal
+        uses: actions/checkout@v4
+        with:
+          ref: feature/company-portal-20261113
+          sparse-checkout: company-portal
+          path: portal-source
+      - name: Assemble site without replacing the existing homepage
+        run: |
+          mkdir -p public/company-portal
+          cp site/index.html public/index.html
+          cp site/manifest.webmanifest public/manifest.webmanifest
+          cp site/icon.png public/icon.png
+          cp portal-source/company-portal/index.html public/company-portal/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: company-portal
+          path: public
       - id: deployment
         uses: actions/deploy-pages@v4
