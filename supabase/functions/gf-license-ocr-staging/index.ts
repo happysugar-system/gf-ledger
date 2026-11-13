@@ -29,7 +29,7 @@ Deno.serve(async (req:Request)=>{
   if(!["image/jpeg","image/png","image/webp"].includes(mime)||typeof image!=="string"||
      image.length>5_500_000||image.length<100||!/^[A-Za-z0-9+/=]+$/.test(image))
     return json(400,{error:"Invalid image"});
-  const prompt="日本の運転免許証の表面から氏名欄の氏名のみを読み取ってください。推測せず、旧字体を変更せず、姓と名の間は半角スペース1個。判読できなければ空文字。JSON形式で {\\\"full_name\\\":\\\"\\\"} を返す。";
+  const prompt=`日本の運転免許証の表面から氏名欄の氏名のみを読み取ってください。推測せず、旧字体を変更せず、姓と名の間は半角スペース1個。判読できなければ空文字。JSON形式で {"full_name":""} を返す。`;
   const aiStarted=Date.now();
   const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent",{
     method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":geminiKey},
