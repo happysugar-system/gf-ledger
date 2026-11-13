@@ -23,7 +23,7 @@ def main():
 
     with psycopg.connect(source_dsn, autocommit=False) as source:
         with source.cursor() as cursor:
-            cursor.execute("begin transaction read only")
+            cursor.execute("set transaction read only")
             cursor.execute(SOURCE_SQL)
             rows = cursor.fetchall()
 
