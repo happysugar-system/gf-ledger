@@ -1,0 +1,33 @@
+name: Company portal sync - manual dry run
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/company-portal-20261113
+      - name: Check database secrets are configured
+        env:
+          SOURCE: ${{ secrets.GF_SOURCE_DATABASE_URL }}
+          TARGET: ${{ secrets.GF_PORTAL_DATABASE_URL }}
+        run: |
+          if [ -z "$SOURCE" ] || [ -z "$TARGET" ]; then
+            echo "::error::Database URLs not configured. Add both repository Actions secrets first."
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned PostgreSQL driver
+        run: python -m pip install 'psycopg[binary]==3.2.10'
+      - name: Verify source and target data (no writes)
+        env:
+          GF_SOURCE_DATABASE_URL: ${{ secrets.GF_SOURCE_DATABASE_URL }}
+          GF_PORTAL_DATABASE_URL: ${{ secrets.GF_PORTAL_DATABASE_URL }}
+          GF_SYNC_APPLY: 'false'
+        run: python scripts/sync_company_portal.py
