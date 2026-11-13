@@ -2,12 +2,12 @@
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GOLD FIRST | 法人マイページ</title>
 <style>
-:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#193047;background:#f4f7fa}*{box-sizing:border-box}body{margin:0}header{background:#102f4a;color:white;padding:18px max(20px,calc((100vw - 1050px)/2))}header strong{font-size:22px;letter-spacing:.06em}header small{display:block;color:#b7d0e3}main{max-width:1050px;margin:24px auto;padding:0 16px}.panel{background:white;border:1px solid #dfe7ee;border-radius:15px;padding:22px;margin-bottom:16px;box-shadow:0 2px 9px #17334b0a}.muted{color:#63788b}.hide{display:none!important}input{padding:12px;border:1px solid #cad6df;border-radius:9px;font:inherit;width:100%;margin:8px 0}button{border:0;background:#146a9b;color:white;padding:12px 18px;border-radius:9px;font:inherit;cursor:pointer}button.secondary{background:#e9eff4;color:#24465e}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#f3f8fb;border-radius:10px;padding:15px;text-align:center}.metric strong{display:block;font-size:28px}.vehicle{border:1px solid #dfe7ee;border-radius:12px;padding:16px;margin-top:12px}.vehicle h3{margin:0 0 8px}.badge{display:inline-block;background:#e5f2fa;color:#115a86;padding:5px 9px;border-radius:20px;font-size:12px}.fields{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}.fields div{background:#f8fafb;padding:10px;border-radius:7px}.fields small{display:block;color:#63788b}#message{color:#a23d38;min-height:22px}footer{color:#708293;text-align:center;padding:22px}@media(max-width:600px){.fields{grid-template-columns:1fr}.grid{gap:6px}.metric{padding:10px}.metric strong{font-size:22px}}
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#193047;background:#f4f7fa}*{box-sizing:border-box}body{margin:0}header{background:#102f4a;color:white;padding:18px max(20px,calc((100vw - 1050px)/2))}header strong{font-size:22px;letter-spacing:.06em}header small{display:block;color:#b7d0e3}main{max-width:1050px;margin:24px auto;padding:0 16px}.panel{background:white;border:1px solid #dfe7ee;border-radius:15px;padding:22px;margin-bottom:16px;box-shadow:0 2px 9px #17334b0a}.muted{color:#63788b}.hide{display:none!important}input{padding:12px;border:1px solid #cad6df;border-radius:9px;font:inherit;width:100%;margin:8px 0}button{border:0;background:#146a9b;color:white;padding:12px 18px;border-radius:9px;font:inherit;cursor:pointer}button.secondary{background:#e9eff4;color:#24465e}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#f3f8fb;border-radius:10px;padding:15px;text-align:center}.metric strong{display:block;font-size:28px}.vehicle{border:1px solid #dfe7ee;border-radius:12px;padding:16px;margin-top:12px}.vehicle h3{margin:0 0 8px}.vehicle-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.vehicle summary{cursor:pointer;list-style:none}.vehicle summary::-webkit-details-marker{display:none}.vehicle summary:after{content:"詳細を見る ＋";font-size:13px;color:#146a9b;display:block;margin-top:8px}.vehicle[open] summary:after{content:"詳細を閉じる −"}.vehicle .fields{margin-top:14px}.notice{padding:10px 12px;border-radius:9px;background:#fff6e8;color:#83551d;margin-top:10px;font-size:13px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.toolbar select{padding:10px;border:1px solid #cad6df;border-radius:9px;background:white;font:inherit}.sync-info{font-size:12px;color:#63788b}.badge{display:inline-block;background:#e5f2fa;color:#115a86;padding:5px 9px;border-radius:20px;font-size:12px}.fields{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}.fields div{background:#f8fafb;padding:10px;border-radius:7px}.fields small{display:block;color:#63788b}#message{color:#a23d38;min-height:22px}footer{color:#708293;text-align:center;padding:22px}@media(max-width:600px){.fields{grid-template-columns:1fr}.grid{gap:6px}.metric{padding:10px}.metric strong{font-size:22px}}
 </style></head><body><header><strong>GOLD FIRST</strong><small>法人用マイページ｜閲覧専用</small></header><main>
 <section id="login" class="panel"><h2>法人担当者ログイン</h2><p class="muted">登録された法人担当者のみ利用できます。会社はログイン情報から判定されます。</p><form id="loginForm"><label>メールアドレス<input type="email" id="email" autocomplete="username" required></label><label>パスワード<input type="password" id="password" autocomplete="current-password" required></label><button type="submit">ログイン</button></form><p id="message" role="alert"></p></section>
 <section id="portal" class="hide"><div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><small class="muted">ログイン中の所属会社</small><h2 id="companyName" style="margin:4px 0"></h2></div><button class="secondary" id="logout">ログアウト</button></div><p class="muted">会社切替・車両編集はできません。</p></div>
 <div class="panel"><div class="grid"><div class="metric">対象車両<strong id="total">0</strong></div><div class="metric">通常管理<strong id="preparing">0</strong></div><div class="metric">その他の管理区分<strong id="active">0</strong></div></div></div>
-<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>車両一覧</h2><button class="secondary" id="refresh" type="button">最新情報を取得</button></div><input id="search" placeholder="車番・利用者で検索"><p class="muted" id="resultInfo"></p><div id="vehicles"></div></div></section>
+<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>車両一覧</h2><button class="secondary" id="refresh" type="button">最新情報を取得</button></div><div class="toolbar"><input id="search" style="flex:1;min-width:180px" placeholder="車番・利用者で検索"><select id="statusFilter" aria-label="管理区分"><option value="">すべての管理区分</option></select><select id="sortOrder" aria-label="並び順"><option value="vehicle">車番順</option><option value="schedule">予定日が近い順</option></select></div><p class="muted" id="resultInfo"></p><p class="sync-info" id="syncInfo"></p><div id="vehicles"></div></div></section>
 <section class="panel" id="setup"><h2>接続設定待ち</h2><p class="muted">この画面は開発版です。デモ用Supabaseの公開可能なURLとpublishable keyを設定してからログインできます。秘密鍵は入力・配置しません。</p></section></main><footer>GOLD FIRST / Company Portal — Development</footer>
 <script type="module">
 import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/+esm";
@@ -36,16 +36,37 @@ async function load(){
  if(vErr)throw vErr;
  items=rows||[];setView(true);render();
 }
+const displayDate=value=>{
+ if(!value)return "—";
+ const d=String(value).trim();
+ if(/^\\d{4}-\\d{2}-\\d{2}$/.test(d))return d.replace(/-/g,"/");
+ return d;
+};
+const nextSchedule=v=>[v.name_change_scheduled,v.delivery_scheduled,v.return_scheduled].filter(x=>/^\\d{4}-\\d{2}-\\d{2}$/.test(x||"")).sort()[0]||"9999-12-31";
 function render(){
  const q=el("search").value.trim().toLowerCase();
- const filtered=items.filter(v=>[v.vehicle_number,v.driver_display_name].some(s=>String(s||"").toLowerCase().includes(q)));
+ const selected=el("statusFilter").value;
+ const statuses=[...new Set(items.map(v=>(v.status||"未設定").trim()||"未設定"))].sort((a,b)=>a.localeCompare(b,"ja"));
+ const old=el("statusFilter").value;
+ el("statusFilter").innerHTML='<option value="">すべての管理区分</option>'+statuses.map(x=>'<option value="'+safe(x)+'">'+safe(x)+'</option>').join("");
+ el("statusFilter").value=statuses.includes(old)?old:"";
+ const filtered=items.filter(v=>[v.vehicle_number,v.driver_display_name].some(s=>String(s||"").toLowerCase().includes(q))).filter(v=>!selected||(v.status||"未設定").trim()===selected);
+ if(el("sortOrder").value==="schedule")filtered.sort((a,b)=>nextSchedule(a).localeCompare(nextSchedule(b))||String(a.vehicle_number).localeCompare(String(b.vehicle_number),"ja"));
  el("total").textContent=items.length;
  el("preparing").textContent=items.filter(v=>(v.status||"").trim()==="通常管理").length;
  el("active").textContent=items.filter(v=>(v.status||"").trim()!=="通常管理").length;
  el("resultInfo").textContent=filtered.length+"台表示";
- el("vehicles").innerHTML=filtered.length?filtered.map(v=>`<article class="vehicle"><h3>${safe(v.vehicle_number||v.vehicle_id)} <span class="badge">${safe(v.status||"確認中")}</span></h3><div class="fields"><div><small>利用者</small>${safe(v.driver_display_name||"—")}</div><div><small>名変予定日</small>${safe(v.name_change_scheduled||"—")}</div><div><small>納車予定日</small>${safe(v.delivery_scheduled||"—")}</div><div><small>返却予定日</small>${safe(v.return_scheduled||"—")}</div></div></article>`).join(""):"<p class='muted'>表示できる車両がありません。</p>";
+ const latest=items.map(v=>v.updated_at).filter(Boolean).sort().at(-1);
+ el("syncInfo").textContent=latest?"法人用データ最終更新："+new Date(latest).toLocaleString("ja-JP"):"";
+ el("vehicles").innerHTML=filtered.length?filtered.map(v=>{
+  const scheduled=[["名変予定日",v.name_change_scheduled],["納車予定日",v.delivery_scheduled],["返却予定日",v.return_scheduled]].filter(([,date])=>date);
+  return `<details class="vehicle"><summary><div class="vehicle-head"><h3>${safe(v.vehicle_number||v.vehicle_id)}</h3><span class="badge">${safe(v.status||"未設定")}</span></div><div class="muted">利用者：${safe(v.driver_display_name||"—")}</div>${scheduled.length?'<div class="notice">予定：'+scheduled.map(([label,date])=>safe(label)+" "+safe(displayDate(date))).join(" ／ ")+'</div>':""}</summary><div class="fields"><div><small>車両ID</small>${safe(v.vehicle_id)}</div><div><small>管理区分</small>${safe(v.status||"未設定")}</div><div><small>利用開始日</small>${safe(displayDate(v.usage_start))}</div><div><small>名変予定日</small>${safe(displayDate(v.name_change_scheduled))}</div><div><small>納車予定日</small>${safe(displayDate(v.delivery_scheduled))}</div><div><small>返却予定日</small>${safe(displayDate(v.return_scheduled))}</div></div></details>`;
+ }).join(""):"<p class='muted'>該当する車両がありません。</p>";
 }
+
 el("search").addEventListener("input",render);
+el("statusFilter").addEventListener("change",render);
+el("sortOrder").addEventListener("change",render);
 el("refresh").addEventListener("click",async()=>{el("refresh").disabled=true;try{await load();}catch(err){alert("更新できませんでした。再ログインしてください。");}finally{el("refresh").disabled=false;}});
 el("loginForm").addEventListener("submit",async e=>{e.preventDefault();if(!client)return;el("message").textContent="確認中…";const {error}=await client.auth.signInWithPassword({email:el("email").value,password:el("password").value});if(error){el("message").textContent="ログインできません。メールアドレスとパスワードをご確認ください。";return;}try{await load();el("message").textContent="";}catch(err){await client.auth.signOut();setView(false);el("message").textContent=err.message;}});
 el("logout").addEventListener("click",async()=>{if(client)await client.auth.signOut();items=[];setView(false);});
