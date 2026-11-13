@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOLD FIRST | 法人マイページ</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#193047;background:#f4f7fa}*{box-sizing:border-box}body{margin:0}header{background:#102f4a;color:white;padding:18px max(20px,calc((100vw - 1050px)/2))}header strong{font-size:22px;letter-spacing:.06em}header small{display:block;color:#b7d0e3}main{max-width:1050px;margin:24px auto;padding:0 16px}.panel{background:white;border:1px solid #dfe7ee;border-radius:15px;padding:22px;margin-bottom:16px;box-shadow:0 2px 9px #17334b0a}.muted{color:#63788b}.hide{display:none!important}input{padding:12px;border:1px solid #cad6df;border-radius:9px;font:inherit;width:100%;margin:8px 0}button{border:0;background:#146a9b;color:white;padding:12px 18px;border-radius:9px;font:inherit;cursor:pointer}button.secondary{background:#e9eff4;color:#24465e}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#f3f8fb;border-radius:10px;padding:15px;text-align:center}.metric strong{display:block;font-size:28px}.vehicle{border:1px solid #dfe7ee;border-radius:12px;padding:16px;margin-top:12px}.vehicle h3{margin:0 0 8px}.badge{display:inline-block;background:#e5f2fa;color:#115a86;padding:5px 9px;border-radius:20px;font-size:12px}.fields{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}.fields div{background:#f8fafb;padding:10px;border-radius:7px}.fields small{display:block;color:#63788b}#message{color:#a23d38;min-height:22px}footer{color:#708293;text-align:center;padding:22px}@media(max-width:600px){.fields{grid-template-columns:1fr}.grid{gap:6px}.metric{padding:10px}.metric strong{font-size:22px}}
+</style></head><body><header><strong>GOLD FIRST</strong><small>法人用マイページ｜閲覧専用</small></header><main>
+<section id="login" class="panel"><h2>法人担当者ログイン</h2><p class="muted">登録された法人担当者のみ利用できます。会社はログイン情報から判定されます。</p><form id="loginForm"><label>メールアドレス<input type="email" id="email" autocomplete="username" required></label><label>パスワード<input type="password" id="password" autocomplete="current-password" required></label><button type="submit">ログイン</button></form><p id="message" role="alert"></p></section>
+<section id="portal" class="hide"><div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><small class="muted">ログイン中の所属会社</small><h2 id="companyName" style="margin:4px 0"></h2></div><button class="secondary" id="logout">ログアウト</button></div><p class="muted">会社切替・車両編集はできません。</p></div>
+<div class="panel"><div class="grid"><div class="metric">対象車両<strong id="total">0</strong></div><div class="metric">準備中<strong id="preparing">0</strong></div><div class="metric">利用中<strong id="active">0</strong></div></div></div>
+<div class="panel"><h2>車両一覧</h2><input id="search" placeholder="車番・利用者で検索"><p class="muted" id="resultInfo"></p><div id="vehicles"></div></div></section>
+<section class="panel" id="setup"><h2>接続設定待ち</h2><p class="muted">この画面は開発版です。デモ用Supabaseの公開可能なURLとpublishable keyを設定してからログインできます。秘密鍵は入力・配置しません。</p></section></main><footer>GOLD FIRST / Company Portal — Development</footer>
+<script type="module">
+import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.10/+esm";
+const CONFIG={url:"__SUPABASE_DEMO_URL__",publishableKey:"__SUPABASE_DEMO_PUBLISHABLE_KEY__"};
+const configured=!Object.values(CONFIG).some(v=>v.startsWith("__"));
+const el=id=>document.getElementById(id);
+const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let client=null,items=[];
+const setView=logged=>{el("login").classList.toggle("hide",logged);el("portal").classList.toggle("hide",!logged)};
+if(configured){el("setup").classList.add("hide");client=createClient(CONFIG.url,CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true}});}
+else{el("message").textContent="現在、認証接続の設定待ちです。";}
+async function load(){
+ if(!client)return;
+ const {data:{user},error:userError}=await client.auth.getUser();
+ if(userError||!user){setView(false);return;}
+ // Company is discovered from authenticated membership, NEVER selected by client.
+ const {data:members,error:mErr}=await client.from("gf_company_portal_members").select("company_id").eq("active",true);
+ if(mErr)throw mErr;
+ if(!members?.length){throw Error("閲覧権限がまだ付与されていません。管理者へお問い合わせください。");}
+ if(members.length!==1)throw Error("複数法人の権限が登録されています。管理者へお問い合わせください。");
+ const companyId=members[0].company_id;
+ const {data:companies,error:cErr}=await client.from("gf_company_portal_companies").select("company_name").eq("id",companyId).limit(1);
+ if(cErr)throw cErr;
+ el("companyName").textContent=companies?.[0]?.company_name||"所属会社";
+ const {data:rows,error:vErr}=await client.from("gf_company_portal_vehicles").select("vehicle_id,vehicle_number,driver_display_name,status,name_change_scheduled,delivery_scheduled,usage_start,return_scheduled,updated_at").eq("company_id",companyId).order("vehicle_number");
+ if(vErr)throw vErr;
+ items=rows||[];setView(true);render();
+}
+function render(){
+ const q=el("search").value.trim().toLowerCase();
+ const filtered=items.filter(v=>[v.vehicle_number,v.driver_display_name].some(s=>String(s||"").toLowerCase().includes(q)));
+ el("total").textContent=items.length;
+ el("preparing").textContent=items.filter(v=>/準備|名変|登録|納車待ち/.test(v.status||"")).length;
+ el("active").textContent=items.filter(v=>/利用中|稼働中|貸出中/.test(v.status||"")).length;
+ el("resultInfo").textContent=filtered.length+"台表示";
+ el("vehicles").innerHTML=filtered.length?filtered.map(v=>`<article class="vehicle"><h3>${safe(v.vehicle_number||v.vehicle_id)} <span class="badge">${safe(v.status||"確認中")}</span></h3><div class="fields"><div><small>利用者</small>${safe(v.driver_display_name||"—")}</div><div><small>名変予定日</small>${safe(v.name_change_scheduled||"—")}</div><div><small>納車予定日</small>${safe(v.delivery_scheduled||"—")}</div><div><small>返却予定日</small>${safe(v.return_scheduled||"—")}</div></div></article>`).join(""):"<p class='muted'>表示できる車両がありません。</p>";
+}
+el("search").addEventListener("input",render);
+el("loginForm").addEventListener("submit",async e=>{e.preventDefault();if(!client)return;el("message").textContent="確認中…";const {error}=await client.auth.signInWithPassword({email:el("email").value,password:el("password").value});if(error){el("message").textContent="ログインできません。メールアドレスとパスワードをご確認ください。";return;}try{await load();el("message").textContent="";}catch(err){await client.auth.signOut();setView(false);el("message").textContent=err.message;}});
+el("logout").addEventListener("click",async()=>{if(client)await client.auth.signOut();items=[];setView(false);});
+if(client)load().catch(async err=>{await client.auth.signOut();setView(false);el("message").textContent=err.message;});
+</script></body></html>
