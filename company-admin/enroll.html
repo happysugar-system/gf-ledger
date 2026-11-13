@@ -1,0 +1,13 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GOLD FIRST 管理者登録申請</title><style>body{background:#f3f6fa;color:#17354c;font:16px system-ui,sans-serif;margin:0}header{background:#12334d;color:white;padding:22px}main{max-width:560px;margin:30px auto;padding:0 18px}.card{background:white;border-radius:14px;padding:24px;box-shadow:0 2px 10px #1d365012}button{background:#126e9c;border:0;color:white;border-radius:9px;padding:13px 18px;font:inherit;cursor:pointer}button:disabled{opacity:.5}p{line-height:1.7}.hint{color:#657685}</style><script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script></head><body><header><strong>GOLD FIRST</strong>｜管理者登録申請</header><main><div class="card"><h1>LINEで本人確認</h1><p>現在のLINEアカウントで管理者登録を申請します。申請しただけでは管理者権限は付与されません。</p><button id="start">LINEで登録申請</button><p id="status" role="status"></p><p class="hint">デモ環境専用。車両情報へのアクセス権は、管理者の確認後に設定されます。</p></div></main><script>
+const liffId="2012058414-9wPp65Lt";
+const endpoint="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-enroll-demo";
+const button=document.getElementById("start"),status=document.getElementById("status");
+button.addEventListener("click",async()=>{button.disabled=true;status.textContent="LINE認証を確認しています…";try{
+await liff.init({liffId});
+if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
+const token=liff.getIDToken();if(!token)throw Error("LINEのIDトークンが取得できません。LIFFのopenid権限を確認してください。");
+const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({line_id_token:token})});
+const result=await response.json();if(!response.ok)throw Error(result.error||"申請できませんでした");
+status.textContent=result.status==="approved"?"管理者登録済みです。":result.status==="pending"?"申請を受け付けました。権限付与はまだ行われていません。":result.status==="rejected"?"この申請は承認されていません。":"状態を確認できませんでした。";
+}catch(e){status.textContent="エラー："+e.message;}finally{button.disabled=false;}});
+</script></body></html>
