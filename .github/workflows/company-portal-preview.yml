@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Redeploy on workflow update to pick up latest main admin enrollment
+      # Redeploy to include authenticated admin console and member application
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
