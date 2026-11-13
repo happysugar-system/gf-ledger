@@ -106,7 +106,10 @@ def main():
                 """)
                 cursor.execute("""
                     delete from public.gf_company_portal_vehicles v
-                    where not exists(
+                    where v.company_id in (
+                      select distinct company_id from public.gf_company_portal_affiliation_aliases
+                    )
+                    and not exists(
                       select 1 from sync_stage s
                       where s.company_id=v.company_id and s.vehicle_id=v.vehicle_id
                     )
