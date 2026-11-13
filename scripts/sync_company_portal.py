@@ -72,7 +72,6 @@ def main():
                     raise RuntimeError("Vehicle count dropped >20%; manual review required")
                 print(f"Source rows: {len(rows)}; approved matches: {len(staged)}; previous: {previous_count}; apply: {apply}")
                 if not apply:
-                    target.rollback()
                     return
                 cursor.execute("""
                     create temporary table sync_stage (
