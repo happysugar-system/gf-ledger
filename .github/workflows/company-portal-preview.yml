@@ -37,6 +37,8 @@ jobs:
           cp site/manifest.webmanifest public/manifest.webmanifest
           cp site/icon.png public/icon.png
           cp portal-source/company-portal/index.html public/company-portal/index.html
+          mkdir -p public/company-admin
+          cp -R site/company-admin/. public/company-admin/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
