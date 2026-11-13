@@ -2,12 +2,29 @@
 const liffId="2012058414-jYEPzMww";
 const endpoint="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-enroll-demo";
 const button=document.getElementById("start"),status=document.getElementById("status");
-button.addEventListener("click",async()=>{button.disabled=true;status.textContent="LINE認証を確認しています…";try{
-await liff.init({liffId});
-if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
-const token=liff.getIDToken();if(!token)throw Error("LINEのIDトークンが取得できません。LIFFのopenid権限を確認してください。");
-const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({line_id_token:token})});
-const result=await response.json();if(!response.ok)throw Error(result.error||"申請できませんでした");
-status.textContent=result.status==="approved"?"管理者登録済みです。":result.status==="pending"?"申請を受け付けました。権限付与はまだ行われていません。":result.status==="rejected"?"この申請は承認されていません。":"状態を確認できませんでした。";
-}catch(e){status.textContent="エラー："+e.message;}finally{button.disabled=false;}});
+const pendingKey="gf_admin_enroll_pending";
+async function submitEnrollment(){
+ button.disabled=true;status.textContent="LINE認証を確認しています…";
+ try{
+  await liff.init({liffId});
+  if(!liff.isLoggedIn()){
+   sessionStorage.setItem(pendingKey,"1");
+   liff.login({redirectUri:location.origin+location.pathname});
+   return;
+  }
+  sessionStorage.removeItem(pendingKey);
+  const token=liff.getIDToken();
+  if(!token)throw Error("LINEのIDトークンが取得できません。LIFFのopenid権限を確認してください。");
+  status.textContent="管理者登録申請を送信しています…";
+  const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({line_id_token:token})});
+  const result=await response.json();
+  if(!response.ok)throw Error(result.error||"申請できませんでした");
+  status.textContent=result.status==="approved"?"管理者登録済みです。":result.status==="pending"?"申請を受け付けました。権限付与はまだ行われていません。":result.status==="rejected"?"この申請は承認されていません。":"状態を確認できませんでした。";
+ }catch(e){status.textContent="エラー："+e.message;sessionStorage.removeItem(pendingKey);}
+ finally{button.disabled=false;}
+}
+button.addEventListener("click",submitEnrollment);
+if(sessionStorage.getItem(pendingKey)==="1"){
+ submitEnrollment();
+}
 </script></body></html>
