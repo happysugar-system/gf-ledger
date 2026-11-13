@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GF 免許証OCR テスト専用</title>
+<style>body{font-family:system-ui,sans-serif;background:#f5f7fa;color:#172235;margin:0;padding:20px}main{max-width:620px;margin:auto;background:white;padding:24px;border-radius:14px;box-shadow:0 3px 16px #0001}label{display:block;margin-top:14px;font-weight:600}input,button{box-sizing:border-box;width:100%;padding:12px;margin-top:6px;border:1px solid #bbb;border-radius:8px;font-size:16px}button{background:#2258a5;color:white;border:0;margin-top:18px;cursor:pointer}button:disabled{opacity:.5}pre{white-space:pre-wrap;background:#f2f4f6;padding:14px;border-radius:8px;overflow-wrap:anywhere}.note{color:#596579;font-size:14px}.warning{background:#fff7e7;padding:12px;border-radius:8px}</style></head>
+<body><main><h1>免許証AI読み取り・速度テスト</h1>
+<p class="warning">デモ専用。<strong>実在する免許証・個人情報は使用しないでください。</strong> 架空のサンプル画像のみ。読み取り結果は保存されません。</p>
+<p class="note">本番のGAS・スプシ・LINEには接続しません。デモのSupabase認証済みかつ許可済みユーザーのみ実行できます。</p>
+<label>デモSupabaseの公開 anon / publishable key（秘密鍵は入力禁止）<input id="key" type="password" autocomplete="off" placeholder="sb_publishable_... または旧 anon key"></label>
+<label>デモSupabaseログイン用メール<input id="email" type="email" autocomplete="email"></label>
+<button id="send">メールにログインコードを送信</button>
+<label>メールで届いた6桁コード<input id="otp" inputmode="numeric" autocomplete="one-time-code"></label>
+<button id="login">ログイン</button><p id="auth" class="note">未ログイン</p>
+<label>架空のテスト免許証画像（JPEG / PNG / WebP）<input id="file" type="file" accept="image/jpeg,image/png,image/webp"></label>
+<button id="run" disabled>Geminiで読み取る</button><pre id="out" aria-live="polite">テスト待機中</pre>
+</main>
+<script type="module">
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2.57.0";
+const URL="https://zwprphmfgobkektzsuti.supabase.co";
+const $=id=>document.getElementById(id);
+let client=null,session=null;
+function getClient(){const key=$("key").value.trim();if(!key||key.startsWith("sb_secret_"))throw Error("公開用キーのみ入力してください");if(!client)client=createClient(URL,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});return client;}
+function status(msg){$("out").textContent=msg;}
+$("send").onclick=async()=>{try{const email=$("email").value.trim();if(!email)throw Error("メールを入力してください");const {error}=await getClient().auth.signInWithOtp({email,options:{shouldCreateUser:false}});if(error)throw error;status("メールを確認してください。届いたコードを入力してください。");}catch(e){status("送信エラー: "+e.message)}};
+$("login").onclick=async()=>{try{const {data,error}=await getClient().auth.verifyOtp({email:$("email").value.trim(),token:$("otp").value.trim(),type:"email"});if(error)throw error;session=data.session;if(!session)throw Error("セッションを取得できませんでした");$("auth").textContent="ログイン済み（テスト許可ユーザーかどうかはサーバーで確認）";$("run").disabled=false;status("ログイン成功。架空のテスト画像を選んでください。");}catch(e){status("ログインエラー: "+e.message)}};
+async function imageBase64(file){if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw Error("画像形式が未対応です");if(file.size>8_000_000)throw Error("画像は8MB以下にしてください");const bitmap=await createImageBitmap(file);const ratio=Math.min(1,1400/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement("canvas");canvas.width=Math.round(bitmap.width*ratio);canvas.height=Math.round(bitmap.height*ratio);canvas.getContext("2d").drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();const url=canvas.toDataURL("image/jpeg",0.78);return {mime_type:"image/jpeg",image_base64:url.split(",")[1]};}
+$("run").onclick=async()=>{const btn=$("run");btn.disabled=true;try{if(!session)throw Error("ログインしてください");const file=$("file").files[0];if(!file)throw Error("画像を選択してください");status("読み取り中…");const payload=await imageBase64(file);const t=performance.now();const response=await fetch(URL+"/functions/v1/gf-license-ocr-staging",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":$("key").value.trim()},body:JSON.stringify(payload)});const wall=Math.round(performance.now()-t);const data=await response.json().catch(()=>({error:"応答がJSONではありません"}));if(!response.ok)throw Error("HTTP "+response.status+" "+(data.error||"失敗"));status(JSON.stringify({readable:data.readable,full_name:data.full_name,verified_identity:data.verified_identity,ai_ms:data.ai_ms,server_total_ms:data.total_ms,browser_request_ms:wall},null,2));}catch(e){status("テスト失敗: "+e.message)}finally{btn.disabled=!session}};
+</script></body></html>
