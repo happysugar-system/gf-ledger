@@ -3,14 +3,14 @@
 Status: **development branch only; not deployed**. Existing LINE, GAS, driver MyPage, gf_vehicles and Supabase RLS unchanged.
 
 ## Purpose (10/26 meeting)
-UP's / カメレオンなどの所属・管理会社が、自社の対象車両の準備・名変・納車・利用開始・返却状況を閲覧し、日付の認識違いを減らす。最初は閲覧専用。会社切替は設けない。
+UP's / カメレオンなどの所属会社が、自社の対象車両の準備・名変・納車・利用開始・返却状況を閲覧し、日付の認識違いを減らす。最初は閲覧専用。会社切替は設けない。
 
 ## Tenant isolation
 - Supabase Auth user -> active membership -> company UUID -> curated vehicle projection.
 - All three new tables have RLS. Authenticated client can SELECT only authorized tenant rows.
 - Never trust company name, company ID, LINE ID or email passed from the browser to grant access.
 - Membership provisioning is server/admin-only after company authorization; new accounts default inactive.
-- Server sync must resolve each vehicle to an explicit, reviewed company mapping. Do not infer entitlement solely from a free-text 所属会社名; distinguish 所属会社 and 管理会社 permissions after confirming with GOLD FIRST.
+- Server sync must resolve each vehicle using its 所属会社名 only, mapped to a reviewed canonical company ID. 管理会社 is not an authorization key. Blank or unknown 所属会社名 means no company visibility. Do not trust browser-supplied company IDs or raw free-text values for authorization.
 - Do not expose the raw gf_vehicles.vehicle_data to tenant clients: it contains sensitive contact, pricing and other information.
 - RLS and negative cross-company tests required before release. No production data writes or notifications in this version.
 
@@ -20,7 +20,7 @@ Relevant JSON keys include 所属会社名, 管理区分, 区分/ステータス
 Map dates and business status after checking actual value patterns. Keep history and notification panels explicitly '準備中' until event records exist.
 
 ## Activation checklist
-1. Confirm company entity list and which vehicles each company may view, including subcontractor/management relationships.
+1. Confirm canonical company names and normalization rules for 所属会社名 (including aliases and blanks); never grant cross-company visibility.
 2. Review migration SQL at sql/company-portal-tenant-rls.sql; apply to an isolated test project first.
 3. Provision separate test Auth users for UP's and カメレオン, and explicit memberships.
 4. Populate curated test rows through trusted server; verify both users cannot read each other's company/vehicle data, including direct REST requests and forged company IDs.
