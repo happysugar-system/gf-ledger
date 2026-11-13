@@ -10,18 +10,11 @@ import sys
 import psycopg
 
 SOURCE_SQL = """
-select vehicle_id, vehicle_number,
-       btrim(vehicle_data->>'所属会社名') as affiliation,
-       nullif(vehicle_data->>'現在使用者','') as driver,
-       coalesce(nullif(vehicle_data->>'管理区分',''),
-                nullif(vehicle_data->>'区分/ステータス','')) as status,
-       nullif(vehicle_data->>'名変予定日','') as name_change,
-       nullif(vehicle_data->>'納車予定日','') as delivery,
-       nullif(vehicle_data->>'代車開始日','') as usage_start,
-       nullif(vehicle_data->>'返却予定日','') as return_date
-from public.gf_vehicles
-where vehicle_id is not null
+select vehicle_id,vehicle_number,affiliation,driver,status,
+       name_change,delivery,usage_start,return_date
+from public.gf_portal_sync_source
 """
+
 
 def main():
     source_dsn = os.environ["GF_SOURCE_DATABASE_URL"]
