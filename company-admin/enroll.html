@@ -3,6 +3,7 @@ const liffId="2012058414-jYEPzMww";
 const endpoint="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-enroll-demo";
 const button=document.getElementById("start"),status=document.getElementById("status");
 const pendingKey="gf_admin_enroll_pending";
+const reviewMode=new URLSearchParams(location.search).get("mode")==="review" || sessionStorage.getItem("gf_company_review_mode")==="1";
 async function submitEnrollment(){
  button.disabled=true;status.textContent="LINE認証を確認しています…";
  try{
@@ -28,7 +29,7 @@ if(!reviewMode && sessionStorage.getItem(pendingKey)==="1"){
  submitEnrollment();
 }
 
-const reviewMode=new URLSearchParams(location.search).get("mode")==="review" || sessionStorage.getItem("gf_company_review_mode")==="1";
+
 if(reviewMode){
  const originalCard=document.querySelector(".card");
  originalCard.querySelector("h1").textContent="法人担当者登録管理";
