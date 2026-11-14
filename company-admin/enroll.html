@@ -26,7 +26,7 @@ async function submitEnrollment(){
  finally{button.disabled=false;}
 }
 button.addEventListener("click",submitEnrollment);
-if(!reviewMode && sessionStorage.getItem(pendingKey)==="1"){
+if(pageMode==="enroll" && sessionStorage.getItem(pendingKey)==="1"){
  submitEnrollment();
 }
 
