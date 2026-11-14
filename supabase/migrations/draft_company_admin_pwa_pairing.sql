@@ -24,3 +24,7 @@ alter table public.gf_company_admin_device_sessions enable row level security;
 revoke all on public.gf_company_admin_pairings from anon, authenticated;
 revoke all on public.gf_company_admin_device_sessions from anon, authenticated;
 -- No client-side policies: only server service role can access these tables.
+
+-- Explicitly allow the trusted Edge Function service role to operate these tables.
+-- RLS remains enabled; anon and authenticated remain denied.
+grant select, insert, update, delete on public.gf_company_admin_pairings, public.gf_company_admin_device_sessions to service_role;
