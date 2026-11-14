@@ -21,14 +21,14 @@ Deno.serve(async(req:Request)=>{
    // PWA generates a 32-byte verifier and retains it locally. Never put it in a URL.
    if(typeof b.verifier!=="string"||!/^[a-f0-9]{64}$/i.test(b.verifier))return reply(400,{error:"Invalid verifier"});
    const verifier_hash=await digest(b.verifier);
-   const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%100000000).padStart(8,"0");
+   const code=Array.from(crypto.getRandomValues(new Uint8Array(12)),v=>String(v%10)).join("");
    const code_hash=await digest(code);
    const {error}=await sb.from("gf_company_admin_pairings").insert({code_hash,verifier_hash});
    if(error)return reply(503,{error:"開始できませんでした。再試行してください"});
    return reply(200,{code,expires_seconds:300});
   }
   if(action==="authorize"){
-   if(typeof b.code!=="string"||!/^[0-9]{8}$/.test(b.code))return fail();
+   if(typeof b.code!=="string"||!/^[0-9]{12}$/.test(b.code))return fail();
    if(typeof b.line_id_token!=="string"||b.line_id_token.length<100||b.line_id_token.length>8192)return fail();
    const verify=await fetch("https://api.line.me/oauth2/v2.1/verify",{
     method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
