@@ -31,6 +31,12 @@ jobs:
           ref: feature/company-portal-20261113
           sparse-checkout: company-portal
           path: portal-source
+      - name: Checkout isolated PWA preview pages
+        uses: actions/checkout@v4
+        with:
+          ref: feature/company-admin-pwa-auth-20261114
+          sparse-checkout: company-admin
+          path: pwa-source
       - name: Assemble site without replacing the existing homepage
         run: |
           mkdir -p public/company-portal
@@ -40,6 +46,16 @@ jobs:
           cp portal-source/company-portal/index.html public/company-portal/index.html
           mkdir -p public/company-admin
           cp -R site/company-admin/. public/company-admin/
+          # Keep the existing admin review screen; add only the pairing mode and preview pages.
+          cp pwa-source/company-admin/enroll.html public/company-admin/enroll.html
+          cp pwa-source/company-admin/pwa-login-preview.html public/company-admin/pwa-login-preview.html
+          cp pwa-source/company-admin/pwa-review-preview.html public/company-admin/pwa-review-preview.html
+          test -f public/index.html
+          test -f public/company-portal/index.html
+          test -f public/company-admin/enroll.html
+          grep -q 'pageMode==="pair"' public/company-admin/enroll.html
+          grep -q 'gf-company-admin-api-demo' public/company-admin/enroll.html
+          grep -q 'gf-company-admin-api-pwa-preview' public/company-admin/pwa-review-preview.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
