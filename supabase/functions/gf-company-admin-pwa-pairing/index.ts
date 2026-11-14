@@ -17,6 +17,15 @@ Deno.serve(async(req:Request)=>{
  const sb=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
  try {
   const b=await req.json(),action=b?.action;
+  // Gate high-risk actions behind a database-atomic fixed-window throttle.
+  if(["begin","authorize","poll"].includes(action)){
+   const ip=req.headers.get("cf-connecting-ip")||"unknown";
+   const {data:allowed,error:limitError}=await sb.rpc("gf_company_admin_auth_allow",{
+    p_scope_hash:await digest(action+":"+ip),p_limit:action==="poll"?20:5
+   });
+   if(limitError)return reply(503,{error:"認証制限を確認できません"});
+   if(!allowed)return reply(429,{error:"操作回数が多すぎます。5分後に再試行してください"});
+  }
   if(action==="begin"){
    // PWA generates a 32-byte verifier and retains it locally. Never put it in a URL.
    if(typeof b.verifier!=="string"||!/^[a-f0-9]{64}$/i.test(b.verifier))return reply(400,{error:"Invalid verifier"});
