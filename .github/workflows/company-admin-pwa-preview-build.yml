@@ -50,10 +50,10 @@ jobs:
           import re
           for name in ("enroll.html", "pwa-login-preview.html", "pwa-review-preview.html"):
               html = Path("artifact/company-admin", name).read_text()
-              scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.S | re.I)
+              scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.S | re.I)
               if not scripts:
                   raise SystemExit(f"No inline script in {name}")
-              Path("/tmp/" + name + ".js").write_text("\\n".join(scripts))
+              Path("/tmp/" + name + ".js").write_text("\n".join(scripts))
           PY
           for page in enroll.html pwa-login-preview.html pwa-review-preview.html; do
             node --check "/tmp/$page.js"
