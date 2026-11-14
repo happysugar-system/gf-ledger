@@ -24,7 +24,95 @@ async function submitEnrollment(){
  finally{button.disabled=false;}
 }
 button.addEventListener("click",submitEnrollment);
-if(sessionStorage.getItem(pendingKey)==="1"){
+if(!new URLSearchParams(location.search).has("mode") && sessionStorage.getItem(pendingKey)==="1"){
  submitEnrollment();
+}
+
+const reviewMode=new URLSearchParams(location.search).get("mode")==="review";
+if(reviewMode){
+ const originalCard=document.querySelector(".card");
+ originalCard.querySelector("h1").textContent="法人担当者登録管理";
+ Array.from(originalCard.children).forEach(x=>{if(x.tagName!=="H1")x.hidden=true});
+ originalCard.insertAdjacentHTML("beforeend","<div id=\"reviewApp\" hidden><h1>法人担当者登録管理</h1><p class=\"hint\">GOLD FIRST｜スタッフ用・LINE認証</p><p id=\"reviewStatus\" role=\"status\">認証を確認しています…</p><div id=\"reviewPanel\" hidden><p><button id=\"reloadReview\">一覧を更新</button></p><h2>承認待ち申請 <span id=\"pendingCount\"></span></h2><div id=\"pendingList\"></div><h2>承認済み一覧</h2><div id=\"approvedList\"></div><h2>却下済み一覧</h2><div id=\"rejectedList\"></div></div></div>");
+ document.getElementById("reviewApp").hidden=false;
+ const api="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-api-demo";
+ const byId=id=>document.getElementById(id);
+ const status=byId("reviewStatus");
+ const text=(tag,value)=>{const x=document.createElement(tag);x.textContent=value??"";return x};
+ const date=v=>v?new Date(v).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}):"未設定";
+ let processing=false,companies=[];
+ async function request(action,extra={}){
+  const token=liff.getIDToken();
+  if(!token)throw Error("LINE認証情報が取得できません");
+  const res=await fetch(api,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,line_id_token:token,...extra})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw Error(data.error||"処理に失敗しました ("+res.status+")");
+  return data;
+ }
+ async function reload(){
+  status.textContent="申請一覧を取得しています…";
+  byId("reviewPanel").hidden=true;
+  try{
+   const data=await request("dashboard");
+   companies=data.companies||[];
+   const requests=data.requests||[];
+   byId("pendingCount").textContent="("+requests.filter(x=>x.status==="pending").length+"件)";
+   for(const [id,filter] of [["pendingList","pending"],["approvedList","approved"],["rejectedList","rejected"]]){
+    const area=byId(id);area.replaceChildren();
+    const items=requests.filter(x=>x.status===filter).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+    if(!items.length){area.append(text("p","該当する申請はありません。"));continue}
+    for(const item of items){
+     const card=document.createElement("div");card.style.cssText="border:1px solid #d9e3e8;border-radius:10px;padding:14px;margin:12px 0";
+     card.append(text("strong",item.representative_name||"氏名未設定"));
+     card.append(text("p","申請法人："+(item.requested_company_name||"未入力")));
+     card.append(text("p","電話番号："+(item.phone||"未入力")));
+     card.append(text("p","申請日時："+date(item.created_at)));
+     if(filter==="pending"){
+      const label=text("label","承認先の法人");label.style.display="block";
+      const select=document.createElement("select");select.style.cssText="display:block;width:100%;padding:10px;margin:8px 0";
+      const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="法人を選択してください";select.append(placeholder);
+      for(const company of companies){const opt=document.createElement("option");opt.value=company.id;opt.textContent=company.company_name;select.append(opt)}
+      const matching=companies.filter(c=>c.company_name===item.requested_company_name);
+      if(matching.length===1)select.value=matching[0].id;
+      label.append(select);card.append(label);
+      const confirmation=document.createElement("label");confirmation.style.cssText="display:block;margin:10px 0";
+      const check=document.createElement("input");check.type="checkbox";
+      confirmation.append(check,document.createTextNode(" 本人・所属法人を確認しました"));card.append(confirmation);
+      const approve=text("button","承認する"),reject=text("button","却下する");
+      approve.disabled=true;check.onchange=()=>approve.disabled=!check.checked||processing;
+      reject.style.marginLeft="8px";reject.style.background="#a33";
+      const decide=async(decision)=>{
+       if(processing)return;
+       if(decision==="approved"&&(!check.checked||!select.value)){alert("本人確認と承認先法人の選択が必要です");return}
+       if(!confirm((decision==="approved"?"承認":"却下")+"しますか？\n"+(item.representative_name||"")+" / "+(item.requested_company_name||"")))return;
+       processing=true;approve.disabled=true;reject.disabled=true;
+       try{await request("review_request",{request_id:item.id,decision,...(decision==="approved"?{approved_company_id:select.value}:{})});await reload()}
+       catch(e){status.textContent="処理エラー："+e.message;approve.disabled=!check.checked;reject.disabled=false}
+       finally{processing=false}
+      };
+      approve.onclick=()=>decide("approved");reject.onclick=()=>decide("rejected");
+      card.append(approve,reject);
+     }
+     area.append(card);
+    }
+   }
+   status.textContent="法人担当者の登録申請を表示しています。";
+   byId("reviewPanel").hidden=false;
+  }catch(e){status.textContent="取得できませんでした："+e.message}
+ }
+ byId("reloadReview").onclick=reload;
+ (async()=>{
+  try{
+   await liff.init({liffId});
+   if(!liff.isLoggedIn()){
+    status.textContent="LINEでログインしてください。";
+    const btn=text("button","LINEでログイン");
+    btn.onclick=()=>liff.login({redirectUri:location.origin+location.pathname+location.search});
+    byId("reviewApp").append(btn);
+    return;
+   }
+   await reload();
+  }catch(e){status.textContent="LINE認証エラー："+e.message}
+ })();
 }
 </script></body></html>
