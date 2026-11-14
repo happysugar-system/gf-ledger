@@ -1,0 +1,49 @@
+name: Build GOLD FIRST PWA auth preview artifact (no deployment)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/company-admin-pwa-auth-20261114
+    paths:
+      - 'company-admin/**'
+      - '.github/workflows/company-admin-pwa-preview-build.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout production site
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: production
+      - name: Checkout isolated PWA preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/company-admin-pwa-auth-20261114
+          path: preview
+      - name: Assemble preview without changing production
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifact/company-admin
+          cp -a production/. artifact/
+          cp preview/company-admin/pwa-login-preview.html artifact/company-admin/
+          cp preview/company-admin/pwa-review-preview.html artifact/company-admin/
+          # Preview artifact only: use the branch version of enroll.html so ?mode=pair works.
+          # The live file in production/ is unchanged and no Pages deploy occurs.
+          cp preview/company-admin/enroll.html artifact/company-admin/enroll.html
+          test -f artifact/index.html
+          test -f artifact/company-admin/enroll.html
+          test -f artifact/company-admin/pwa-login-preview.html
+          test -f artifact/company-admin/pwa-review-preview.html
+          cmp preview/company-admin/enroll.html artifact/company-admin/enroll.html
+          grep -q 'pageMode==="pair"' artifact/company-admin/enroll.html
+          grep -q 'device_session_token:token' artifact/company-admin/pwa-review-preview.html
+      - name: Upload preview for review only (NOT GitHub Pages)
+        uses: actions/upload-artifact@v4
+        with:
+          name: gf-company-admin-pwa-preview
+          path: artifact/
+          retention-days: 7
