@@ -41,6 +41,26 @@ jobs:
           cmp preview/company-admin/enroll.html artifact/company-admin/enroll.html
           grep -q 'pageMode==="pair"' artifact/company-admin/enroll.html
           grep -q 'device_session_token:token' artifact/company-admin/pwa-review-preview.html
+      - name: Validate JavaScript syntax and pairing integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for name in ("enroll.html", "pwa-login-preview.html", "pwa-review-preview.html"):
+              html = Path("artifact/company-admin", name).read_text()
+              scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.S | re.I)
+              if not scripts:
+                  raise SystemExit(f"No inline script in {name}")
+              Path("/tmp/" + name + ".js").write_text("\\n".join(scripts))
+          PY
+          for page in enroll.html pwa-login-preview.html pwa-review-preview.html; do
+            node --check "/tmp/$page.js"
+          done
+          grep -q 'gf-company-admin-pwa-pairing' artifact/company-admin/pwa-login-preview.html
+          grep -q 'gf-company-admin-pwa-pairing' artifact/company-admin/enroll.html
+          grep -q 'gf-company-admin-api-pwa-preview' artifact/company-admin/pwa-review-preview.html
       - name: Upload preview for review only (NOT GitHub Pages)
         uses: actions/upload-artifact@v4
         with:
