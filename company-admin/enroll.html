@@ -36,7 +36,7 @@ if(reviewMode){
  const originalCard=document.querySelector(".card");
  originalCard.querySelector("h1").textContent="法人担当者登録管理";
  Array.from(originalCard.children).forEach(x=>{if(x.tagName!=="H1")x.hidden=true});
- originalCard.insertAdjacentHTML("beforeend","<div id=\"reviewApp\" hidden><h1>法人担当者登録管理</h1><p class=\"hint\">GOLD FIRST｜スタッフ用・LINE認証</p><p id=\"reviewStatus\" role=\"status\">認証を確認しています…</p><div id=\"reviewPanel\" hidden><p><button id=\"reloadReview\">一覧を更新</button></p><h2>承認待ち申請 <span id=\"pendingCount\"></span></h2><div id=\"pendingList\"></div><h2>承認済み一覧</h2><div id=\"approvedList\"></div><h2>却下済み一覧</h2><div id=\"rejectedList\"></div></div></div>");
+ originalCard.insertAdjacentHTML("beforeend","<div id=\"reviewApp\" hidden><p class=\"hint\">GOLD FIRST｜スタッフ用・LINE認証</p><p id=\"reviewStatus\" role=\"status\">認証を確認しています…</p><div id=\"reviewPanel\" hidden><p><button id=\"reloadReview\">一覧を更新</button></p><h2>承認待ち申請 <span id=\"pendingCount\"></span></h2><div id=\"pendingList\"></div><h2>承認済み一覧</h2><div id=\"approvedList\"></div><h2>却下済み一覧</h2><div id=\"rejectedList\"></div></div></div>");
  document.getElementById("reviewApp").hidden=false;
  const api="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-api-demo";
  const byId=id=>document.getElementById(id);
