@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Redeploy simplified free-text company registration and approval
+      # Redeploy latest main company-admin pages without changing the portal build layout
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
