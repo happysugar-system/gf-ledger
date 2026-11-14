@@ -1,4 +1,5 @@
 name: Build GOLD FIRST PWA auth preview artifact (no deployment)
+# Re-run smoke test after Supabase service_role grant repair.
 on:
   workflow_dispatch:
   push:
