@@ -24,11 +24,11 @@ async function submitEnrollment(){
  finally{button.disabled=false;}
 }
 button.addEventListener("click",submitEnrollment);
-if(!new URLSearchParams(location.search).has("mode") && sessionStorage.getItem(pendingKey)==="1"){
+if(!reviewMode && sessionStorage.getItem(pendingKey)==="1"){
  submitEnrollment();
 }
 
-const reviewMode=new URLSearchParams(location.search).get("mode")==="review";
+const reviewMode=new URLSearchParams(location.search).get("mode")==="review" || sessionStorage.getItem("gf_company_review_mode")==="1";
 if(reviewMode){
  const originalCard=document.querySelector(".card");
  originalCard.querySelector("h1").textContent="法人担当者登録管理";
