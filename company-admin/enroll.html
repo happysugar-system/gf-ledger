@@ -52,7 +52,7 @@ if(pageMode==="pair"){
    await liff.init({liffId});
    if(!liff.isLoggedIn()){
     sessionStorage.setItem("gf_pair_pending_code",code);
-    liff.login({redirectUri:location.origin+location.pathname});
+    liff.login({redirectUri:location.origin+location.pathname+"?mode=pair"});
     return;
    }
    const token=liff.getIDToken();
