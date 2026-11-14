@@ -31,13 +31,16 @@ jobs:
           cp -a production/. artifact/
           cp preview/company-admin/pwa-login-preview.html artifact/company-admin/
           cp preview/company-admin/pwa-review-preview.html artifact/company-admin/
-          # Pairing mode is deliberately NOT overlaid onto production enroll.html.
-          # LIFF endpoint and redirect configuration must be verified before any publication.
+          # Preview artifact only: use the branch version of enroll.html so ?mode=pair works.
+          # The live file in production/ is unchanged and no Pages deploy occurs.
+          cp preview/company-admin/enroll.html artifact/company-admin/enroll.html
           test -f artifact/index.html
           test -f artifact/company-admin/enroll.html
           test -f artifact/company-admin/pwa-login-preview.html
           test -f artifact/company-admin/pwa-review-preview.html
-          cmp production/company-admin/enroll.html artifact/company-admin/enroll.html
+          cmp preview/company-admin/enroll.html artifact/company-admin/enroll.html
+          grep -q 'pageMode==="pair"' artifact/company-admin/enroll.html
+          grep -q 'device_session_token:token' artifact/company-admin/pwa-review-preview.html
       - name: Upload preview for review only (NOT GitHub Pages)
         uses: actions/upload-artifact@v4
         with:
