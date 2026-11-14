@@ -61,6 +61,39 @@ jobs:
           grep -q 'gf-company-admin-pwa-pairing' artifact/company-admin/pwa-login-preview.html
           grep -q 'gf-company-admin-pwa-pairing' artifact/company-admin/enroll.html
           grep -q 'gf-company-admin-api-pwa-preview' artifact/company-admin/pwa-review-preview.html
+      - name: Smoke-test deployed pairing API from GitHub runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, secrets, urllib.request, urllib.error
+          url = "https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-pwa-pairing"
+          origin = "https://happysugar-system.github.io"
+          def call(body):
+              request = urllib.request.Request(url,
+                  data=json.dumps(body).encode(),
+                  headers={"Content-Type":"application/json", "Origin":origin},
+                  method="POST")
+              try:
+                  with urllib.request.urlopen(request, timeout=15) as response:
+                      return response.status, json.load(response)
+              except urllib.error.HTTPError as error:
+                  return error.code, json.loads(error.read())
+          verifier = secrets.token_hex(32)
+          status, response = call({"action":"begin","verifier":verifier})
+          print("begin status:", status, "response fields:", sorted(response))
+          if status != 200 or not isinstance(response.get("code"), str) or len(response["code"]) != 12:
+              raise SystemExit("Pairing begin API failed; inspect deployed function and trusted IP header")
+          status, response = call({"action":"poll","verifier":verifier})
+          print("poll status:", status, "pairing status:", response.get("status"))
+          if status != 200 or response.get("status") != "pending":
+              raise SystemExit("Pairing poll API failed")
+          status, response = call({"action":"check","session_token":secrets.token_hex(32)})
+          print("invalid session status:", status)
+          if status != 401:
+              raise SystemExit("Invalid session was not rejected")
+          print("Smoke tests passed. No LINE credentials or production admin data used.")
+          PY
       - name: Upload preview for review only (NOT GitHub Pages)
         uses: actions/upload-artifact@v4
         with:
