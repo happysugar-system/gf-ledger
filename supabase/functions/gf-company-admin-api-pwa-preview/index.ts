@@ -33,7 +33,7 @@ Deno.serve(async(req:Request)=>{
   });
   if(!verify.ok)return out(401,{error:"LINE verification failed"});
   const identity=await verify.json();
-  if(identity.iss!=="https://access.line.me"||identity.aud!==channel||!/^U[0-9a-f]{32}$/i.test(lineUserId||"")||!Number.isFinite(identity.exp)||identity.exp<=Date.now()/1000)return out(401,{error:"Invalid LINE identity"});
+  if(identity.iss!=="https://access.line.me"||identity.aud!==channel||!/^U[0-9a-f]{32}$/i.test(identity.sub||"")||!Number.isFinite(identity.exp)||identity.exp<=Date.now()/1000)return out(401,{error:"Invalid LINE identity"});
   lineUserId=identity.sub;
  }
  const {data:admin,error:authError}=await sb.from("gf_company_admin_identities").select("role,active").eq("line_user_id",lineUserId).maybeSingle();
