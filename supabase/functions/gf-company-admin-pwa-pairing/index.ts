@@ -19,7 +19,8 @@ Deno.serve(async(req:Request)=>{
   const b=await req.json(),action=b?.action;
   // Gate high-risk actions behind a database-atomic fixed-window throttle.
   if(["begin","authorize"].includes(action)){
-   const ip=req.headers.get("cf-connecting-ip")||"unknown";
+   const ip=req.headers.get("cf-connecting-ip");
+   if(!ip)return reply(503,{error:"Request origin cannot be verified"});
    const {data:allowed,error:limitError}=await sb.rpc("gf_company_admin_auth_allow",{
     p_scope_hash:await digest(action+":"+ip),p_limit:5
    });
@@ -30,7 +31,9 @@ Deno.serve(async(req:Request)=>{
    // PWA generates a 32-byte verifier and retains it locally. Never put it in a URL.
    if(typeof b.verifier!=="string"||!/^[a-f0-9]{64}$/i.test(b.verifier))return reply(400,{error:"Invalid verifier"});
    const verifier_hash=await digest(b.verifier);
-   const code=Array.from({length:12},()=>String(crypto.getRandomValues(new Uint32Array(1))[0]%10)).join("");
+   const digits:number[]=[];
+   while(digits.length<12){for(const v of crypto.getRandomValues(new Uint8Array(24))){if(v<250)digits.push(v%10);if(digits.length===12)break;}}
+   const code=digits.join("");
    const code_hash=await digest(code);
    const {error}=await sb.from("gf_company_admin_pairings").insert({code_hash,verifier_hash});
    if(error)return reply(503,{error:"開始できませんでした。再試行してください"});
