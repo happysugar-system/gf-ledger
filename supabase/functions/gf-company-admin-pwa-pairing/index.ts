@@ -8,6 +8,11 @@ const randomHex=(n:number)=>Array.from(crypto.getRandomValues(new Uint8Array(n))
 const digest=async(value:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value))),v=>v.toString(16).padStart(2,"0")).join("");
 const fail=()=>reply(401,{error:"認証できませんでした"});
 Deno.serve(async(req:Request)=>{
+ // Read-only health check: no tokens, identifiers, or secret values are returned.
+ if(req.method==="GET"&&new URL(req.url).searchParams.get("health")==="channel"){
+  const channel=Deno.env.get("GF_DEMO_LINE_LOGIN_CHANNEL_ID");
+  return reply(200,{service:"pairing",configured:Boolean(channel),channel_matches_liff:channel==="2012058414"});
+ }
  if(req.method==="OPTIONS")return new Response(null,{headers:CORS});
  if(req.method!=="POST")return reply(405,{error:"Method not allowed"});
  if(req.headers.get("Origin")!==ORIGIN)return reply(403,{error:"Origin denied"});
