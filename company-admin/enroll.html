@@ -3,7 +3,11 @@ const liffId="2012058414-jYEPzMww";
 const endpoint="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-enroll-demo";
 const button=document.getElementById("start"),status=document.getElementById("status");
 const pendingKey="gf_admin_enroll_pending";
-const pageMode=new URLSearchParams(location.search).get("mode");
+const requestedMode=new URLSearchParams(location.search).get("mode");
+const pairPendingKey="gf_pair_pending_code", pairModeUntilKey="gf_pair_mode_until";
+const pairModeActive=Number(sessionStorage.getItem(pairModeUntilKey)||"0")>Date.now();
+const pageMode=requestedMode==="pair"||(!requestedMode&&pairModeActive)?"pair":requestedMode;
+if(pageMode==="pair"&&requestedMode!=="pair")history.replaceState(null,"",location.pathname+"?mode=pair");
 const reviewMode=pageMode!=="enroll"&&pageMode!=="pair";
 async function submitEnrollment(){
  button.disabled=true;status.textContent="LINE認証を確認しています…";
@@ -51,7 +55,8 @@ if(pageMode==="pair"){
   try{
    await liff.init({liffId});
    if(!liff.isLoggedIn()){
-    sessionStorage.setItem("gf_pair_pending_code",code);
+    sessionStorage.setItem(pairPendingKey,code);
+    sessionStorage.setItem(pairModeUntilKey,String(Date.now()+300000));
     liff.login({redirectUri:location.origin+location.pathname+"?mode=pair"});
     return;
    }
@@ -60,13 +65,14 @@ if(pageMode==="pair"){
    const response=await fetch(authApi,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"authorize",code,line_id_token:token}),cache:"no-store"});
    const data=await response.json();
    if(!response.ok)throw Error(data.error||"承認できませんでした");
-   sessionStorage.removeItem("gf_pair_pending_code");
+   sessionStorage.removeItem(pairPendingKey);
+   sessionStorage.removeItem(pairModeUntilKey);
    result.textContent="本人確認が完了しました。ホーム画面アプリに戻ってください。";
   }catch(e){result.textContent="認証エラー："+e.message}
   finally{btn.disabled=false}
  };
- const pending=sessionStorage.getItem("gf_pair_pending_code");
- if(pending){input.value=pending;sessionStorage.removeItem("gf_pair_pending_code");btn.click()}
+ const pending=sessionStorage.getItem(pairPendingKey);
+ if(pending){input.value=pending;sessionStorage.removeItem(pairPendingKey);btn.click()}
 }
 
 if(reviewMode){
