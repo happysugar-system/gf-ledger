@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Publish corporate review heading fix from main; preserve existing site layout
+      # Refresh simplified PWA login UI from isolated branch; preserve existing site layout
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
