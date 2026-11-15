@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Refresh persistent PWA LINE handoff verifier from isolated branch; preserve existing site layout
+      # Refresh explicit PWA LINE approval status check from isolated branch; preserve existing site layout
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
