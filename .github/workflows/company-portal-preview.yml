@@ -41,6 +41,18 @@ jobs:
         run: |
           mkdir -p public/company-portal
           cp site/index.html public/index.html
+          # Rename the fourth menu and route it to the PWA-authenticated review preview.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("public/index.html")
+          s=p.read_text()
+          old="ドライバー登録申請"
+          assert old in s
+          s=s.replace(old,"法人担当者登録管理",1)
+          s=s.replace("本人確認・DriverID照合・承認","法人担当者の申請確認・承認",1)
+          s=s.replace("window.location.href = REGISTRATION_URL;","window.location.href = './company-admin/pwa-login-preview.html';",1)
+          p.write_text(s)
+          PY
           cp site/manifest.webmanifest public/manifest.webmanifest
           cp site/icon.png public/icon.png
           cp portal-source/company-portal/index.html public/company-portal/index.html
@@ -50,6 +62,16 @@ jobs:
           cp pwa-source/company-admin/enroll.html public/company-admin/enroll.html
           cp pwa-source/company-admin/pwa-login-preview.html public/company-admin/pwa-login-preview.html
           cp pwa-source/company-admin/pwa-review-preview.html public/company-admin/pwa-review-preview.html
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ("pwa-login-preview.html","pwa-review-preview.html"):
+              p=Path("public/company-admin")/name
+              s=p.read_text()
+              marker="<main"
+              assert marker in s
+              s=s.replace(marker,'<nav style="padding:12px 20px"><a href="../" style="color:#12334d;font-weight:700;text-decoration:none">← 業務システムへ戻る</a></nav><main',1)
+              p.write_text(s)
+          PY
           test -f public/index.html
           test -f public/company-portal/index.html
           test -f public/company-admin/enroll.html
