@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GOLD FIRST｜管理者ログイン検証</title><style>
-[hidden]{display:none!important}body{font-family:system-ui,-apple-system,sans-serif;background:#f5f7fa;color:#172333;margin:0;padding:20px}.card{max-width:520px;margin:30px auto;background:white;border-radius:16px;padding:24px;box-shadow:0 4px 22px #1232}h1{font-size:1.4rem}button,a.action{display:inline-block;background:#1469c9;color:white;border:0;border-radius:8px;padding:13px 18px;font-size:1rem;margin:6px 0;text-decoration:none}button:disabled{opacity:.5}button,a.action{cursor:pointer}#dashboard{display:block;text-align:center;font-weight:700}#dashboard[hidden]{display:none}.secondary{background:#edf3fa;color:#23415d;border:1px solid #c9d7e6;font-size:.9rem}#logout{margin-top:14px}input{font-size:1.4rem;width:95%;padding:12px;letter-spacing:.12em}.code{font-size:2rem;font-weight:700;letter-spacing:.18em}small{color:#667}#status{white-space:pre-wrap}</style></head><body><main class="card"><h1>GOLD FIRST｜管理者ログイン検証</h1><p><small>検証専用。既存の承認画面は変更しません。</small></p><section id="pwa"><p id="loginInstructions">ホーム画面アプリから開始し、表示された12桁の番号をLINE認証画面で入力してください。</p><button id="begin">LINEでログインする</button><p class="code" id="code"></p><p id="expires"></p><p><a class="action" id="openAuth" href="enroll.html?mode=pair" target="_blank" rel="noopener" hidden>LINE認証画面を開く</a></p><button class="secondary" id="restart" hidden>新しい12桁コードを発行し直す</button><button class="secondary" id="pollNow" hidden>LINE認証の完了を確認</button><button class="secondary" id="check" hidden>ログイン状態を再確認</button><p><a class="action" id="dashboard" href="pwa-review-preview.html" hidden>法人担当者の承認管理を開く</a></p><button class="secondary" id="logout" hidden>ログアウト</button></section><p id="status" role="status"></p></main>
+[hidden]{display:none!important}body{font-family:system-ui,-apple-system,sans-serif;background:#f5f7fa;color:#172333;margin:0;padding:20px}.card{max-width:520px;margin:30px auto;background:white;border-radius:16px;padding:24px;box-shadow:0 4px 22px #1232}h1{font-size:1.4rem}button,a.action{display:inline-block;background:#1469c9;color:white;border:0;border-radius:8px;padding:13px 18px;font-size:1rem;margin:6px 0;text-decoration:none}button:disabled{opacity:.5}button,a.action{cursor:pointer}#dashboard{display:block;text-align:center;font-weight:700}#dashboard[hidden]{display:none}.secondary{background:#edf3fa;color:#23415d;border:1px solid #c9d7e6;font-size:.9rem}#logout{margin-top:14px}input{font-size:1.4rem;width:95%;padding:12px;letter-spacing:.12em}.code{font-size:2rem;font-weight:700;letter-spacing:.18em}small{color:#667}#status{white-space:pre-wrap}</style></head><body><main class="card"><h1>GOLD FIRST｜管理者ログイン検証</h1><p><small>検証専用。既存の承認画面は変更しません。</small></p><section id="pwa"><p id="loginInstructions">ホーム画面アプリから開始し、表示された12桁の番号をLINE認証画面で入力してください。</p><button id="begin">LINEでログインする</button><p class="code" id="code"></p><p id="expires"></p><p><a class="action" id="openAuth" href="enroll.html?mode=pair" target="_blank" rel="noopener" hidden>LINE認証画面を開く</a></p><button class="secondary" id="restart" hidden>新しい12桁コードを発行し直す</button><button class="secondary" id="pollNow" hidden>認証が終わったらここを押す（ログイン確認）</button><button class="secondary" id="check" hidden>ログイン状態を再確認</button><p><a class="action" id="dashboard" href="pwa-review-preview.html" hidden>法人担当者の承認管理を開く</a></p><button class="secondary" id="logout" hidden>ログアウト</button></section><p id="status" role="status"></p></main>
 <script>
 "use strict";
 const API="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-pwa-pairing";
 const TOKEN_KEY="gf_admin_pwa_session_v1",VERIFIER_KEY="gf_admin_pwa_verifier_v1";
 const el=id=>document.getElementById(id);
 const status=s=>el("status").textContent=s;
-const BUILD="20261115-pwa7";
+const BUILD="20261115-pwa8";
 const CODE_KEY="gf_admin_pwa_pair_code_v1";
-const post=async body=>{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const d=await r.json();if(!r.ok)throw Error(d.error||"通信エラー");return d};
+const post=async body=>{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store",signal:AbortSignal.timeout(12000)});const d=await r.json();if(!r.ok)throw Error(d.error||"通信エラー");return d};
 const randomHex=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>b.toString(16).padStart(2,"0")).join("");
 const session=()=>localStorage.getItem(TOKEN_KEY);
 // PWA can be suspended or relaunched when LINE opens another browser.
@@ -26,6 +26,8 @@ function view(mode){
  el("openAuth").hidden=!waiting;
  el("check").hidden=!signedIn;
  el("pollNow").hidden=!waiting;
+ el("pollNow").style.background="#1469c9";
+ el("pollNow").style.color="#fff";
  el("restart").hidden=!waiting;
  el("logout").hidden=!signedIn;
  el("dashboard").hidden=!signedIn;
@@ -65,7 +67,7 @@ async function poll(){
    await check();
   }else if(d.status==="pending"){
    view("waiting");
-   status("LINEでの本人確認を待っています…（承認されると自動で管理画面を開きます）");
+   status("LINEの本人確認待ちです。Chromeで「本人確認が完了しました」と表示されたら、このGFアプリに戻ってください。自動で進まない場合は青い「ログイン確認」を押してください。");
   }else{
    localStorage.removeItem(VERIFIER_KEY);
    localStorage.removeItem(verifierExpiryKey);
@@ -88,7 +90,7 @@ el("begin").onclick=async()=>{
   el("code").textContent=d.code;
   el("expires").textContent="コード入力は5分以内／承認結果の受取は24時間";
   view("waiting");
-  status("「LINE認証画面を開く」を押し、12桁の番号を入力してください。");
+  status("12桁コードをChromeのLINE認証画面で入力してください。承認後はGFアプリに戻ると自動で確認します。進まない場合は青い「ログイン確認」を押してください。");
  }catch(e){view("signed-out");status("開始できませんでした："+e.message)}
  finally{el("begin").disabled=false}
 };
@@ -105,7 +107,9 @@ el("logout").onclick=async()=>{
  status("ログアウトしました");
  if(token)try{await post({action:"logout",session_token:token})}catch{status("この端末からはログアウトしました。通信できなかったためサーバー側の解除は未確認です。")}
 };
-document.addEventListener("visibilitychange",()=>{if(!document.hidden){if(localStorage.getItem(VERIFIER_KEY))poll();else if(session())check()}});
+const resumeAuth=()=>{if(document.hidden)return;if(localStorage.getItem(VERIFIER_KEY))poll();else if(session())check()};
+document.addEventListener("visibilitychange",resumeAuth);
+window.addEventListener("focus",resumeAuth);
 window.addEventListener("pageshow",()=>{if(localStorage.getItem(VERIFIER_KEY))poll();else if(session())check()});
 document.querySelector("h1").textContent="GOLD FIRST｜法人担当者管理（"+BUILD+"）";
 if(session()){view("signed-in");check()}else if(localStorage.getItem(VERIFIER_KEY)&&Number(localStorage.getItem(verifierExpiryKey))>Date.now()){
@@ -113,5 +117,5 @@ if(session()){view("signed-in");check()}else if(localStorage.getItem(VERIFIER_KE
  if(savedCode){el("code").textContent=savedCode;el("expires").textContent="コード入力は5分以内／承認結果の受取は24時間";view("waiting");status("LINE本人確認の完了を確認しています…");poll()}
  else{localStorage.removeItem(VERIFIER_KEY);localStorage.removeItem(verifierExpiryKey);view("signed-out");status("前回の認証番号を復元できません。新しく12桁コードを発行してください。")}
 }else{localStorage.removeItem(VERIFIER_KEY);localStorage.removeItem(verifierExpiryKey);localStorage.removeItem(CODE_KEY);view("signed-out");status("LINEでログインしてください")}
-setInterval(()=>{if(!document.hidden&&localStorage.getItem(VERIFIER_KEY))poll()},4000);
+setInterval(resumeAuth,3000);
 </script></body></html>
