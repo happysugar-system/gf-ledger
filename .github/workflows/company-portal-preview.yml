@@ -55,6 +55,8 @@ jobs:
           PY
           cp site/manifest.webmanifest public/manifest.webmanifest
           cp site/icon.png public/icon.png
+          # Keep the existing LINE vehicle-request form available on GitHub Pages.
+          cp site/vehicle-request.html public/vehicle-request.html
           cp portal-source/company-portal/index.html public/company-portal/index.html
           mkdir -p public/company-admin
           cp -R site/company-admin/. public/company-admin/
@@ -73,6 +75,7 @@ jobs:
               p.write_text(s)
           PY
           test -f public/index.html
+          test -f public/vehicle-request.html
           test -f public/company-portal/index.html
           test -f public/company-admin/enroll.html
           grep -q 'pageMode==="pair"' public/company-admin/enroll.html
