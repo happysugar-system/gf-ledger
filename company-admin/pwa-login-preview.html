@@ -10,6 +10,9 @@ const status=s=>el("status").textContent=s;
 const post=async body=>{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const d=await r.json();if(!r.ok)throw Error(d.error||"通信エラー");return d};
 const randomHex=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>b.toString(16).padStart(2,"0")).join("");
 const session=()=>localStorage.getItem(TOKEN_KEY);
+// PWA can be suspended or relaunched when LINE opens another browser.
+// Keep the one-time verifier across app restarts (never place it in a URL).
+const verifierExpiryKey="gf_admin_pwa_verifier_expires_v1";
 let polling=false, checking=false;
 function view(mode){
  const signedIn=mode==="signed-in", waiting=mode==="waiting";
@@ -40,21 +43,23 @@ async function check(){
 }
 async function poll(){
  if(polling)return;
- const verifier=sessionStorage.getItem(VERIFIER_KEY);
+ const verifier=localStorage.getItem(VERIFIER_KEY);
  if(!verifier)return;
  polling=true;
  try{
   const d=await post({action:"poll",verifier});
   if(d.status==="approved"&&d.session_token){
    localStorage.setItem(TOKEN_KEY,d.session_token);
-   sessionStorage.removeItem(VERIFIER_KEY);
+   localStorage.removeItem(VERIFIER_KEY);
+   localStorage.removeItem(verifierExpiryKey);
    el("code").textContent="";
    await check();
   }else if(d.status==="pending"){
    view("waiting");
    status("LINEでの本人確認を待っています…");
   }else{
-   sessionStorage.removeItem(VERIFIER_KEY);
+   localStorage.removeItem(VERIFIER_KEY);
+   localStorage.removeItem(verifierExpiryKey);
    view("signed-out");
    status("認証コードの期限が切れました。新しくログインしてください。");
   }
@@ -67,7 +72,8 @@ el("begin").onclick=async()=>{
  try{
   const verifier=randomHex(32);
   const d=await post({action:"begin",verifier});
-  sessionStorage.setItem(VERIFIER_KEY,verifier);
+  localStorage.setItem(VERIFIER_KEY,verifier);
+  localStorage.setItem(verifierExpiryKey,String(Date.now()+300000));
   el("code").textContent=d.code;
   el("expires").textContent="有効期限：5分";
   view("waiting");
@@ -79,12 +85,14 @@ el("check").onclick=check;
 el("logout").onclick=async()=>{
  const token=session();
  localStorage.removeItem(TOKEN_KEY);
- sessionStorage.removeItem(VERIFIER_KEY);
+ localStorage.removeItem(VERIFIER_KEY);
+ localStorage.removeItem(verifierExpiryKey);
  view("signed-out");
  status("ログアウトしました");
  if(token)try{await post({action:"logout",session_token:token})}catch{status("この端末からはログアウトしました。通信できなかったためサーバー側の解除は未確認です。")}
 };
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&sessionStorage.getItem(VERIFIER_KEY))poll()});
-if(session()){view("signed-in");check()}else if(sessionStorage.getItem(VERIFIER_KEY)){view("waiting");status("LINE本人確認の完了を確認しています…");poll()}else{view("signed-out");status("LINEでログインしてください")}
-setInterval(()=>{if(!document.hidden&&sessionStorage.getItem(VERIFIER_KEY))poll()},4000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&localStorage.getItem(VERIFIER_KEY))poll()});
+window.addEventListener("pageshow",()=>{if(localStorage.getItem(VERIFIER_KEY))poll()});
+if(session()){view("signed-in");check()}else if(localStorage.getItem(VERIFIER_KEY)&&Number(localStorage.getItem(verifierExpiryKey))>Date.now()){view("waiting");status("LINE本人確認の完了を確認しています…");poll()}else{localStorage.removeItem(VERIFIER_KEY);localStorage.removeItem(verifierExpiryKey);view("signed-out");status("LINEでログインしてください")}
+setInterval(()=>{if(!document.hidden&&localStorage.getItem(VERIFIER_KEY))poll()},4000);
 </script></body></html>
