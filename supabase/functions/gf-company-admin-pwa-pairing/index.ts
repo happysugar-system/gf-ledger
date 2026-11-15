@@ -46,17 +46,19 @@ Deno.serve(async(req:Request)=>{
     method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
     body:new URLSearchParams({id_token:b.line_id_token,client_id:channel}),signal:AbortSignal.timeout(10000)
    });
-   if(!verify.ok)return fail();
+   if(!verify.ok){console.warn("pwa-pair-authorize: line_verify_rejected",verify.status);return fail();}
    const id=await verify.json();
-   if(id.iss!=="https://access.line.me"||id.aud!==channel||!/^U[0-9a-f]{32}$/i.test(id.sub||"")||!Number.isFinite(id.exp)||id.exp<=Date.now()/1000)return fail();
+   if(id.iss!=="https://access.line.me"||id.aud!==channel||!/^U[0-9a-f]{32}$/i.test(id.sub||"")||!Number.isFinite(id.exp)||id.exp<=Date.now()/1000){console.warn("pwa-pair-authorize: line_claims_rejected");return fail();}
    const {data:admin,error:adminError}=await sb.from("gf_company_admin_identities").select("role,active").eq("line_user_id",id.sub).maybeSingle();
-   if(adminError||!admin?.active||!["owner","manager"].includes(admin.role))return fail();
+   if(adminError){console.warn("pwa-pair-authorize: admin_lookup_error",adminError.code);return fail();}
+   if(!admin?.active||!["owner","manager"].includes(admin.role)){console.warn("pwa-pair-authorize: admin_not_authorized");return fail();}
    const code_hash=await digest(b.code);
    // Atomic update prevents reuse and multiple approvals. No response reveals whether code exists.
    const {data:updated,error}=await sb.from("gf_company_admin_pairings").update({status:"approved",line_user_id:id.sub})
     .eq("code_hash",code_hash).eq("status","pending").gt("expires_at",new Date().toISOString())
     .select("id").maybeSingle();
-   if(error||!updated)return fail();
+   if(error){console.warn("pwa-pair-authorize: pairing_update_error",error.code);return fail();}
+   if(!updated){console.warn("pwa-pair-authorize: pairing_missing_or_expired");return fail();}
    return reply(200,{ok:true});
   }
   if(action==="poll"){
