@@ -48,31 +48,50 @@ if(pageMode==="pair"){
  const result=document.createElement("p");result.setAttribute("role","status");
  card.append(h,p,input,btn,result);
  const authApi="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-pwa-pairing";
- btn.onclick=async()=>{
-  const code=input.value.trim();
-  if(!/^[0-9]{12}$/.test(code)){result.textContent="12桁の番号を入力してください";return}
-  btn.disabled=true;
+ let liffReady=false;
+ async function prepareLine(){
+  result.textContent="LINEログインを確認しています…";
+  input.disabled=true;btn.disabled=true;
   try{
    await liff.init({liffId});
    if(!liff.isLoggedIn()){
-    sessionStorage.setItem(pairPendingKey,code);
     sessionStorage.setItem(pairModeUntilKey,String(Date.now()+300000));
+    result.textContent="LINEログイン画面へ移動します。戻ったあと12桁コードを入力してください。";
     liff.login({redirectUri:location.origin+location.pathname+"?mode=pair"});
     return;
    }
+   if(!liff.getIDToken())throw Error("LINEの本人確認情報を取得できません");
+   liffReady=true;
+   input.disabled=false;btn.disabled=false;
+   result.textContent="LINEログイン済みです。GFアプリの12桁コードを入力して承認してください。";
+  }catch(e){
+   result.textContent="LINEログインの確認に失敗しました："+e.message;
+   btn.disabled=false;
+   btn.textContent="LINEログインを再確認";
+  }
+ }
+ btn.onclick=async()=>{
+  if(!liffReady){await prepareLine();return}
+  const code=input.value.trim();
+  if(!/^[0-9]{12}$/.test(code)){result.textContent="12桁の番号を入力してください";return}
+  btn.disabled=true;input.disabled=true;
+  result.textContent="本人確認を送信しています…";
+  try{
    const token=liff.getIDToken();
-   if(!token)throw Error("LINEの本人確認情報を取得できません");
+   if(!token)throw Error("LINEログイン情報が取得できません");
    const response=await fetch(authApi,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"authorize",code,line_id_token:token}),cache:"no-store"});
    const data=await response.json();
    if(!response.ok)throw Error(data.error||"承認できませんでした");
    sessionStorage.removeItem(pairPendingKey);
    sessionStorage.removeItem(pairModeUntilKey);
-   result.textContent="本人確認が完了しました。ホーム画面アプリに戻ってください。";
-  }catch(e){result.textContent="認証エラー："+e.message}
-  finally{btn.disabled=false}
+   input.value="";
+   result.textContent="本人確認が完了しました。GFアプリに戻ってください。";
+   btn.hidden=true;
+  }catch(e){result.textContent="認証エラー："+e.message+"。コードの有効期限は5分です。"}
+  finally{input.disabled=false;btn.disabled=false}
  };
- const pending=sessionStorage.getItem(pairPendingKey);
- if(pending){input.value=pending;sessionStorage.removeItem(pairPendingKey);btn.click()}
+ // Authenticate before accepting the code so a LINE-to-Chrome redirect cannot discard it.
+ prepareLine();
 }
 
 if(reviewMode){
