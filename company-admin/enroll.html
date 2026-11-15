@@ -46,7 +46,14 @@ if(pageMode==="pair"){
  const input=document.createElement("input");input.inputMode="numeric";input.maxLength=12;input.placeholder="12桁の番号";input.autocomplete="off";input.style.cssText="font-size:1.5rem;letter-spacing:.12em;width:95%;padding:12px;box-sizing:border-box";
  const btn=document.createElement("button");btn.textContent="LINEで本人確認して承認";
  const result=document.createElement("p");result.setAttribute("role","status");
- card.append(h,p,input,btn,result);
+ const back=document.createElement("a");
+ back.textContent="← GF業務システムへ戻る";
+ back.href="../?v=20261115-pwa10";
+ back.style.cssText="display:block;color:#12334d;font-weight:700;padding:14px 0;text-decoration:underline";
+ const help=document.createElement("p");
+ help.textContent="※ Chromeからホーム画面のGFアプリへ直接切り替わらない場合は、ホーム画面のGFアイコンを開いてください。";
+ help.style.cssText="font-size:.85rem;color:#607080";
+ card.append(back,h,p,input,btn,result,help);
  const authApi="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-pwa-pairing";
  let liffReady=false;
  async function prepareLine(){
