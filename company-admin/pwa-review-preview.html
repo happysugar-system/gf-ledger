@@ -77,6 +77,33 @@ if(reviewMode){
  Array.from(originalCard.children).forEach(x=>{if(x.tagName!=="H1")x.hidden=true});
  originalCard.insertAdjacentHTML("beforeend","<div id=\"reviewApp\" hidden><p class=\"hint\">GOLD FIRST｜スタッフ用・LINE認証</p><p id=\"reviewStatus\" role=\"status\">認証を確認しています…</p><div id=\"reviewPanel\" hidden><p><button id=\"reloadReview\">一覧を更新</button></p><h2>承認待ち申請 <span id=\"pendingCount\"></span></h2><div id=\"pendingList\"></div><h2>承認済み一覧</h2><div id=\"approvedList\"></div><h2>却下済み一覧</h2><div id=\"rejectedList\"></div></div></div>");
  document.getElementById("reviewApp").hidden=false;
+ const logoutButton=document.createElement("button");
+ logoutButton.id="pwaLogout";
+ logoutButton.textContent="ログアウト";
+ logoutButton.style.cssText="background:#edf3fa;color:#23415d;border:1px solid #c9d7e6;margin-top:24px";
+ document.getElementById("reviewApp").append(logoutButton);
+ logoutButton.onclick=async()=>{
+  if(!confirm("この端末からログアウトしますか？"))return;
+  logoutButton.disabled=true;
+  const token=localStorage.getItem("gf_admin_pwa_session_v1");
+  try{
+   if(token){
+    const response=await fetch("https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-pwa-pairing",{
+     method:"POST",headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({action:"logout",session_token:token}),cache:"no-store"
+    });
+    if(!response.ok)throw Error("サーバー側のログアウトに失敗しました");
+   }
+   localStorage.removeItem("gf_admin_pwa_session_v1");
+   localStorage.removeItem("gf_admin_pwa_verifier_v1");
+   localStorage.removeItem("gf_admin_pwa_verifier_expires_v1");
+   localStorage.removeItem("gf_admin_pwa_pair_code_v1");
+   location.replace("pwa-login-preview.html");
+  }catch(e){
+   document.getElementById("reviewStatus").textContent="ログアウトできませんでした："+e.message+"。通信を確認して再試行してください。";
+   logoutButton.disabled=false;
+  }
+ };
  const api="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-api-pwa-preview";
  const byId=id=>document.getElementById(id);
  const status=byId("reviewStatus");
