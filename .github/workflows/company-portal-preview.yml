@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Publish PWA built-in version check and refresh button; preserve existing site layout
+      # Publish Chrome pairing return navigation and clearer instructions; preserve existing site layout
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
