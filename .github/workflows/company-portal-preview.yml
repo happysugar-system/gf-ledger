@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Publish PWA resume and approved-pairing handoff fix; preserve existing site layout
+      # Publish automatic PWA post-approval navigation; preserve existing site layout
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
@@ -50,7 +50,7 @@ jobs:
           assert old in s
           s=s.replace(old,"法人担当者登録管理",1)
           s=s.replace("本人確認・DriverID照合・承認","法人担当者の申請確認・承認",1)
-          s=s.replace("window.location.href = REGISTRATION_URL;","window.location.href = './company-admin/pwa-login-preview.html?v=20261115-pwa5';",1)
+          s=s.replace("window.location.href = REGISTRATION_URL;","window.location.href = './company-admin/pwa-login-preview.html?v=20261115-pwa6';",1)
           p.write_text(s)
           PY
           cp site/manifest.webmanifest public/manifest.webmanifest
