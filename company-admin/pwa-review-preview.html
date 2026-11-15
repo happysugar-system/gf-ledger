@@ -88,7 +88,7 @@ if(reviewMode){
   if(!token)throw Error("ホーム画面アプリでログインしてください");
   const res=await fetch(api,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,device_session_token:token,...extra})});
   const data=await res.json().catch(()=>({}));
-  if(!res.ok)throw Error(data.error||"処理に失敗しました ("+res.status+")");
+  if(!res.ok){if(res.status===401){localStorage.removeItem("gf_admin_pwa_session_v1");location.replace("pwa-login-preview.html");throw Error("ログインの有効期限が切れました")}throw Error(data.error||"処理に失敗しました ("+res.status+")");}
   return data;
  }
  async function reload(){
@@ -145,7 +145,7 @@ if(reviewMode){
  byId("reloadReview").onclick=reload;
  (async()=>{
   try{
-   if(!localStorage.getItem("gf_admin_pwa_session_v1")){status.textContent="ログインしていません。認証画面に戻ってください。";return}
+   if(!localStorage.getItem("gf_admin_pwa_session_v1")){location.replace("pwa-login-preview.html");return}
    await reload();
   }catch(e){status.textContent="端末認証エラー："+e.message}
  })();
