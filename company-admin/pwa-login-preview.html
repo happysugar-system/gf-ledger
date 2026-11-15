@@ -7,7 +7,7 @@ const API="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admi
 const TOKEN_KEY="gf_admin_pwa_session_v1",VERIFIER_KEY="gf_admin_pwa_verifier_v1";
 const el=id=>document.getElementById(id);
 const status=s=>el("status").textContent=s;
-const BUILD="20261115-pwa4";
+const BUILD="20261115-pwa5";
 const CODE_KEY="gf_admin_pwa_pair_code_v1";
 const post=async body=>{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const d=await r.json();if(!r.ok)throw Error(d.error||"通信エラー");return d};
 const randomHex=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>b.toString(16).padStart(2,"0")).join("");
@@ -49,7 +49,7 @@ async function poll(){
  if(polling)return;
  const verifier=localStorage.getItem(VERIFIER_KEY);
  if(!verifier){status("認証待ち情報がありません。新しく12桁コードを発行してください。");view("signed-out");return}
- if(Number(localStorage.getItem(verifierExpiryKey))<=Date.now()){localStorage.removeItem(VERIFIER_KEY);localStorage.removeItem(verifierExpiryKey);localStorage.removeItem(CODE_KEY);view("signed-out");status("認証コードが5分で期限切れになりました。新しく発行してください。");return}
+ if(Number(localStorage.getItem(verifierExpiryKey))<=Date.now()){localStorage.removeItem(VERIFIER_KEY);localStorage.removeItem(verifierExpiryKey);localStorage.removeItem(CODE_KEY);view("signed-out");status("承認結果の受取期限が切れました。新しく発行してください。");return}
  polling=true;
  try{
   const d=await post({action:"poll",verifier});
@@ -62,7 +62,7 @@ async function poll(){
    await check();
   }else if(d.status==="pending"){
    view("waiting");
-   status("LINEでの本人確認を待っています…");
+   status("LINEでの本人確認を待っています…（Chromeで承認済みなら「LINE認証の完了を確認」を押してください）");
   }else{
    localStorage.removeItem(VERIFIER_KEY);
    localStorage.removeItem(verifierExpiryKey);
@@ -81,9 +81,9 @@ el("begin").onclick=async()=>{
   const d=await post({action:"begin",verifier});
   localStorage.setItem(VERIFIER_KEY,verifier);
   localStorage.setItem(CODE_KEY,String(d.code));
-  localStorage.setItem(verifierExpiryKey,String(Date.now()+300000));
+  localStorage.setItem(verifierExpiryKey,String(Date.now()+86400000));
   el("code").textContent=d.code;
-  el("expires").textContent="有効期限：5分";
+  el("expires").textContent="コード入力は5分以内／承認結果の受取は24時間";
   view("waiting");
   status("「LINE認証画面を開く」を押し、12桁の番号を入力してください。");
  }catch(e){view("signed-out");status("開始できませんでした："+e.message)}
