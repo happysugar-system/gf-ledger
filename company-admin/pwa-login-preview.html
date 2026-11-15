@@ -7,7 +7,7 @@ const API="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admi
 const TOKEN_KEY="gf_admin_pwa_session_v1",VERIFIER_KEY="gf_admin_pwa_verifier_v1";
 const el=id=>document.getElementById(id);
 const status=s=>el("status").textContent=s;
-const BUILD="20261115-pwa5";
+const BUILD="20261115-pwa6";
 const CODE_KEY="gf_admin_pwa_pair_code_v1";
 const post=async body=>{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const d=await r.json();if(!r.ok)throw Error(d.error||"通信エラー");return d};
 const randomHex=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>b.toString(16).padStart(2,"0")).join("");
@@ -16,6 +16,7 @@ const session=()=>localStorage.getItem(TOKEN_KEY);
 // Keep the one-time verifier across app restarts (never place it in a URL).
 const verifierExpiryKey="gf_admin_pwa_verifier_expires_v1";
 let polling=false, checking=false;
+const goDashboard=()=>{window.location.replace("pwa-review-preview.html")};
 function view(mode){
  const signedIn=mode==="signed-in", waiting=mode==="waiting";
  el("begin").hidden=signedIn||waiting;
@@ -38,7 +39,8 @@ async function check(){
  try{
   await post({action:"check",session_token:token});
   view("signed-in");
-  status("✓ ログイン中です。承認管理画面を開けます。");
+  status("✓ ログイン完了。承認管理画面を開きます…");
+  goDashboard();
  }catch(e){
   localStorage.removeItem(TOKEN_KEY);
   view("signed-out");
@@ -62,7 +64,7 @@ async function poll(){
    await check();
   }else if(d.status==="pending"){
    view("waiting");
-   status("LINEでの本人確認を待っています…（Chromeで承認済みなら「LINE認証の完了を確認」を押してください）");
+   status("LINEでの本人確認を待っています…（承認されると自動で管理画面を開きます）");
   }else{
    localStorage.removeItem(VERIFIER_KEY);
    localStorage.removeItem(verifierExpiryKey);
@@ -102,12 +104,12 @@ el("logout").onclick=async()=>{
  status("ログアウトしました");
  if(token)try{await post({action:"logout",session_token:token})}catch{status("この端末からはログアウトしました。通信できなかったためサーバー側の解除は未確認です。")}
 };
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&localStorage.getItem(VERIFIER_KEY))poll()});
-window.addEventListener("pageshow",()=>{if(localStorage.getItem(VERIFIER_KEY))poll()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){if(localStorage.getItem(VERIFIER_KEY))poll();else if(session())check()}});
+window.addEventListener("pageshow",()=>{if(localStorage.getItem(VERIFIER_KEY))poll();else if(session())check()});
 document.querySelector("h1").textContent="GOLD FIRST｜管理者ログイン（"+BUILD+"）";
 if(session()){view("signed-in");check()}else if(localStorage.getItem(VERIFIER_KEY)&&Number(localStorage.getItem(verifierExpiryKey))>Date.now()){
  const savedCode=localStorage.getItem(CODE_KEY);
- if(savedCode){el("code").textContent=savedCode;el("expires").textContent="有効期限：5分";view("waiting");status("LINE本人確認の完了を確認しています…");poll()}
+ if(savedCode){el("code").textContent=savedCode;el("expires").textContent="コード入力は5分以内／承認結果の受取は24時間";view("waiting");status("LINE本人確認の完了を確認しています…");poll()}
  else{localStorage.removeItem(VERIFIER_KEY);localStorage.removeItem(verifierExpiryKey);view("signed-out");status("前回の認証番号を復元できません。新しく12桁コードを発行してください。")}
 }else{localStorage.removeItem(VERIFIER_KEY);localStorage.removeItem(verifierExpiryKey);localStorage.removeItem(CODE_KEY);view("signed-out");status("LINEでログインしてください")}
 setInterval(()=>{if(!document.hidden&&localStorage.getItem(VERIFIER_KEY))poll()},4000);
