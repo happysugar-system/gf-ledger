@@ -60,7 +60,26 @@ if(pageMode==="pair"){
     liff.login({redirectUri:location.origin+location.pathname+"?mode=pair"});
     return;
    }
-   if(!liff.getIDToken())throw Error("LINEの本人確認情報を取得できません");
+   const currentToken=liff.getIDToken();
+   if(!currentToken)throw Error("LINEの本人確認情報を取得できません");
+   // LIFF may retain an expired ID token in Chrome. Refresh it before accepting the 12-digit code.
+   let tokenExpiry=0;
+   try{
+    const part=currentToken.split(".")[1];
+    const payload=JSON.parse(atob(part.replace(/-/g,"+").replace(/_/g,"/")));
+    tokenExpiry=Number(payload.exp)||0;
+   }catch{}
+   if(!tokenExpiry||tokenExpiry*1000<Date.now()+60000){
+    if(sessionStorage.getItem("gf_pair_token_refresh_attempted")==="1"){
+     sessionStorage.removeItem("gf_pair_token_refresh_attempted");
+     throw Error("LINE認証の更新に失敗しました。Chromeでこのページを開き直してください");
+    }
+    sessionStorage.setItem("gf_pair_token_refresh_attempted","1");
+    liff.logout();
+    liff.login({redirectUri:location.origin+location.pathname+"?mode=pair"});
+    return;
+   }
+   sessionStorage.removeItem("gf_pair_token_refresh_attempted");
    liffReady=true;
    input.disabled=false;btn.disabled=false;
    result.textContent="LINEログイン済みです。GFアプリの12桁コードを入力して承認してください。";
