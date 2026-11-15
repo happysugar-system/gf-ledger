@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Preserve LINE pairing callback mode across login redirect; preserve existing site layout
+      # Login to LINE before pairing-code entry to survive browser handoff; preserve existing site layout
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
