@@ -98,7 +98,7 @@ if(reviewMode){
    localStorage.removeItem("gf_admin_pwa_verifier_v1");
    localStorage.removeItem("gf_admin_pwa_verifier_expires_v1");
    localStorage.removeItem("gf_admin_pwa_pair_code_v1");
-   location.replace("pwa-login-preview.html");
+   location.replace("pwa-login-preview.html?v=20261115-pwa8");
   }catch(e){
    document.getElementById("reviewStatus").textContent="ログアウトできませんでした："+e.message+"。通信を確認して再試行してください。";
    logoutButton.disabled=false;
@@ -115,7 +115,7 @@ if(reviewMode){
   if(!token)throw Error("ホーム画面アプリでログインしてください");
   const res=await fetch(api,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,device_session_token:token,...extra})});
   const data=await res.json().catch(()=>({}));
-  if(!res.ok){if(res.status===401){localStorage.removeItem("gf_admin_pwa_session_v1");location.replace("pwa-login-preview.html");throw Error("ログインの有効期限が切れました")}throw Error(data.error||"処理に失敗しました ("+res.status+")");}
+  if(!res.ok){if(res.status===401){localStorage.removeItem("gf_admin_pwa_session_v1");location.replace("pwa-login-preview.html?v=20261115-pwa8");throw Error("ログインの有効期限が切れました")}throw Error(data.error||"処理に失敗しました ("+res.status+")");}
   return data;
  }
  async function reload(){
@@ -172,7 +172,7 @@ if(reviewMode){
  byId("reloadReview").onclick=reload;
  (async()=>{
   try{
-   if(!localStorage.getItem("gf_admin_pwa_session_v1")){location.replace("pwa-login-preview.html");return}
+   if(!localStorage.getItem("gf_admin_pwa_session_v1")){location.replace("pwa-login-preview.html?v=20261115-pwa8");return}
    await reload();
   }catch(e){status.textContent="端末認証エラー："+e.message}
  })();
