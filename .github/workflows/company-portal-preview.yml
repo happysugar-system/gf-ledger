@@ -4,7 +4,7 @@ on:
     branches: [feature/company-portal-20261113]
     paths:
       - 'company-portal/**'
-      # Publish PWA resume auth and clear confirmation button; preserve existing site layout
+      # Refresh PWA login redirect cache-buster on iPhone; preserve existing site layout
       - '.github/workflows/company-portal-preview.yml'
   workflow_dispatch:
 permissions:
