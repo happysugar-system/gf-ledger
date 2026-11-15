@@ -1,4 +1,4 @@
-// Isolated draft: NOT deployed. Requires reviewed SQL migration.
+// Device pairing preview function. Deployed separately from the existing production dashboard API.
 // This API handles device pairing only; existing dashboard API stays untouched.
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 const ORIGIN = "https://happysugar-system.github.io";
@@ -46,7 +46,22 @@ Deno.serve(async(req:Request)=>{
     method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
     body:new URLSearchParams({id_token:b.line_id_token,client_id:channel}),signal:AbortSignal.timeout(10000)
    });
-   if(!verify.ok){console.warn("pwa-pair-authorize: line_verify_rejected",verify.status);return fail();}
+   if(!verify.ok){
+    // Log only a fixed diagnostic category; never log ID tokens, LINE responses or user identifiers.
+    let reason="unclassified";
+    try{
+     const lineError=await verify.json();
+     const code=typeof lineError?.error==="string"?lineError.error:"";
+     const desc=typeof lineError?.error_description==="string"?lineError.error_description:"";
+     if(/client_id|audience|channel/i.test(desc))reason="channel_mismatch";
+     else if(/expired|expiration/i.test(desc))reason="expired_token";
+     else if(/invalid.*token|token.*invalid|signature/i.test(desc))reason="invalid_token";
+     else if(code==="invalid_request")reason="invalid_request";
+     else if(code==="invalid_grant")reason="invalid_grant";
+    }catch{}
+    console.warn("pwa-pair-authorize: line_verify_rejected",verify.status,"reason="+reason,"configured_channel_matches_liff="+(channel==="2012058414"));
+    return fail();
+   }
    const id=await verify.json();
    if(id.iss!=="https://access.line.me"||id.aud!==channel||!/^U[0-9a-f]{32}$/i.test(id.sub||"")||!Number.isFinite(id.exp)||id.exp<=Date.now()/1000){console.warn("pwa-pair-authorize: line_claims_rejected");return fail();}
    const {data:admin,error:adminError}=await sb.from("gf_company_admin_identities").select("role,active").eq("line_user_id",id.sub).maybeSingle();
