@@ -1,4 +1,5 @@
 name: Deploy GOLD FIRST site and company portal
+# Publish demo company member self-reset control (2026-11-16)
 on:
   push:
     branches: [feature/company-portal-20261113]
