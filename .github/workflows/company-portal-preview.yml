@@ -52,6 +52,12 @@ jobs:
           s=s.replace(old,"法人担当者登録管理",1)
           s=s.replace("本人確認・DriverID照合・承認","法人担当者の申請確認・承認",1)
           s=s.replace("window.location.href = REGISTRATION_URL;","window.location.href = './company-admin/pwa-review-preview.html?v=20261115-pwa9';",1)
+          # The legacy registration badge counts DRIVER applications, not company members.
+          # Hide only this incorrect badge until a company-specific count is wired.
+          s=s.replace('id="registrationBadge"', 'id="registrationBadge" data-company-count-unavailable="true"',1)
+          s=s.replace('    updateBadge(count);\n    currentRegistrationCount = count;', '    updateBadge(0);\n    currentRegistrationCount = 0;',1)
+          s=s.replace("      count === 0\n        ? '現在、承認待ちの申請はありません。'\n        : '承認待ち：' + count + '件'", "      '法人担当者の申請件数は「法人担当者登録管理」で確認してください。'",1)
+
           p.write_text(s)
           PY
           cp site/manifest.webmanifest public/manifest.webmanifest
