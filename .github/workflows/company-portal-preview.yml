@@ -89,6 +89,41 @@ jobs:
 </script>"""
           assert "</body>" in s
           s=s.replace("</body>",badge_script+"</body>",1)
+          # PWA-only manual update control. Does not clear login/session storage.
+          update_ui = """<div style="margin:20px auto 0;max-width:440px;text-align:center">
+<button id="gfUpdateButton" type="button" style="padding:12px 20px;border:1px solid #c5a358;background:#fff;border-radius:12px;color:#5a4517;font-weight:700;font-size:14px;cursor:pointer">↻ 最新版に更新</button>
+<p id="gfUpdateStatus" role="status" style="font-size:12px;color:#666;line-height:1.6"></p></div>"""
+          update_js = """<script>
+(function(){
+ const button=document.getElementById("gfUpdateButton");
+ const status=document.getElementById("gfUpdateStatus");
+ if(!button||!status)return;
+ button.addEventListener("click",async()=>{
+   button.disabled=true;status.textContent="最新版を確認しています…";
+   try{
+     const url=new URL("./index.html",location.href);
+     url.searchParams.set("gf_refresh",String(Date.now()));
+     const response=await fetch(url.toString(),{cache:"no-store",redirect:"follow"});
+     if(!response.ok)throw Error("HTTP "+response.status);
+     const html=await response.text();
+     if(!html.includes("GOLD FIRST")||!html.includes("法人担当者登録管理"))throw Error("最新版を確認できませんでした");
+     // Updating any registered service worker is safe and does not erase auth storage.
+     if("serviceWorker" in navigator){
+       const regs=await navigator.serviceWorker.getRegistrations();
+       await Promise.allSettled(regs.map(reg=>reg.update()));
+     }
+     status.textContent="最新版を読み込みます…";
+     location.replace(url.toString());
+   }catch(error){
+     status.textContent="更新できませんでした。通信状態を確認して、もう一度お試しください。";
+     button.disabled=false;
+   }
+ });
+})();
+</script>"""
+          assert '<div class="note">' in s
+          s=s.replace('<div class="note">',update_ui+'<div class="note">',1)
+          s=s.replace('</body>',update_js+'</body>',1)
           p.write_text(s)
           PY
           cp site/manifest.webmanifest public/manifest.webmanifest
