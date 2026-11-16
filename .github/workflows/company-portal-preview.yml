@@ -58,6 +58,37 @@ jobs:
           s=s.replace('    updateBadge(count);\n    currentRegistrationCount = count;', '    updateBadge(0);\n    currentRegistrationCount = 0;',1)
           s=s.replace("      count === 0\n        ? '現在、承認待ちの申請はありません。'\n        : '承認待ち：' + count + '件'", "      '法人担当者の申請件数は「法人担当者登録管理」で確認してください。'",1)
 
+          # Company badge: authenticated, exact pending count from the company database.
+          # The old driver registration badge remains disabled.
+          badge_script = """<script>
+(function(){
+ const endpoint="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-api-pwa-preview";
+ const tokenKey="gf_admin_pwa_session_v1";
+ let busy=false,last=0;
+ async function refreshCompanyBadge(force=false){
+   if(busy||(!force&&Date.now()-last<30000))return;
+   busy=true;last=Date.now();
+   const token=localStorage.getItem(tokenKey);
+   if(!token){updateBadge(0);currentRegistrationCount=0;busy=false;return;}
+   try{
+     const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"pending_count",device_session_token:token}),cache:"no-store"});
+     if(!response.ok)throw Error("company count unavailable");
+     const data=await response.json();
+     if(!Number.isInteger(data.pending_count)||data.pending_count<0)throw Error("invalid count");
+     updateBadge(data.pending_count);
+     currentRegistrationCount=data.pending_count;
+     await updateAppIconBadge();
+   }catch(e){updateBadge(0);currentRegistrationCount=null;}
+   finally{busy=false;}
+ }
+ document.addEventListener("DOMContentLoaded",()=>refreshCompanyBadge(true));
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshCompanyBadge(true)});
+ window.addEventListener("focus",()=>refreshCompanyBadge());
+ setInterval(()=>{if(!document.hidden)refreshCompanyBadge()},60000);
+})();
+</script>"""
+          assert "</body>" in s
+          s=s.replace("</body>",badge_script+"</body>",1)
           p.write_text(s)
           PY
           cp site/manifest.webmanifest public/manifest.webmanifest
