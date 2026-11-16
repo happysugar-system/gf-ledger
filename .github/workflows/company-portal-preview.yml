@@ -55,7 +55,7 @@ jobs:
           # The legacy registration badge counts DRIVER applications, not company members.
           # Hide only this incorrect badge until a company-specific count is wired.
           s=s.replace('id="registrationBadge"', 'id="registrationBadge" data-company-count-unavailable="true"',1)
-          s=s.replace('    updateBadge(count);\n    currentRegistrationCount = count;', '    updateBadge(0);\n    currentRegistrationCount = 0;',1)
+          s=s.replace('    updateBadge(count);\n    currentRegistrationCount = count;', '    // Legacy driver count intentionally not displayed here.\n    // Company count is loaded separately via authenticated company API.',1)
           s=s.replace("      count === 0\n        ? '現在、承認待ちの申請はありません。'\n        : '承認待ち：' + count + '件'", "      '法人担当者の申請件数は「法人担当者登録管理」で確認してください。'",1)
 
           # Company badge: authenticated, exact pending count from the company database.
