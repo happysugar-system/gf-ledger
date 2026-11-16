@@ -64,6 +64,7 @@ jobs:
           cp -R site/company-admin/. public/company-admin/
           # Keep the existing admin review screen; add only the pairing mode and preview pages.
           cp pwa-source/company-admin/enroll.html public/company-admin/enroll.html
+          cp pwa-source/company-admin/member-apply.html public/company-admin/member-apply.html
           cp pwa-source/company-admin/pwa-login-preview.html public/company-admin/pwa-login-preview.html
           cp pwa-source/company-admin/pwa-review-preview.html public/company-admin/pwa-review-preview.html
           python3 - <<'PY'
@@ -81,6 +82,7 @@ jobs:
           test -f public/vehicle-request-complete.html
           test -f public/company-portal/index.html
           test -f public/company-admin/enroll.html
+          grep -q 'demoResetCompany' public/company-admin/member-apply.html
           grep -q 'pageMode==="pair"' public/company-admin/enroll.html
           grep -q 'gf-company-admin-api-demo' public/company-admin/enroll.html
           grep -q 'gf-company-admin-api-pwa-preview' public/company-admin/pwa-review-preview.html
