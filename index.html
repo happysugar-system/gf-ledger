@@ -237,25 +237,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
   </button>
 
   <button class="menu" type="button"
-    onclick="openReception()"
-    style="margin-top:16px">
-    <span class="menuIcon">📩<span id="lineBadge" class="notificationBadge hidden" aria-label="LINE受付の未完了件数"></span></span>
-    <span class="menuText">
-      <span class="menuTitle">
-        LINE受付管理
-      </span>
-      <span class="menuSub">
-        車両依頼・お問い合わせ（任意保険・代車）
-      </span>
-    </span>
-    <span class="arrow">›</span>
-  </button>
-
-  <button id="ownerAccessMenu" class="menu hidden" type="button" onclick="window.location.href='./reception-access-admin.html'" style="margin-top:16px">
-    <span class="menuIcon">🔐</span><span class="menuText"><span class="menuTitle">スタッフ・権限管理</span><span class="menuSub">最高管理者専用｜スタッフ名・メール・権限</span></span><span class="arrow">›</span>
-  </button>
-
-  <button class="menu" type="button"
     onclick="openShift()"
     style="margin-top:16px">
     <span class="menuIcon">📅</span>
@@ -270,6 +251,21 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <span class="arrow">›</span>
   </button>
 
+  <button class="menu" type="button"
+    onclick="openReception()"
+    style="margin-top:16px">
+    <span class="menuIcon">📩<span id="lineBadge" class="notificationBadge hidden" aria-label="LINE受付の未完了件数"></span></span>
+    <span class="menuText">
+      <span class="menuTitle">
+        LINE受付管理
+      </span>
+      <span class="menuSub">
+        車両依頼・お問い合わせ（任意保険・代車）
+      </span>
+    </span>
+    <span class="arrow">›</span>
+  </button>
+
   <button class="menu" type="button" onclick="window.location.href='./staff-approvals.html'" style="margin-top:16px">
     <span class="menuIcon">🏢<span id="registrationBadge" class="notificationBadge hidden" aria-label="ドライバー承認待ち0件"></span></span>
     <span class="menuText">
@@ -278,6 +274,10 @@ window.addEventListener('DOMContentLoaded',async()=>{
     </span>
     <span class="arrow">›</span>
   </button>
+  <button id="ownerAccessMenu" class="menu hidden" type="button" onclick="window.location.href='./reception-access-admin.html'" style="margin-top:16px">
+    <span class="menuIcon">🔐</span><span class="menuText"><span class="menuTitle">スタッフ・権限管理</span><span class="menuSub">最高管理者専用｜スタッフ名・メール・権限</span></span><span class="arrow">›</span>
+  </button>
+
 
   <button class="staffLogout" type="button" onclick="logoutStaff()">ログアウト</button>
   <!-- GF155｜管理者通知（共通ログイン連動） -->
