@@ -3,7 +3,12 @@ const liffId="2012058414-jYEPzMww";
 const endpoint="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-enroll-demo";
 const button=document.getElementById("start"),status=document.getElementById("status");
 const pendingKey="gf_admin_enroll_pending";
-const reviewMode=new URLSearchParams(location.search).get("mode")!=="enroll";
+const requestedMode=new URLSearchParams(location.search).get("mode");
+const pairPendingKey="gf_pair_pending_code", pairModeUntilKey="gf_pair_mode_until";
+const pairModeActive=Number(sessionStorage.getItem(pairModeUntilKey)||"0")>Date.now();
+const pageMode=requestedMode==="pair"||(!requestedMode&&pairModeActive)?"pair":requestedMode;
+if(pageMode==="pair"&&requestedMode!=="pair")history.replaceState(null,"",location.pathname+"?mode=pair");
+const reviewMode=pageMode!=="enroll"&&pageMode!=="pair";
 async function submitEnrollment(){
  button.disabled=true;status.textContent="LINE認証を確認しています…";
  try{
@@ -25,10 +30,95 @@ async function submitEnrollment(){
  finally{button.disabled=false;}
 }
 button.addEventListener("click",submitEnrollment);
-if(!reviewMode && sessionStorage.getItem(pendingKey)==="1"){
+if(pageMode==="enroll" && sessionStorage.getItem(pendingKey)==="1"){
  submitEnrollment();
 }
 
+
+// Pairing mode uses the already configured LIFF endpoint path, rather than a new unregistered endpoint.
+if(pageMode==="pair"){
+ document.title="GOLD FIRST｜端末ログイン本人確認";
+ document.querySelector("header").textContent="GOLD FIRST｜端末ログイン本人確認";
+ const card=document.querySelector(".card");
+ card.replaceChildren();
+ const h=document.createElement("h1");h.textContent="端末ログインの本人確認";
+ const p=document.createElement("p");p.textContent="ホーム画面アプリに表示された12桁の番号を入力してください。";
+ const input=document.createElement("input");input.inputMode="numeric";input.maxLength=12;input.placeholder="12桁の番号";input.autocomplete="off";input.style.cssText="font-size:1.5rem;letter-spacing:.12em;width:95%;padding:12px;box-sizing:border-box";
+ const btn=document.createElement("button");btn.textContent="LINEで本人確認して承認";
+ const result=document.createElement("p");result.setAttribute("role","status");
+ const back=document.createElement("a");
+ back.textContent="← GF業務システムへ戻る";
+ back.href="../?v=20261115-pwa10";
+ back.style.cssText="display:block;color:#12334d;font-weight:700;padding:14px 0;text-decoration:underline";
+ const help=document.createElement("p");
+ help.textContent="※ Chromeからホーム画面のGFアプリへ直接切り替わらない場合は、ホーム画面のGFアイコンを開いてください。";
+ help.style.cssText="font-size:.85rem;color:#607080";
+ card.append(back,h,p,input,btn,result,help);
+ const authApi="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-pwa-pairing";
+ let liffReady=false;
+ async function prepareLine(){
+  result.textContent="LINEログインを確認しています…";
+  input.disabled=true;btn.disabled=true;
+  try{
+   await liff.init({liffId});
+   if(!liff.isLoggedIn()){
+    sessionStorage.setItem(pairModeUntilKey,String(Date.now()+300000));
+    result.textContent="LINEログイン画面へ移動します。戻ったあと12桁コードを入力してください。";
+    liff.login({redirectUri:location.origin+location.pathname+"?mode=pair"});
+    return;
+   }
+   const currentToken=liff.getIDToken();
+   if(!currentToken)throw Error("LINEの本人確認情報を取得できません");
+   // LIFF may retain an expired ID token in Chrome. Refresh it before accepting the 12-digit code.
+   let tokenExpiry=0;
+   try{
+    const part=currentToken.split(".")[1];
+    const payload=JSON.parse(atob(part.replace(/-/g,"+").replace(/_/g,"/")));
+    tokenExpiry=Number(payload.exp)||0;
+   }catch{}
+   if(!tokenExpiry||tokenExpiry*1000<Date.now()+60000){
+    if(sessionStorage.getItem("gf_pair_token_refresh_attempted")==="1"){
+     sessionStorage.removeItem("gf_pair_token_refresh_attempted");
+     throw Error("LINE認証の更新に失敗しました。Chromeでこのページを開き直してください");
+    }
+    sessionStorage.setItem("gf_pair_token_refresh_attempted","1");
+    liff.logout();
+    liff.login({redirectUri:location.origin+location.pathname+"?mode=pair"});
+    return;
+   }
+   sessionStorage.removeItem("gf_pair_token_refresh_attempted");
+   liffReady=true;
+   input.disabled=false;btn.disabled=false;
+   result.textContent="LINEログイン済みです。GFアプリの12桁コードを入力して承認してください。";
+  }catch(e){
+   result.textContent="LINEログインの確認に失敗しました："+e.message;
+   btn.disabled=false;
+   btn.textContent="LINEログインを再確認";
+  }
+ }
+ btn.onclick=async()=>{
+  if(!liffReady){await prepareLine();return}
+  const code=input.value.trim();
+  if(!/^[0-9]{12}$/.test(code)){result.textContent="12桁の番号を入力してください";return}
+  btn.disabled=true;input.disabled=true;
+  result.textContent="本人確認を送信しています…";
+  try{
+   const token=liff.getIDToken();
+   if(!token)throw Error("LINEログイン情報が取得できません");
+   const response=await fetch(authApi,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"authorize",code,line_id_token:token}),cache:"no-store"});
+   const data=await response.json();
+   if(!response.ok)throw Error(data.error||"承認できませんでした");
+   sessionStorage.removeItem(pairPendingKey);
+   sessionStorage.removeItem(pairModeUntilKey);
+   input.value="";
+   result.textContent="本人確認が完了しました。GFアプリに戻ってください。";
+   btn.hidden=true;
+  }catch(e){result.textContent="認証エラー："+e.message+"。コードの有効期限は5分です。"}
+  finally{input.disabled=false;btn.disabled=false}
+ };
+ // Authenticate before accepting the code so a LINE-to-Chrome redirect cannot discard it.
+ prepareLine();
+}
 
 if(reviewMode){
  document.title="GOLD FIRST｜法人担当者登録管理";
