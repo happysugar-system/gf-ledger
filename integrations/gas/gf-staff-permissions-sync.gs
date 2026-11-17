@@ -2,12 +2,13 @@
 // Deploy as a standalone GAS bound to the management spreadsheet.
 // Script Properties: GF_STAFF_SYNC_URL, GF_STAFF_SYNC_SECRET
 const GF_STAFF_TAB = 'スタッフ権限管理';
+const GF_STAFF_SPREADSHEET_ID = '1Wz67IH2D5s_29336c_akdovEsDJKYcXK6Uay7qTnw2M';
 function gfStaffSync() {
   const p = PropertiesService.getScriptProperties();
   const url = p.getProperty('GF_STAFF_SYNC_URL');
   const secret = p.getProperty('GF_STAFF_SYNC_SECRET');
   if (!url || !secret) throw new Error('同期URL・シークレットが未設定です');
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(GF_STAFF_TAB);
+  const sheet = SpreadsheetApp.openById(GF_STAFF_SPREADSHEET_ID).getSheetByName(GF_STAFF_TAB);
   if (!sheet) throw new Error('スタッフ権限管理タブがありません');
   const rows = sheet.getDataRange().getDisplayValues();
   const headers = rows.shift().map(x => x.trim());
