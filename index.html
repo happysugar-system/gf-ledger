@@ -251,6 +251,10 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <span class="arrow">›</span>
   </button>
 
+  <button id="ownerAccessMenu" class="menu hidden" type="button" onclick="window.location.href='./reception-access-admin.html'" style="margin-top:16px">
+    <span class="menuIcon">🔐</span><span class="menuText"><span class="menuTitle">スタッフ・権限管理</span><span class="menuSub">最高管理者専用｜スタッフ名・メール・権限</span></span><span class="arrow">›</span>
+  </button>
+
   <button class="menu" type="button"
     onclick="openShift()"
     style="margin-top:16px">
@@ -384,6 +388,19 @@ function openLedger(){
     'https://script.google.com/macros/s/AKfycbzDrU44saPdqQLxP3yyTPA8UgGkbw0fWSkNcUZp9XCEF2QErzk5uQki4_4eVDVwl4Hw0g/exec';
 }
 
+async function refreshOwnerAccessMenu(){
+ const menu=$('ownerAccessMenu');if(!menu||!gfClient)return;
+ menu.classList.add('hidden');
+ try{
+  const {data:{session}}=await gfClient.auth.getSession();
+  if(!session?.access_token)return;
+  const res=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-line-reception-admin',{
+   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_PUBLISHABLE_KEY},
+   body:JSON.stringify({action:'members'})
+  });
+  if(res.ok)menu.classList.remove('hidden');
+ }catch(e){console.info('権限メニュー判定を再試行してください')}
+}
 function openReception(){
   window.location.href =
     './line-reception-admin.html';
@@ -697,11 +714,12 @@ async function initGF155(){
   gfClient.auth.onAuthStateChange((event) => {
     if(event === 'SIGNED_IN' ||
        event === 'SIGNED_OUT'){
-      setTimeout(() => checkAdminSession(),0);
+      setTimeout(() => {checkAdminSession();refreshOwnerAccessMenu()},0);
     }
   });
 
   await checkAdminSession();
+  await refreshOwnerAccessMenu();
 
   // 60秒ごとに件数更新
   setInterval(() => {
