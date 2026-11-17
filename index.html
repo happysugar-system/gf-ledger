@@ -273,8 +273,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
   <button class="menu" type="button" onclick="window.location.href='./staff-approvals.html'" style="margin-top:16px">
     <span class="menuIcon">🏢<span id="registrationBadge" class="notificationBadge hidden" aria-label="ドライバー承認待ち0件"></span></span>
     <span class="menuText">
-      <span class="menuTitle">申請承認・法人管理</span>
-      <span class="menuSub">ドライバー申請・法人一覧・法人担当者承認（数字はドライバー申請）</span>
+      <span class="menuTitle">法人管理・担当者承認</span>
+      <span class="menuSub">法人一覧・法人担当者承認（本番連携準備中）</span>
     </span>
     <span class="arrow">›</span>
   </button>
@@ -547,24 +547,10 @@ async function refreshNotifications(){
   const seq = authSequence;
 
   try{
-    const {count,error} = await gfClient
-      .from('gf_mypage_registration_requests')
-      .select('auth_user_id',{
-        count:'exact',
-        head:true
-      })
-      .eq('status','pending');
-
-    if(seq !== authSequence || !adminVerified) return;
-
-    if(error) throw error;
-
-    if(typeof count !== 'number'){
-      throw new Error('件数を取得できませんでした');
-    }
-
-    updateBadge(count);
-    currentRegistrationCount = count;
+    // ドライバー本人登録の承認は廃止。旧8件を法人承認として数えない。
+    // 法人担当者の申請数は法人管理の本番データ接続完了後に表示する。
+    currentRegistrationCount = 0;
+    updateBadge(0);
 
     // GF156: GASがSupabaseに同期したLINE受付の未完了件数
     const {data:lineData,error:lineError} = await gfClient
@@ -589,9 +575,7 @@ async function refreshNotifications(){
     await updateAppIconBadge();
 
     setAuthStatus(
-      count === 0
-        ? '現在、承認待ちの申請はありません。'
-        : '承認待ち：' + count + '件'
+      '法人担当者の承認件数は本番連携準備中です。旧ドライバー申請は集計していません。'
     );
 
   }catch(err){
