@@ -608,31 +608,34 @@
     <section class="page" id="page4">
       <h2>契約書の事前確認</h2>
       <div class="note" style="margin-bottom:16px">
-        <strong>【デモ・仮の契約内容】</strong><br>
-        こちらは動作確認用の仮文書です。正式な契約書ではありません。
-        実際の契約条件は後日GOLDFIRSTから案内します。
+        以下の車両利用条件をご確認ください。この確認は申込時の事前確認であり、正式な契約はクラウドサインで締結します。
       </div>
       <div class="contractPaper" id="contractPaper">
-        <h3>車両利用に関するご案内（デモ）</h3>
-        <p><strong>第1項　お申し込みについて</strong><br>
-          車両依頼は利用申し込みであり、この画面で契約が成立するものではありません。</p>
-        <p><strong>第2項　車両・利用条件について</strong><br>
-          車両の種類、車両番号、料金、利用開始日、その他の条件は、
-          車両の準備後に提示する正式な契約書で確認します。</p>
-        <p><strong>第3項　正式な契約手続きについて</strong><br>
-          車両の準備ができた後、電子契約サービス等を利用して
-          正式な契約書をご案内します。契約成立はその正式な手続きによります。</p>
-        <p><strong>第4項　事前確認の記録について</strong><br>
-          この画面の確認操作は、契約内容の事前説明を確認したことを示すためのものです。
-          正式な電子署名ではありません。</p>
-        <p><strong>※</strong> 上記はデモ専用の仮文面です。
-          本番ではGOLDFIRSTから受領した正式な文書に差し替えます。</p>
+        <h3>車両利用に関する条件のご案内</h3>
+        <p><strong>【費用について】</strong></p>
+        <p>・車両費：30,000円／月（4WD車は33,000円／月）<br>
+        ・名義変更代：10,000円<br>
+        ・納車月の車両費は日割り計算となります。</p>
+        <p><strong>【納車・返却について】</strong></p>
+        <p>・納車および返却は、原則として埼玉県さいたま市見沼区中川302の事務所にてお願いいたします。<br>
+        ・遠方の場合などは納車対応も可能です。費用はご依頼をいただいた際に算出いたします。</p>
+        <p>・<strong>半年以内に退職された場合は、納車費をご負担いただきます。</strong>納車には人件費・交通費等がかかるためです。最低でも半年間稼働していただいた場合は、納車費用の負担はございません。</p>
+        <p><strong>【返却時について】</strong></p>
+        <p>・返却時には点検を行うため、返却点検費用（おおよそ18,000円）が発生します。<br>
+        ・あわせて、使用月分の車検法定費用（おおよそ1,000円／使用月）をご負担いただきます。</p>
+        <p><strong>【その他】</strong></p>
+        <p>・消耗品はドライバー様のご負担となります。<br>
+        ・保険は弊社指定の損保ジャパンにご加入いただきます。<br>
+        ・リース車両のトラブルや事故等が発生した場合は、こちらの公式LINEへご連絡ください。</p>
+        <p><strong>【契約について】</strong></p>
+        <p>・契約書はクラウドサインにて締結します。その際、緊急連絡先の方のお名前とメールアドレスが必要となります。<br>
+        ・ご承諾後は「契約書締結 → 車両手配 → 名義変更 → 保険加入 → 納車」の流れで進めます。</p>
       </div>
       <label class="contractAgree">
         <input id="contractConfirmed" type="checkbox" onchange="contractConfirmationChanged()">
-        <span>上記の仮の案内を確認しました。正式な契約は後日別途行うことを理解しています。</span>
+        <span>上記の車両利用条件と費用負担について確認し、同意します。正式な契約はクラウドサインで締結することを理解しています。</span>
       </label>
-      <div class="docStatus" id="contractConfirmStatus">未確認（デモ）</div>
+      <div class="docStatus" id="contractConfirmStatus">未確認</div>
       <div class="buttons">
         <button class="secondary" type="button" onclick="showPage(3)">戻る</button>
         <button class="primary" type="button" onclick="goFinalConfirm()">入力内容の確認へ</button>
@@ -887,7 +890,7 @@
   let cameraStream = null;
   let residentMethod = '';
   let residentFileName = '';
-  const CONTRACT_DEMO_VERSION = 'DEMO-20261013-01';
+  const CONTRACT_DEMO_VERSION = 'GF-TERMS-20261117-01';
   let contractConfirmedAt = '';
 
   function value(id) {
@@ -1199,7 +1202,7 @@
       ['稼働開始日', document.querySelector('input[name="startChoice"]:checked').value === 'undecided' ? '未定' : value('startDate')],
       ['免許証 表', licenseFrontData ? '撮影済み' : '未撮影'],
       ['免許証 裏', licenseBackData ? '撮影済み' : '未撮影'],
-      ['契約書の事前確認', contractConfirmedAt ? '確認済み（デモ）' : '未確認'],
+      ['契約書の事前確認', contractConfirmedAt ? '確認済み' : '未確認'],
       ['事前確認文書の版', CONTRACT_DEMO_VERSION],
       ['住民票',
         residentMethod === 'upload'
