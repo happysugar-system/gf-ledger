@@ -1,0 +1,25 @@
+name: GF company affiliation candidate discovery
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gf-company-affiliation-discovery
+  cancel-in-progress: false
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'psycopg[binary]==3.2.10'
+      - name: Sync affiliation candidates
+        env:
+          GF_SOURCE_DATABASE_URL: ${{ secrets.GF_SOURCE_DATABASE_URL }}
+          GF_PORTAL_DATABASE_URL: ${{ secrets.GF_PORTAL_DATABASE_URL }}
+        run: python scripts/sync_affiliation_candidates.py
