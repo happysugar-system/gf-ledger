@@ -429,6 +429,7 @@ function setAuthStatus(message){
 
 function updateBadge(count, badgeId = 'registrationBadge'){
   const badge = $(badgeId);
+  if(!badge) return;
 
   if(!Number.isInteger(count) || count <= 0){
     badge.classList.add('hidden');
