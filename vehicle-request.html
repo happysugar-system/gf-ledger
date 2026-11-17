@@ -601,14 +601,14 @@
 
       <div class="buttons">
         <button class="secondary" type="button" onclick="showPage(2)">戻る</button>
-        <button class="primary" type="button" onclick="goDocumentConfirm()">契約書の確認へ</button>
+        <button class="primary" type="button" onclick="goDocumentConfirm()">車両利用条件を確認する</button>
       </div>
     </section>
 
     <section class="page" id="page4">
-      <h2>契約書の事前確認</h2>
+      <h2>車両利用条件のご案内</h2>
       <div class="note" style="margin-bottom:16px">
-        以下の車両利用条件をご確認ください。この確認は申込時の事前確認であり、正式な契約はクラウドサインで締結します。
+        お申し込み前に、車両利用に関する費用や条件をご確認ください。正式な契約書は別途クラウドサインで締結します。
       </div>
       <div class="contractPaper" id="contractPaper">
         <h3>車両利用に関する条件のご案内</h3>
@@ -633,7 +633,7 @@
       </div>
       <label class="contractAgree">
         <input id="contractConfirmed" type="checkbox" onchange="contractConfirmationChanged()">
-        <span>上記の車両利用条件と費用負担について確認し、同意します。正式な契約はクラウドサインで締結することを理解しています。</span>
+        <span>上記の車両利用条件と費用負担について確認し、同意します。</span>
       </label>
       <div class="docStatus" id="contractConfirmStatus">未確認</div>
       <div class="buttons">
@@ -1174,13 +1174,13 @@
     const checked = document.getElementById('contractConfirmed').checked;
     contractConfirmedAt = checked ? new Date().toISOString() : '';
     const status = document.getElementById('contractConfirmStatus');
-    status.textContent = checked ? '✅ 事前確認済み（この端末内のデモ表示）' : '未確認（デモ）';
+    status.textContent = checked ? '確認・同意済み' : '未確認';
     status.classList.toggle('okText', checked);
   }
 
   function goFinalConfirm() {
     if (!document.getElementById('contractConfirmed').checked || !contractConfirmedAt) {
-      alert('契約内容の事前確認欄にチェックしてください。');
+      alert('車両利用条件を確認し、同意にチェックしてください。');
       return;
     }
     showPage(5);
@@ -1202,8 +1202,8 @@
       ['稼働開始日', document.querySelector('input[name="startChoice"]:checked').value === 'undecided' ? '未定' : value('startDate')],
       ['免許証 表', licenseFrontData ? '撮影済み' : '未撮影'],
       ['免許証 裏', licenseBackData ? '撮影済み' : '未撮影'],
-      ['契約書の事前確認', contractConfirmedAt ? '確認済み' : '未確認'],
-      ['事前確認文書の版', CONTRACT_DEMO_VERSION],
+      ['車両利用条件への同意', contractConfirmedAt ? '同意済み' : '未確認'],
+      ['車両利用条件の版', CONTRACT_DEMO_VERSION],
       ['住民票',
         residentMethod === 'upload'
           ? 'コンビニスキャンPDF：' + residentFileName
@@ -1300,7 +1300,7 @@
     if (!gfEntryVerified) { alert('公式LINEから「車両依頼」を開き直してください。'); return; }
     if (gfSubmitting) return;
     if (!document.getElementById('contractConfirmed').checked || !contractConfirmedAt) {
-      alert('契約書の事前確認が完了していません。'); showPage(4); return;
+      alert('車両利用条件への同意が完了していません。'); showPage(4); return;
     }
     const entry = new URLSearchParams(location.search).get('gf_entry') || '';
     if (!/^[a-f0-9]{64}$/i.test(entry)) {alert('公式LINEから「車両依頼」を開き直してください。');return;}
