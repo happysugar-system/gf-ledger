@@ -171,5 +171,18 @@ document.getElementById("verify").addEventListener("click",async()=>{
  if(error){msg.textContent="認証エラー："+error.message;return;}
  try{await load()}catch(e){msg.textContent="管理者確認エラー："+e.message}
 });
-(async()=>{try{const {data:{session}}=await client.auth.getSession();if(session)await load();else msg.textContent="スタッフ管理者メールでログインしてください";}catch(e){msg.textContent="ログイン確認エラー："+e.message}})();
+(async()=>{try{
+ const {data:{session},error}=await client.auth.getSession();
+ if(error)throw error;
+ if(session){
+   document.getElementById("emailAuth").hidden=true;
+   msg.textContent="ログイン済みです。法人管理のデータを読み込んでいます…";
+   try{await load()}catch(e){
+     msg.textContent="法人管理データを取得できませんでした。通信状態を確認して、もう一度お試しください。";
+     const retry=el("button","再読み込み");retry.addEventListener("click",()=>load().catch(()=>{msg.textContent="再取得に失敗しました。管理者にお問い合わせください。";}));
+     msg.append(document.createElement("br"),retry);
+     console.error("法人管理データ取得失敗",e);
+   }
+ }else msg.textContent="スタッフ管理者メールでログインしてください";
+}catch(e){msg.textContent="ログイン状態を確認できませんでした。トップ画面から開き直してください。";console.error(e)}})();
 </script></body></html>
