@@ -1,0 +1,24 @@
+name: Reception UI safety checks
+on:
+  push:
+    paths:
+      - 'line-reception-admin.html'
+      - 'tests/reception-contract.test.mjs'
+      - '.github/workflows/reception-tests.yml'
+  pull_request:
+    paths:
+      - 'line-reception-admin.html'
+      - 'tests/reception-contract.test.mjs'
+      - '.github/workflows/reception-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/reception-contract.test.mjs
