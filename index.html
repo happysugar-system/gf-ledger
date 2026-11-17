@@ -118,6 +118,7 @@ h1{
   line-height:1.7;
 }
 
+.staffLogout{display:block;margin:14px auto;padding:11px 22px;border:1px solid #d5c9ad;border-radius:10px;background:white;color:#72591c;font-weight:700;cursor:pointer}
 /* GF155｜通知バッジ */
 .notificationBadge{
   position:absolute;
@@ -274,7 +275,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <span class="arrow">›</span>
   </button>
 
-  <!-- GF155｜管理者ログイン状態 -->
+  <button class="staffLogout" type="button" onclick="logoutStaff()">ログアウト</button>
+  <!-- GF155｜管理者通知（共通ログイン連動） -->
   <section id="authBox" class="authBox hidden">
     <div class="authTitle">
       管理者通知
@@ -328,9 +330,9 @@ window.addEventListener('DOMContentLoaded',async()=>{
       </button>
 
       <button
-        class="authButton authSecondary"
+        class="authButton authSecondary hidden"
         type="button"
-        onclick="logoutAdmin()">
+        onclick="logoutStaff()">
         ログアウト
       </button>
     </div>
@@ -397,7 +399,7 @@ function openDriverRegistrations(){
 }
 
 function showAuthSection(id){
-  $('authBox').classList.toggle('hidden', id !== 'authLogin');
+  $('authBox').classList.toggle('hidden', id !== 'authLoggedIn');
   ['authLoading','authLogin','authLoggedIn']
     .forEach(name => {
       $(name).classList.toggle('hidden',name !== id);
@@ -445,20 +447,9 @@ async function updateAppIconBadge(){
  * 非管理者はRPC側で拒否される。
  */
 async function verifyAdmin(){
-  const {error} = await gfClient.rpc(
-    'gf153_find_driver_candidates',
-    {p_full_name:'__GF155_ADMIN_CHECK__'}
-  );
-
-  if(error){
-    console.warn(
-      '管理者権限の確認に失敗',
-      error.code || error.name || 'unknown'
-    );
-    return false;
-  }
-
-  return true;
+ const {data,error}=await gfClient.rpc('gf_staff_access_self');
+ if(error)return false;
+ return !!data?.[0]?.access_granted && data[0].staff_role === '最高管理者';
 }
 
 async function checkAdminSession(){
@@ -733,6 +724,16 @@ async function initGF155(){
   });
 }
 
+async function logoutStaff(){
+ const btn=document.querySelector('.staffLogout');
+ btn.disabled=true;
+ try{
+  const client=gfClient||window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+  const {error}=await client.auth.signOut();
+  if(error)throw error;
+  location.replace('./portal/');
+ }catch(e){btn.disabled=false;alert('ログアウトに失敗しました。もう一度お試しください。');}
+}
 initGF155();
 </script>
 </body>
