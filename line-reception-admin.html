@@ -10,7 +10,7 @@
 </style></head><body><div id="gfAuthGate" role="status" aria-live="polite"><div class="authPanel"><h2>GOLD FIRST｜受付管理</h2><p id="gfAuthMessage">共通ログインの利用権限を確認しています…</p><p><a href="./portal/">共通ログイン画面へ戻る</a></p></div></div><header><small>GOLD FIRST / STAFF</small><h1>車両依頼・代車契約管理</h1><small>受付管理｜車両依頼データ連携</small></header><main>
 <div class="notice"><b>車両依頼の受付管理</b>：認証済みスタッフは受付データを読み込み、担当者・ステータス・対応メモを更新できます。代車契約発行・履歴は引き続きデモ機能です。既存GASは変更していません。正式な契約送信はマネーフォワードで行います。</div>
 <nav class="tabs no-print"><button class="active" data-tab="home">受付一覧</button><button data-tab="loan">代車契約発行</button><button data-tab="history">代車契約履歴</button></nav>
-<section id="home" class="section active"><div class="grid"><div class="card metric"><strong>—</strong><span class="muted">未対応</span></div><div class="card metric"><strong>—</strong><span class="muted">対応中</span></div><div class="card metric"><strong>—</strong><span class="muted">完了</span></div><div class="card metric"><strong>—</strong><span class="muted">契約待ち</span></div></div><div class="card"><h2>車両依頼｜受付一覧</h2><div class="row"><input id="search" placeholder="氏名・受付番号で検索"><button id="sampleLoad">サンプルで動作確認</button><button id="syncLive" disabled title="共通ログイン接続後に利用可能">受付を更新（未接続）</button></div><p class="muted">「受付を更新」でスプレッドシートの車両依頼を読み込みます。「サンプルで動作確認」はデモデータに切り替わります。</p><div id="receptions"></div><div id="receptionDetail" class="card hidden"><h3>受付詳細</h3><div id="receptionFields"></div><div class="two"><div><label>受付ステータス</label><select id="receptionStatus"><option>未対応</option><option>受付済</option><option>対応中</option><option>確認待ち</option><option>完了</option></select></div><div><label>担当者</label><input id="receptionAssignee"></div></div><label>対応メモ</label><textarea id="receptionMemo"></textarea><div class="row" style="margin-top:12px"><button id="receptionSave">受付の変更を保存</button><button class="primary" id="receptionToLoan">代車契約を準備</button></div><p class="muted">実データの変更は受付管理スプレッドシートに保存されます（既存GASの処理は呼び出しません）。サンプルの変更は画面内のみです。</p></div><div class="row"><button data-go="loan" class="primary">代車契約発行へ</button></div></div></section>
+<section id="home" class="section active"><div class="grid"><div class="card metric"><strong>—</strong><span class="muted">未対応</span></div><div class="card metric"><strong>—</strong><span class="muted">対応中</span></div><div class="card metric"><strong>—</strong><span class="muted">完了</span></div><div class="card metric"><strong>—</strong><span class="muted">契約待ち</span></div></div><div class="card"><h2>車両依頼｜受付一覧</h2><div class="row"><input id="search" placeholder="氏名・受付番号で検索"><button id="sampleLoad">サンプルで動作確認</button><button id="apiSaveTest" disabled>保存APIテスト</button><button id="syncLive" disabled title="共通ログイン接続後に利用可能">受付を更新（未接続）</button></div><p class="muted">「受付を更新」でスプレッドシートの車両依頼を読み込みます。「サンプルで動作確認」はデモデータに切り替わります。</p><div id="receptions"></div><div id="receptionDetail" class="card hidden"><h3>受付詳細</h3><div id="receptionFields"></div><div class="two"><div><label>受付ステータス</label><select id="receptionStatus"><option>未対応</option><option>受付済</option><option>対応中</option><option>確認待ち</option><option>完了</option></select></div><div><label>担当者</label><input id="receptionAssignee"></div></div><label>対応メモ</label><textarea id="receptionMemo"></textarea><div class="row" style="margin-top:12px"><button id="receptionSave">受付の変更を保存</button><button class="primary" id="receptionToLoan">代車契約を準備</button></div><p class="muted">実データの変更は受付管理スプレッドシートに保存されます（既存GASの処理は呼び出しません）。サンプルの変更は画面内のみです。</p></div><div class="row"><button data-go="loan" class="primary">代車契約発行へ</button></div></div></section>
 <section id="loan" class="section"><div class="card"><h2>🚗 代車契約発行</h2><p class="muted">ドライバー・車両情報は本番連携後にDriverID / VehicleIDから自動取得。現在は架空のサンプル入力で帳票のレイアウトを確認できます。</p><div class="two"><div><label>契約番号（仮）</label><input id="receipt" type="hidden"><input id="driverId" type="hidden"><input id="vehicleId" type="hidden"><input id="cid" value="DEMO-LOAN-001" readonly><label>ドライバー氏名</label><input id="driver" value="山田 太郎（サンプル）"><label>メールアドレス</label><input id="email" type="email" value="sample@example.com"><label>代車車番</label><input id="vehicle" value="大宮 580 あ 1234（サンプル）"></div><div><label>貸出開始日</label><input id="start" type="date"><label>返却予定日</label><input id="end" type="date"><label>契約状況</label><select id="status"><option>未送信</option><option>送信済み</option><option>契約完了</option></select><label>管理メモ</label><textarea id="memo" placeholder="貸出理由など（デモでは保存されません）"></textarea></div></div><div class="row" style="margin-top:18px"><button class="primary" id="preview">契約書プレビュー</button><button id="copy">送信先をコピー</button><button id="saveDraft">デモ履歴に追加</button><a class="btn" href="https://biz.moneyforward.com/contract/" target="_blank" rel="noopener noreferrer">マネーフォワードを開く ↗</a></div><p class="muted">マネーフォワードへの自動送信・自動入力は行いません。送信後の状態保存は本番API接続後に有効化します。</p></div></section>
 <section id="history" class="section"><div class="card"><h2>代車契約履歴</h2><p class="muted">本番接続後、受付ID・DriverID・VehicleID・契約番号・送信日・締結日・返却日・契約書DriveファイルIDで1件ずつ管理します。</p><div class="item">この画面で追加したサンプル履歴だけを表示します。ページ再読み込みで消去され、本番データには保存されません。</div><div id="draftHistory"></div></div></section>
 <section id="guide" class="section hidden"><div class="card"><h2>既存機能を維持する接続計画</h2><p>既存のLINE受付管理GASは変更せず、読み取り・保存APIを認証付きで追加する方式を想定しています。</p><div id="features"></div><p class="muted">公開GitHub PagesにGASの秘密鍵、Supabase service_roleキー、個人情報を埋め込まないでください。スタッフ認証・権限チェック・操作ログを実装してから本番データを接続します。</p></div></section>
@@ -58,11 +58,47 @@ const gfAdapter={
       受付内容:v('受付内容','内容'),受付日時:v('受付日時'),写真フォルダURL:v('写真フォルダURL'),仮押さえ状態:v('仮押さえ状態'),代車開始予定日:v('代車開始予定日'),代車返却予定日:v('代車返却予定日'),代車予定連携状態:v('代車予定連携状態'),担当者:v('担当者'),対応メモ:v('対応メモ'),
       契約状況:v('契約状況')||'未送信',raw:row};
   },
-  async list(){if(!this.bridge?.listVehicleRequests)throw Error('共通ログイン側の認証済み接続がありません');const data=await this.bridge.listVehicleRequests();const rows=Array.isArray(data)?data:data?.一覧;if(!Array.isArray(rows))throw Error('GASの一覧データ形式が不正です');return rows.map(r=>this.normalize(r)).filter(r=>r.受付種別==='車両依頼')},
+  async list(){if(!this.bridge?.listVehicleRequests)throw Error('共通ログイン側の認証済み接続がありません');const data=await this.bridge.listVehicleRequests();const rows=Array.isArray(data)?data:data?.一覧;if(!Array.isArray(rows))throw Error('GASの一覧データ形式が不正です');return rows.map(r=>this.normalize(r)).filter(r=>r.受付種別==='車両依頼'&&!r.受付ID.startsWith('GF-API-TEST-'))},
   async save(r){if(!this.bridge?.saveVehicleRequest)throw Error('認証済み保存接続がありません');return this.bridge.saveVehicleRequest({受付ID:r.受付ID,DriverID:r.DriverID,VehicleID:r.VehicleID,ドライバー名:r.ドライバー名,車番:r.車番,ステータス:r.ステータス,担当者:r.担当者,対応メモ:r.対応メモ})}
 };
 async function loadLive(){try{const rows=await gfAdapter.list();receptionRows=rows;selectedReception=null;document.querySelector('#receptionDetail').classList.add('hidden');drawReception()}catch(e){alert('受付データを取得できません：'+e.message)}}
-function activateAuthorizedBridge(){const ready=!!gfAdapter.bridge?.listVehicleRequests;const btn=document.querySelector('#syncLive');btn.disabled=!ready;btn.textContent=ready?'受付を更新（API接続確認）':'受付を更新（ログイン確認中）';btn.onclick=loadLive;}
+function activateAuthorizedBridge(){const ready=!!gfAdapter.bridge?.listVehicleRequests;const btn=document.querySelector('#syncLive');btn.disabled=!ready;btn.textContent=ready?'受付を更新（API接続確認）':'受付を更新（ログイン確認中）';btn.onclick=loadLive;const testBtn=document.querySelector('#apiSaveTest');if(testBtn)testBtn.disabled=!ready;}
+const API_TEST_ID='GF-API-TEST-20261117';
+async function runReceptionSaveTest(){
+ const btn=document.querySelector('#apiSaveTest');btn.disabled=true;btn.textContent='保存APIテスト中…';
+ const original={受付ID:API_TEST_ID,ステータス:'未対応',担当者:'',対応メモ:''};
+ const changed={...original,ステータス:'対応中',担当者:'API自動テスト',対応メモ:'API往復テスト'};
+ let changedSaved=false;
+ try{
+  if(!receptionAuthorized)throw Error('共通ログインが必要です');
+  const raw=await receptionGateway.listVehicleRequests();
+  const matches=(raw.一覧||[]).filter(x=>x.受付ID===API_TEST_ID);
+  if(matches.length!==1)throw Error('専用テスト受付が見つかりません');
+  const before=matches[0];
+  for(const k of ['ステータス','担当者','対応メモ'])original[k]=before[k]||'';
+  const saved=await receptionGateway.saveVehicleRequest(changed);
+  if(saved?.成功!==true)throw Error('保存APIが成功を返しませんでした');
+  changedSaved=true;
+  const check=await receptionGateway.listVehicleRequests();
+  const got=(check.一覧||[]).find(x=>x.受付ID===API_TEST_ID);
+  if(!got||['ステータス','担当者','対応メモ'].some(k=>got[k]!==changed[k]))throw Error('保存後の再読み取りが一致しません');
+  alert('保存APIテスト成功！保存・再読み取りを確認しました。元の値に戻します。');
+ }catch(e){alert('保存APIテスト：'+e.message)}
+ finally{
+  if(changedSaved){
+   try{
+    const restored=await receptionGateway.saveVehicleRequest(original);
+    if(restored?.成功!==true)throw Error('復元APIが失敗');
+    const read=await receptionGateway.listVehicleRequests();
+    const got=(read.一覧||[]).find(x=>x.受付ID===API_TEST_ID);
+    if(!got||['ステータス','担当者','対応メモ'].some(k=>(got[k]||'')!==original[k]))throw Error('復元後の再読み取りが不一致');
+    alert('テスト受付の値も元に戻しました。');
+   }catch(e){alert('テスト受付の復元を確認してください：'+e.message)}
+  }
+  btn.disabled=!receptionAuthorized;btn.textContent='保存APIテスト';
+ }
+}
+document.querySelector('#apiSaveTest').onclick=runReceptionSaveTest;
 window.addEventListener('gf-admin-bridge-ready',activateAuthorizedBridge);activateAuthorizedBridge();
 const sample={受付ID:'DEMO-REQ-001',DriverID:'DEMO-D001',VehicleID:'DEMO-V001',ドライバー名:'山田 太郎（サンプル）',メールアドレス:'sample@example.com',車番:'大宮 580 あ 1234（サンプル）',受付種別:'車両依頼',ステータス:'未対応',受付内容:'納車希望：未定 / 稼働エリア：埼玉県（サンプル）',担当者:'',対応メモ:''};
 let receptionRows=[],drafts=[];const recBox=document.querySelector('#receptions');
