@@ -75,35 +75,79 @@ function render(){
   });cell.append(button);
  }
 
- // Display-only consolidation. Preserve original vehicle affiliations and company IDs.
- const groups=[
-  {canonical:"レガーメ",names:["レガーメ","(レガーメ)","（レガーメ）"]},
-  {canonical:"TransPorter",names:["TransPorter","TrancePorter","Trans porter"]}
- ];
- const groupedNames=new Set(groups.flatMap(g=>g.names));
- const rows=[];
- for(const group of groups){
-   const related=state.companies.filter(c=>group.names.includes(c.company_name));
-   if(!related.length)continue;
-   const items=candidates.filter(a=>group.names.includes(a.affiliation));
-   const excluded=items.length>0&&items.every(x=>x.hidden);
-   rows.push({label:group.canonical,items,excluded,merged:related.length>1});
+
+ // Persistent, staff-editable display names. Never change ledger affiliations or member company IDs.
+ const overrides=new Map((state.displayOverrides||[]).map(x=>[x.source_affiliation,x.display_name]));
+ const rowMap=new Map();
+ for(const item of candidates){
+   const label=overrides.get(item.affiliation)||item.affiliation;
+   if(!rowMap.has(label))rowMap.set(label,[]);
+   rowMap.get(label).push(item);
  }
  for(const c of state.companies){
-   if(groupedNames.has(c.company_name))continue;
-   const items=matching(c),excluded=items.length>0&&items.every(x=>x.hidden);
-   rows.push({label:c.company_name,items,excluded,merged:false});
+   const label=overrides.get(c.company_name)||c.company_name;
+   if(!rowMap.has(label))rowMap.set(label,[]);
  }
+ const rows=[...rowMap].map(([label,items])=>({label,items,excluded:items.length>0&&items.every(x=>x.hidden)}));
  rows.sort((a,b)=>a.label.localeCompare(b.label,"ja"));
+ function editButton(label,items,actions){
+   const edit=el("button","名前を変更");
+   edit.style.margin="3px";
+   edit.addEventListener("click",async()=>{
+     const next=prompt("法人管理画面で表示する会社名を入力してください。車両台帳は変更しません。",label);
+     if(next===null)return;
+     const name=next.trim();
+     if(!name||name.length>120){alert("会社名は1〜120文字で入力してください");return;}
+     if(name===label)return;
+     if(!confirm("「"+label+"」を「"+name+"」に変更しますか？同じ名前の法人は一覧で統合表示されます。"))return;
+     edit.disabled=true;
+     try{
+       for(const item of items)await call("set_display_name",{source_affiliation:item.affiliation,display_name:name});
+       await load();msg.textContent="表示名を保存しました（車両台帳は変更していません）";
+     }catch(e){msg.textContent="変更できませんでした："+e.message;edit.disabled=false;}
+   });actions.append(edit);
+   const merge=el("button","別の名前と統合");
+   merge.style.margin="3px";
+   merge.addEventListener("click",async()=>{
+     const choices=rows.filter(x=>x.label!==label&&x.items.length).map(x=>x.label);
+     if(!choices.length){alert("統合先がありません");return;}
+     const selected=prompt("統合先の表示名を入力してください。\n候補：\n"+choices.join(" / "));
+     if(selected===null)return;
+     const target=selected.trim();
+     if(!choices.includes(target)){alert("候補にある会社名を正確に入力してください");return;}
+     if(!confirm("「"+label+"」を「"+target+"」へ統合表示しますか？元の台帳や担当者の権限は変更しません。"))return;
+     merge.disabled=true;
+     try{
+       for(const item of items)await call("set_display_name",{source_affiliation:item.affiliation,display_name:target});
+       await load();msg.textContent="法人一覧の統合表示を保存しました";
+     }catch(e){msg.textContent="統合できませんでした："+e.message;merge.disabled=false;}
+   });actions.append(merge);
+   if(items.some(x=>overrides.has(x.affiliation))){
+     const reset=el("button","元の表示に戻す");
+     reset.style.margin="3px";
+     reset.addEventListener("click",async()=>{
+       if(!confirm("この表示名の変更・統合を解除しますか？"))return;
+       reset.disabled=true;
+       try{
+         for(const item of items)await call("reset_display_name",{source_affiliation:item.affiliation});
+         await load();msg.textContent="元の表示に戻しました";
+       }catch(e){msg.textContent="戻せませんでした："+e.message;reset.disabled=false;}
+     });actions.append(reset);
+   }
+ }
  for(const entry of rows){
    const tr=el("tr");td(tr,entry.label);
    td(tr,String(entry.items.reduce((sum,x)=>sum+(Number(x.vehicle_count)||0),0)));
    const actions=el("td");
-   if(entry.merged){const note=el("small","表記違いをまとめて表示");actions.append(note,document.createElement("br"));}
-   if(entry.items.length)addToggle(actions,entry.items,entry.excluded);
+   if(entry.items.length>1){const note=el("small","表記違い "+entry.items.length+"件を統合表示");actions.append(note,document.createElement("br"));}
+   if(entry.items.length){
+     editButton(entry.label,entry.items,actions);
+     addToggle(actions,entry.items,entry.excluded);
+   }
    tr.append(actions);
    (entry.excluded?hidden:companies).append(tr);
  }
+
  const requests=document.getElementById("requestRows");requests.replaceChildren();
  state.requests.slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)).forEach(r=>{
  const tr=el("tr");td(tr,r.representative_name);td(tr,r.requested_company_name||name(r.company_id));td(tr,r.phone);td(tr,r.status==="pending"?"承認待ち":r.status==="approved"?"承認済み":"却下");
