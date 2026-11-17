@@ -90,16 +90,23 @@ window.addEventListener('gf-admin-bridge-ready',activateAuthorizedBridge);activa
 let loanDrivers=[],loanVehicles=[];
 const driverSelect=document.getElementById('driver'),vehicleSelect=document.getElementById('vehicle');
 function fillDriverOptions(){
- const q=document.getElementById('driverSearch').value.trim().toLocaleLowerCase('ja');
+ const search=document.getElementById('driverSearch');
+ const normalize=t=>String(t||'').normalize('NFKC').replace(/[\\s　]/g,'').toLocaleLowerCase('ja');
+ const q=normalize(search.value);
  const selected=driverSelect.value;
- driverSelect.replaceChildren(new Option('▼ ドライバー一覧を開いて選択',''));
- for(const d of loanDrivers.filter(d=>!q||d.name.toLocaleLowerCase('ja').includes(q))){
-   const o=new Option(d.name+(d.email?'':'（メール未登録）'),d.id);driverSelect.add(o);
+ const matched=loanDrivers.filter(d=>!q||normalize(d.name).includes(q));
+ driverSelect.replaceChildren(new Option(q?(matched.length?'▼ '+matched.length+'人の候補から選択':'一致するドライバーはいません'):'▼ ドライバー一覧から選択',''));
+ for(const d of matched){
+   driverSelect.add(new Option(d.name+(d.email?'':'（メール未登録）'),d.id));
  }
- if([...driverSelect.options].some(o=>o.value===selected))driverSelect.value=selected;
+ if(matched.some(d=>d.id===selected))driverSelect.value=selected;
  else {driverSelect.value='';document.getElementById('driverId').value='';document.getElementById('email').value=''}
+ driverSelect.disabled=matched.length===0;
 }
-document.getElementById('driverSearch').addEventListener('input',fillDriverOptions);
+const driverSearch=document.getElementById('driverSearch');
+driverSearch.addEventListener('input',fillDriverOptions);
+driverSearch.addEventListener('compositionend',fillDriverOptions);
+driverSearch.addEventListener('search',fillDriverOptions);
 driverSelect.addEventListener('change',()=>{
  const d=loanDrivers.find(d=>d.id===driverSelect.value);
  document.getElementById('driverId').value=d?.id||'';
