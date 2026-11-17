@@ -74,12 +74,36 @@ function render(){
    }catch(e){msg.textContent="エラー："+e.message;button.disabled=false;}
   });cell.append(button);
  }
- state.companies.slice().sort((a,b)=>a.company_name.localeCompare(b.company_name,"ja")).forEach(c=>{
-  const items=matching(c),excluded=items.length>0&&items.every(x=>x.hidden);
-  const tr=el("tr");td(tr,c.company_name);td(tr,String(items.reduce((sum,x)=>sum+(Number(x.vehicle_count)||0),0)));
-  const actions=el("td");if(items.length)addToggle(actions,items,excluded);tr.append(actions);
-  (excluded?hidden:companies).append(tr);
- });
+
+ // Display-only consolidation. Preserve original vehicle affiliations and company IDs.
+ const groups=[
+  {canonical:"レガーメ",names:["レガーメ","(レガーメ)","（レガーメ）"]},
+  {canonical:"TransPorter",names:["TransPorter","TrancePorter","Trans porter"]}
+ ];
+ const groupedNames=new Set(groups.flatMap(g=>g.names));
+ const rows=[];
+ for(const group of groups){
+   const related=state.companies.filter(c=>group.names.includes(c.company_name));
+   if(!related.length)continue;
+   const items=candidates.filter(a=>group.names.includes(a.affiliation));
+   const excluded=items.length>0&&items.every(x=>x.hidden);
+   rows.push({label:group.canonical,items,excluded,merged:related.length>1});
+ }
+ for(const c of state.companies){
+   if(groupedNames.has(c.company_name))continue;
+   const items=matching(c),excluded=items.length>0&&items.every(x=>x.hidden);
+   rows.push({label:c.company_name,items,excluded,merged:false});
+ }
+ rows.sort((a,b)=>a.label.localeCompare(b.label,"ja"));
+ for(const entry of rows){
+   const tr=el("tr");td(tr,entry.label);
+   td(tr,String(entry.items.reduce((sum,x)=>sum+(Number(x.vehicle_count)||0),0)));
+   const actions=el("td");
+   if(entry.merged){const note=el("small","表記違いをまとめて表示");actions.append(note,document.createElement("br"));}
+   if(entry.items.length)addToggle(actions,entry.items,entry.excluded);
+   tr.append(actions);
+   (entry.excluded?hidden:companies).append(tr);
+ }
  const requests=document.getElementById("requestRows");requests.replaceChildren();
  state.requests.slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)).forEach(r=>{
  const tr=el("tr");td(tr,r.representative_name);td(tr,r.requested_company_name||name(r.company_id));td(tr,r.phone);td(tr,r.status==="pending"?"承認待ち":r.status==="approved"?"承認済み":"却下");
