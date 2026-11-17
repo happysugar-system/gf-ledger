@@ -780,6 +780,8 @@
     const sc=document.querySelector('input[name="startChoice"]:checked').value;
     fields.deliveryWish=dc==='asap'?'最短希望':document.getElementById('deliveryDate').value;
     fields.startWish=sc==='undecided'?'未定':document.getElementById('startDate').value;
+      fields.vehicleTermsAgreedAt=contractConfirmedAt;
+      fields.vehicleTermsVersion=CONTRACT_DEMO_VERSION;
     if((dc==='date'&&!fields.deliveryWish)||(sc==='date'&&!fields.startWish)){alert('希望日を入力してください。');return;}
     if(!confirm('145テスト：入力した氏名・連絡先・連帯保証人情報・希望日をテスト用スプレッドシートに保存します。免許証・住民票は送信しません。続けますか？'))return;
     const form=document.createElement('form');form.method='POST';form.action=LINE_VERIFY_TEST_URL;form.target='_blank';
