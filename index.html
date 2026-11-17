@@ -547,10 +547,25 @@ async function refreshNotifications(){
   const seq = authSequence;
 
   try{
-    // ドライバー本人登録の承認は廃止。旧8件を法人承認として数えない。
-    // 法人担当者の申請数は法人管理の本番データ接続完了後に表示する。
-    currentRegistrationCount = 0;
-    updateBadge(0);
+    // 法人担当者の未処理申請のみを数える（旧ドライバー申請は含めない）。
+    // スタッフ認証トークンで法人管理APIに照会し、失敗時は0件と断定しない。
+    const {data:{session:corporateSession}}=await gfClient.auth.getSession();
+    if(!corporateSession?.access_token)throw Error('スタッフ認証を確認できません');
+    const corporateResponse=await fetch(
+      'https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-api-demo',
+      {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+corporateSession.access_token},
+       body:JSON.stringify({action:'dashboard'})}
+    );
+    if(seq !== authSequence || !adminVerified)return;
+    if(corporateResponse.ok){
+      const corporateData=await corporateResponse.json();
+      currentRegistrationCount=(corporateData.requests||[]).filter(x=>x.status==='pending').length;
+      updateBadge(currentRegistrationCount);
+    }else{
+      currentRegistrationCount=null;
+      updateBadge(0);
+      console.warn('法人担当者の承認待ち件数を取得できませんでした',corporateResponse.status);
+    }
 
     // GF156: GASがSupabaseに同期したLINE受付の未完了件数
     const {data:lineData,error:lineError} = await gfClient
@@ -575,7 +590,7 @@ async function refreshNotifications(){
     await updateAppIconBadge();
 
     setAuthStatus(
-      '法人担当者の承認件数は本番連携準備中です。旧ドライバー申請は集計していません。'
+      currentRegistrationCount===null?'法人担当者の承認件数を取得できませんでした。時間をおいて再度更新してください。':'法人担当者の承認待ち：'+currentRegistrationCount+'件'
     );
 
   }catch(err){
