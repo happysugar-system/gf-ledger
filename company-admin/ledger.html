@@ -1,0 +1,47 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GOLD FIRST 法人管理</title><style>body{margin:0;background:#f4f7fb;color:#183449;font:16px system-ui,sans-serif}header{background:#12344d;color:white;padding:20px}main{max-width:980px;margin:24px auto;padding:0 16px}.card{background:white;border:1px solid #dce5ee;border-radius:14px;padding:20px;margin:16px 0}h1{font-size:23px;margin:0}h2{font-size:19px}button{border:0;background:#176d9a;color:white;border-radius:9px;padding:10px 16px;font:inherit;cursor:pointer}button:disabled{opacity:.5}input{padding:11px;border:1px solid #b9cbd8;border-radius:8px;font:inherit;max-width:420px;width:100%;box-sizing:border-box}form{display:flex;gap:8px;flex-wrap:wrap}table{border-collapse:collapse;width:100%;font-size:14px}td,th{text-align:left;padding:10px;border-bottom:1px solid #e6edf2}small,.muted{color:#62788a}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{background:#e7eef5;color:#24516b}.tabs button.active{background:#176d9a;color:white}section[hidden]{display:none}.danger{background:#a53f3f}.status{padding:12px;background:#eef5fa;border-radius:9px;margin:12px 0;white-space:pre-wrap}.scroll{overflow:auto}</style><script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script></head><body><header><h1>GOLD FIRST 法人管理</h1><div>LINE認証・デモ環境</div></header><main><div class="card"><button id="login">LINEで管理者ログイン</button><div class="status" id="message" role="status">ログインしてください。</div><small>管理者に登録されたLINEアカウントのみ利用可能。操作はサーバーで権限確認されます。</small></div><div id="workspace" hidden><div class="tabs" role="tablist"><button class="active" data-tab="companies">法人管理</button><button data-tab="requests">担当者の承認</button><button data-tab="members">登録済み担当者</button></div><section id="companies" class="card"><h2>法人一覧</h2><p class="muted">車両台帳「所属会社名」の件数を表示しています。不要な会社名は「一覧から除外」で非表示にできます（元の台帳は変更されません）。</p><div class="scroll"><table><thead><tr><th>法人名</th><th>台帳の車両台数</th><th>操作</th></tr></thead><tbody id="companyRows"></tbody></table></div><details><summary>除外した法人名を表示・復元</summary><div class="scroll"><table><tbody id="hiddenAffiliationRows"></tbody></table></div></details></section><section id="requests" class="card" hidden><h2>担当者の登録申請</h2><p class="muted">LINEで申請した担当者を確認し、所属法人を確認してから承認してください。</p><div class="scroll"><table><thead><tr><th>担当者</th><th>申請会社名</th><th>電話番号</th><th>状態</th><th>承認先・操作</th></tr></thead><tbody id="requestRows"></tbody></table></div></section><section id="members" class="card" hidden><h2>登録済み担当者</h2><div class="scroll"><table><thead><tr><th>担当者</th><th>法人</th><th>電話番号</th><th>状態</th><th>操作</th></tr></thead><tbody id="memberRows"></tbody></table></div><p class="muted">法人別の車両表示は別途LINE利用者用の閲覧APIと接続します。既存のメール認証版法人ポータルとはまだ連携していません。</p></section></div></main><script>
+const liffId="2012058414-jYEPzMww",endpoint="https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-company-admin-api-demo";
+const msg=document.getElementById("message"),workspace=document.getElementById("workspace");
+let state={companies:[],requests:[],members:[],vehicleCounts:[],candidates:[]};
+function el(tag,value){const e=document.createElement(tag);e.textContent=value??"";return e;}
+function td(row,value){row.append(el("td",value));}
+function name(id){return state.companies.find(c=>c.id===id)?.company_name||"未登録の法人";}
+async function call(action,fields={}){
+ const token=liff.getIDToken();if(!token)throw Error("LINEのIDトークンを取得できません。");
+ const res=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({line_id_token:token,action,...fields})});
+ const data=await res.json();if(!res.ok)throw Error(data.error||"処理に失敗しました");return data;
+}
+async function load(){
+ const data=await call("dashboard");state=data;workspace.hidden=false;msg.textContent="管理者認証済み（"+(data.role==="owner"?"最高管理者":"管理者")+"）";render();
+}
+function render(){
+ const companies=document.getElementById("companyRows"),hidden=document.getElementById("hiddenAffiliationRows");companies.replaceChildren();hidden.replaceChildren();
+ const candidates=state.candidates||[],aliases=state.aliases||[];
+ function matching(c){return candidates.filter(a=>a.affiliation===c.company_name||aliases.some(x=>x.company_id===c.id&&x.source_affiliation===a.affiliation));}
+ function addToggle(cell,items,hiddenState){
+  const button=el("button",hiddenState?"一覧に戻す":"一覧から除外");if(!hiddenState)button.className="danger";
+  button.addEventListener("click",async()=>{
+   if(!hiddenState&&!confirm("「"+items.map(x=>x.affiliation).join("・")+"」を一覧から除外しますか？"))return;
+   button.disabled=true;
+   try{
+    for(const item of items)await call("set_affiliation_hidden",{affiliation:item.affiliation,hidden:!hiddenState});
+    await load();
+   }catch(e){msg.textContent="エラー："+e.message;button.disabled=false;}
+  });cell.append(button);
+ }
+ state.companies.slice().sort((a,b)=>a.company_name.localeCompare(b.company_name,"ja")).forEach(c=>{
+  const items=matching(c),excluded=items.length>0&&items.every(x=>x.hidden);
+  const tr=el("tr");td(tr,c.company_name);td(tr,String(items.reduce((sum,x)=>sum+(Number(x.vehicle_count)||0),0)));
+  const actions=el("td");if(items.length)addToggle(actions,items,excluded);tr.append(actions);
+  (excluded?hidden:companies).append(tr);
+ });
+ const requests=document.getElementById("requestRows");requests.replaceChildren();
+ state.requests.slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)).forEach(r=>{
+ const tr=el("tr");td(tr,r.representative_name);td(tr,r.requested_company_name||name(r.company_id));td(tr,r.phone);td(tr,r.status==="pending"?"承認待ち":r.status==="approved"?"承認済み":"却下");
+ const actions=el("td");let companySelect=null;if(r.status==="pending"){companySelect=document.createElement("select");companySelect.style.marginRight="8px";companySelect.style.padding="8px";companySelect.append(new Option("承認先法人を選択",""));state.companies.filter(c=>!(state.candidates||[]).some(a=>a.affiliation===c.company_name&&a.hidden)).forEach(c=>companySelect.add(new Option(c.company_name,c.id)));if(r.company_id)companySelect.value=r.company_id;actions.append(companySelect);for(const [decision,label,css] of [["approved","承認",""],["rejected","却下","danger"]]){const b=el("button",label);if(css)b.className=css;b.style.marginRight="6px";b.addEventListener("click",async()=>{if(decision==="approved"&&!companySelect.value){msg.textContent="承認先法人を選択してください";return;}if(!confirm(r.representative_name+"さんの申請会社名「"+(r.requested_company_name||"")+"」を確認し、"+(decision==="approved"?name(companySelect.value)+"に承認":"却下")+"しますか？"))return;b.disabled=true;try{await call("review_request",{request_id:r.id,decision,approved_company_id:companySelect?.value||null});await load()}catch(e){msg.textContent="エラー："+e.message;b.disabled=false}});actions.append(b)}}tr.append(actions);requests.append(tr)});
+ const members=document.getElementById("memberRows");members.replaceChildren();state.members.forEach(m=>{const tr=el("tr");td(tr,m.representative_name);td(tr,name(m.company_id));td(tr,m.phone);td(tr,m.active?"有効":"停止中");const actions=el("td");const unlink=el("button","LINE紐付け解除");unlink.className="danger";unlink.addEventListener("click",async()=>{if(!confirm(m.representative_name+"さんのLINE紐付けを解除しますか？ 再登録が必要になります。"))return;unlink.disabled=true;try{await call("unlink_member",{member_line_id:m.line_user_id});await load();msg.textContent="LINE紐付けを解除しました";}catch(e){msg.textContent="エラー："+e.message;unlink.disabled=false;}});actions.append(unlink);tr.append(actions);members.append(tr)});
+}
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll("section").forEach(s=>s.hidden=s.id!==b.dataset.tab)}));
+document.getElementById("login").addEventListener("click",async()=>{msg.textContent="LINEで本人確認しています…";try{await liff.init({liffId});if(!liff.isLoggedIn()){liff.login({redirectUri:location.origin+location.pathname});return;}await load()}catch(e){msg.textContent="エラー："+e.message}});
+
+(async()=>{try{await liff.init({liffId});if(liff.isLoggedIn())await load()}catch(e){msg.textContent="LINEログイン待ち："+e.message}})();
+</script></body></html>
