@@ -193,22 +193,20 @@ h1{
 }
 </style>
 <script>
-/* GF staff gate preview: opt-in only; preserves current production navigation. */
-if(new URLSearchParams(location.search).has('staff_login_preview')){
- document.documentElement.style.visibility='hidden';
- window.addEventListener('DOMContentLoaded',async()=>{
-  const fail=()=>{location.replace('./portal/?return=preview');};
-  if(!window.supabase)return fail();
-  try{
-   const client=window.supabase.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW');
-   const {data:user,error:userError}=await client.auth.getUser();
-   if(userError||!user.user)return fail();
-   const {data,error}=await client.rpc('gf_staff_access_self');
-   if(error||!data?.[0]?.access_granted)return fail();
-   document.documentElement.style.visibility='';
-  }catch(e){fail();}
- });
-}
+/* GOLD FIRST production staff gate: fail closed, existing app links preserved. */
+document.documentElement.style.visibility='hidden';
+window.addEventListener('DOMContentLoaded',async()=>{
+ const redirect=()=>location.replace('./portal/?return=preview');
+ if(!window.supabase)return redirect();
+ try{
+  const client=window.supabase.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW');
+  const {data:user,error:userError}=await client.auth.getUser();
+  if(userError||!user?.user)return redirect();
+  const {data,error}=await client.rpc('gf_staff_access_self');
+  if(error||!data?.[0]?.access_granted)return redirect();
+  document.documentElement.style.visibility='';
+ }catch(e){redirect();}
+});
 </script>
 </head>
 
