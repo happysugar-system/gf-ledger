@@ -209,6 +209,31 @@ window.addEventListener('DOMContentLoaded',async()=>{
  }catch(e){redirect();}
 });
 </script>
+<script>
+/* Check the deployed version when the installed app opens, without clearing logins. */
+(function(){
+ const localVersion="20261117.2005",key="gf-app-version-last-refresh";
+ let checking=false;
+ async function checkForUpdate(){
+   if(checking||document.visibilityState==="hidden")return;
+   checking=true;
+   try{
+     const response=await fetch("./app-version.json?check="+Date.now(),{cache:"no-store"});
+     if(!response.ok)return;
+     const remote=await response.json();
+     if(!remote.version||remote.version===localVersion)return;
+     if(sessionStorage.getItem(key)===remote.version)return;
+     sessionStorage.setItem(key,remote.version);
+     const url=new URL(location.href);
+     url.searchParams.set("appv",remote.version);
+     location.replace(url.href);
+   }catch(e){console.warn("更新確認をスキップしました",e)}
+   finally{checking=false}
+ }
+ window.addEventListener("pageshow",checkForUpdate);
+ document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkForUpdate()});
+})();
+</script>
 </head>
 
 <body>
