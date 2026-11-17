@@ -33,6 +33,12 @@ def main():
                         values (%s,%s,now()) on conflict(affiliation) do update set
                         vehicle_count=excluded.vehicle_count,updated_at=now()""", (name,count))
                 c.execute("update public.gf_company_affiliation_candidates set vehicle_count=0,updated_at=now() where not (affiliation = any(%s))", (list(counts),))
+                c.execute("""insert into public.gf_company_portal_companies(company_name)
+                    select a.affiliation from public.gf_company_affiliation_candidates a
+                    where not exists (select 1 from public.gf_company_portal_affiliation_aliases x where x.source_affiliation=a.affiliation)
+                      and not exists (select 1 from public.gf_company_portal_companies p where p.company_name=a.affiliation)
+                    on conflict do nothing""")
+
     print("Updated affiliation candidates:",len(counts))
 if __name__ == "__main__":
     main()
