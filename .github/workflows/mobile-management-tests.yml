@@ -1,0 +1,22 @@
+name: Mobile management unit tests
+on:
+  push:
+    paths:
+      - 'mobile-management/**'
+      - '.github/workflows/mobile-management-tests.yml'
+  pull_request:
+    paths:
+      - 'mobile-management/**'
+  workflow_dispatch:
+jobs:
+  node-unit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node mobile-management/vehicle-schema.test.mjs
+      - run: node mobile-management/vehicle-reader.test.mjs
