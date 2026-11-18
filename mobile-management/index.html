@@ -76,43 +76,4 @@ async function init(){try{
  }catch(e){$('identity').textContent='認証できませんでした';$('status').textContent=e.message||'認証エラー';$('status').className='small error';}}
 init();
 $('q').addEventListener('input',render);
-</script></body></html'<div class="tabs">'+groups.map(([key,label])=>'<button data-group="'+key+'" class="'+(detailGroup===key?'active':'')+'">'+label+'</button>').join('')+'</div><div class="card">'+fields+'</div>';
-  return;
- }
- $('list').hidden=false;$('detail').hidden=true;
- $('list').innerHTML=found.map(v=>'<div class="card" role="button" tabindex="0" data-vehicle="'+escapeHTML(v.VehicleID)+'"><div class="row"><span class="plate">'+escapeHTML(v['車番'])+'</span><span class="tag">'+escapeHTML(v['区分/ステータス'])+'</span></div><p>使用者：'+escapeHTML(v['現在使用者']||'なし')+'</p><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['車種'])+' / '+escapeHTML(v['管理区分'])+'</p><p class="small">タップして63項目を確認 ›</p></div>').join('')||'<p class="small">該当車両がありません</p>';
-}
-$('list').addEventListener('click',e=>{const el=e.target.closest('[data-vehicle]');if(el)openVehicle(el.dataset.vehicle);});
-$('list').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const el=e.target.closest('[data-vehicle]');if(el){e.preventDefault();openVehicle(el.dataset.vehicle);}}});
-async function load(reset=false){
- if(busy||!client)return;
- busy=true;$('load').disabled=true;$('q').disabled=true;
- $('status').className='small';$('status').textContent='認証・読込み中…';
- try{
-  const {data:{session},error:sessionError}=await client.auth.getSession();
-  if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');
-  token=session.access_token;
-  const fetched=await fetchAllVehicles({apiBase:endpoint,accessToken:token,publishableKey,limit:100});
-  rows.splice(0,rows.length,...fetched);
-  selectedId=null;editing=false;draft=null;
-  $('status').textContent=rows.length+'件取得完了（読込み専用）';
-  $('q').disabled=false;render();
- }catch(e){
-  rows.length=0;selectedId=null;render();
-  $('status').textContent='取得できません：'+(e.message||'通信エラー');
-  $('status').className='small error';$('q').disabled=true;
- }finally{busy=false;$('load').disabled=false;}
-}
-$('load').addEventListener('click',()=>load(true));
-async function init(){try{
- if(!client)throw Error('認証ライブラリを読み込めません');
- const {data:{user},error:userError}=await client.auth.getUser();
- if(userError||!user)throw Error('ログインが必要です。ポータルからログインしてください');
- const {data:access,error:accessError}=await client.rpc('gf_staff_access_self');
- if(accessError||!Array.isArray(access)||access[0]?.access_granted!==true)throw Error('スタッフ権限がありません');
- $('identity').textContent='ログイン中：'+(user.email||'');
- $('load').disabled=false;await load(true);
- }catch(e){$('identity').textContent='認証できませんでした';$('status').textContent=e.message||'認証エラー';$('status').className='small error';}}
-init();
-$('q').addEventListener('input',render);
 </script></body></html>
