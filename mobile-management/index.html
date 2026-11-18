@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOLD FIRST 車両一覧｜開発確認用</title>
+<style>body{font-family:system-ui,sans-serif;background:#f3f6fa;color:#18304b;margin:0}.wrap{max-width:650px;margin:auto;padding:18px}header{background:#173b64;color:#fff;padding:18px}h1{font-size:20px;margin:0}.card{background:white;border:1px solid #dce4ee;border-radius:14px;padding:15px;margin:12px 0}input,button{font:inherit;padding:12px;border-radius:9px;border:1px solid #c8d5e3}input{width:100%;box-sizing:border-box}button{background:#176cbd;color:white;cursor:pointer;border:0;margin-top:8px}button:disabled{opacity:.5}.small{font-size:12px;color:#5c7084}.error{color:#b32020}.plate{font-size:18px;font-weight:700}.row{display:flex;justify-content:space-between;gap:10px}.tag{background:#e7f1ff;border-radius:12px;padding:3px 8px;font-size:12px}</style>
+</head><body><header><h1>🚗 GOLD FIRST 車両検索｜開発確認用</h1></header>
+<div class="wrap"><div class="card"><b>🔒 読込み専用・スタッフ限定</b><p class="small">現在のスマホ管理アプリとは別の検証画面です。車両の変更・保存はできません。既存ポータルと同じSupabaseログイン状態を使用します。認証情報の手入力は不要です。ログインしていない場合はポータルに戻ってください。</p>
+<p id="identity" class="small">ログイン状態を確認しています…</p><a href="../portal/">スタッフログイン画面に戻る</a>
+<button id="load" disabled>車両一覧を更新</button><p id="status" role="status" class="small">未接続</p></div>
+<div class="card"><label for="q">車番・使用者・車種・VehicleIDで検索（全件取得後に検索）</label><input id="q" placeholder="車番などを入力" disabled><div class="row"><span id="count" class="small">0件</span><span id="more" class="small" hidden>残りを読み込み中…</span></div></div><div id="list"></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script type="module">
+import { fetchAllVehicles, filterVehicles } from './vehicle-reader.mjs';
+const endpoint='https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-mobile-vehicles-read';
+const $=id=>document.getElementById(id);
+const publishableKey='sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
+const client=window.supabase?.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co',publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const rows=[];let busy=false,token='';
+function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function render(){const found=filterVehicles(rows,$('q').value);$('count').textContent=found.length+'件表示（取得済み '+rows.length+'件）';$('list').innerHTML=found.map(v=>'<div class="card"><div class="row"><span class="plate">'+escapeHTML(v['車番'])+'</span><span class="tag">'+escapeHTML(v['区分/ステータス'])+'</span></div><p>使用者：'+escapeHTML(v['現在使用者']||'なし')+'</p><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['車種'])+' / '+escapeHTML(v['管理区分'])+'</p></div>').join('')||'<p class="small">該当車両がありません</p>';}
+async function load(reset=false){
+ if(busy||!client)return;
+ busy=true;$('load').disabled=true;$('q').disabled=true;
+ $('status').className='small';$('status').textContent='認証・読込み中…';
+ try{
+  const {data:{session},error:sessionError}=await client.auth.getSession();
+  if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');
+  token=session.access_token;
+  const fetched=await fetchAllVehicles({apiBase:endpoint,accessToken:token,publishableKey,limit:100});
+  rows.splice(0,rows.length,...fetched);
+  $('status').textContent=rows.length+'件取得完了（読込み専用）';
+  $('q').disabled=false;render();
+ }catch(e){
+  rows.length=0;render();
+  $('status').textContent='取得できません：'+(e.message||'通信エラー');
+  $('status').className='small error';$('q').disabled=true;
+ }finally{busy=false;$('load').disabled=false;}
+}
+$('load').addEventListener('click',()=>load(true));
+async function init(){try{
+ if(!client)throw Error('認証ライブラリを読み込めません');
+ const {data:{user},error:userError}=await client.auth.getUser();
+ if(userError||!user)throw Error('ログインが必要です。ポータルからログインしてください');
+ const {data:access,error:accessError}=await client.rpc('gf_staff_access_self');
+ if(accessError||!Array.isArray(access)||access[0]?.access_granted!==true)throw Error('スタッフ権限がありません');
+ $('identity').textContent='ログイン中：'+(user.email||'');
+ $('load').disabled=false;await load(true);
+ }catch(e){$('identity').textContent='認証できませんでした';$('status').textContent=e.message||'認証エラー';$('status').className='small error';}}
+init();
+$('q').addEventListener('input',render);
+</script></body></html>
