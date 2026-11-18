@@ -35,3 +35,27 @@ export async function fetchVehicles({ apiBase, accessToken, publishableKey, fetc
   if (!Array.isArray(payload.vehicles)) throw new Error('Invalid vehicle API response');
   return { vehicles: payload.vehicles.map(normalizeVehicle), nextCursor: payload.nextCursor ?? null };
 }
+
+/**
+ * Retrieve all pages before making any rows available to the UI.
+ * Throws on repeated cursors, duplicate IDs or unbounded pagination.
+ */
+export async function fetchAllVehicles(options) {
+  const all = [];
+  const cursors = new Set();
+  const ids = new Set();
+  let cursor = null;
+  for (let page = 0; page < 100; page++) {
+    const result = await fetchVehicles({ ...options, cursor });
+    for (const vehicle of result.vehicles) {
+      if (!vehicle.VehicleID || ids.has(vehicle.VehicleID)) throw new Error('Duplicate or missing VehicleID');
+      ids.add(vehicle.VehicleID);
+      all.push(vehicle);
+    }
+    if (!result.nextCursor) return all;
+    if (result.nextCursor === cursor || cursors.has(result.nextCursor)) throw new Error('Repeated vehicle cursor');
+    cursors.add(result.nextCursor);
+    cursor = result.nextCursor;
+  }
+  throw new Error('Vehicle pagination limit exceeded');
+}
