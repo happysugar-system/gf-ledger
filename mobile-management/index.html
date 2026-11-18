@@ -9,7 +9,7 @@
 <div class="card"><label for="q">車番・使用者・車種・VehicleIDで検索（全件取得後に検索）</label><input id="q" placeholder="車番などを入力" disabled><div class="row"><span id="count" class="small">0件</span><span id="more" class="small" hidden>残りを読み込み中…</span></div></div><div id="list"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script type="module">
-import { fetchVehicles, filterVehicles } from './vehicle-reader.mjs';
+import { fetchAllVehicles, filterVehicles } from './vehicle-reader.mjs';
 const endpoint='https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-mobile-vehicles-read';
 const $=id=>document.getElementById(id);
 const publishableKey='sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
@@ -25,21 +25,8 @@ async function load(reset=false){
   const {data:{session},error:sessionError}=await client.auth.getSession();
   if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');
   token=session.access_token;
-  if(reset){rows.length=0;cursor=null;}
-  const seen=new Set();let pages=0;
-  do{
-   const requestCursor=cursor;
-   if(requestCursor&&seen.has(requestCursor))throw Error('ページ送りが循環しました');
-   if(requestCursor)seen.add(requestCursor);
-   const result=await fetchVehicles({apiBase:endpoint,accessToken:token,publishableKey,cursor:requestCursor,limit:100});
-   rows.push(...result.vehicles);
-   cursor=result.nextCursor;
-   pages++;
-   $('status').textContent=rows.length+'件を取得中…';
-   if(pages>100)throw Error('ページ数が上限を超えました');
-  }while(cursor);
-  const ids=rows.map(r=>r.VehicleID);
-  if(new Set(ids).size!==ids.length)throw Error('車両IDが重複しています');
+  const fetched=await fetchAllVehicles({apiBase:endpoint,accessToken:token,publishableKey,limit:100});
+  rows.splice(0,rows.length,...fetched);
   $('status').textContent=rows.length+'件取得完了（読込み専用）';
   $('q').disabled=false;render();
  }catch(e){
