@@ -1,79 +1,43 @@
-<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GOLD FIRST 車両一覧｜開発確認用</title>
-<style>body{font-family:system-ui,sans-serif;background:#f3f6fa;color:#18304b;margin:0}.wrap{max-width:650px;margin:auto;padding:18px}header{background:#173b64;color:#fff;padding:18px}h1{font-size:20px;margin:0}.card{background:white;border:1px solid #dce4ee;border-radius:14px;padding:15px;margin:12px 0}input,button{font:inherit;padding:12px;border-radius:9px;border:1px solid #c8d5e3}input{width:100%;box-sizing:border-box}button{background:#176cbd;color:white;cursor:pointer;border:0;margin-top:8px}button:disabled{opacity:.5}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.tabs button{background:#e7f1ff;color:#173b64;margin:0}.tabs button.active{background:#176cbd;color:white}.field textarea{width:100%;box-sizing:border-box;margin-top:5px;min-height:75px}.field{padding:9px 0;border-bottom:1px solid #edf1f5;overflow-wrap:anywhere}.field b{display:block;color:#52677d;font-size:12px}.back{background:#e7f1ff;color:#173b64}.small{font-size:12px;color:#5c7084}.error{color:#b32020}.plate{font-size:18px;font-weight:700}.row{display:flex;justify-content:space-between;gap:10px}.tag{background:#e7f1ff;border-radius:12px;padding:3px 8px;font-size:12px}</style>
-</head><body><header><h1>🚗 GOLD FIRST 車両検索｜開発確認用</h1></header>
-<div class="wrap"><div class="card"><b>🔒 読込み専用・スタッフ限定</b><p class="small">現在のスマホ管理アプリとは別の検証画面です。車両の変更・保存はできません。既存ポータルと同じSupabaseログイン状態を使用します。認証情報の手入力は不要です。ログインしていない場合はポータルに戻ってください。</p>
-<p id="identity" class="small">ログイン状態を確認しています…</p><a href="../portal/">スタッフログイン画面に戻る</a>
-<button id="load" disabled>車両一覧を更新</button><p id="status" role="status" class="small">未接続</p></div>
-<div class="card"><label for="q">車番・使用者・車種・VehicleIDで検索（全件取得後に検索）</label><input id="q" placeholder="車番などを入力" disabled><div class="row"><span id="count" class="small">0件</span><span id="more" class="small" hidden>残りを読み込み中…</span></div></div><div id="list"></div><div id="detail" hidden></div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script type="module">
-import { fetchAllVehicles, filterVehicles } from './vehicle-reader.mjs';
-import { VEHICLE_HEADERS, FIELD_GROUPS } from './vehicle-schema.mjs';
-const endpoint='https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-mobile-vehicles-read';
-const $=id=>document.getElementById(id);
-const publishableKey='sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
-const client=window.supabase?.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co',publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
-const rows=[];let busy=false,token='',selectedId=null,detailGroup='basic',editing=false,draft=null;
-function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function showList(){editing=false;draft=null;selectedId=null;$('detail').hidden=true;$('list').hidden=false;$('q').disabled=!rows.length;render();}
-function openVehicle(id){editing=false;draft=null;selectedId=id;detailGroup='basic';render();}
-window.openVehicle=openVehicle;window.showList=showList;window.setDetailGroup=g=>{detailGroup=g;render();};
-const LOCKED=new Set([...FIELD_GROUPS.system,'VehicleID','DriverID','車番','車体番号','現在使用者','区分/ステータス','管理区分','引渡し','代車開始日','代車返却日']);
-window.beginEdit=()=>{const v=rows.find(x=>x.VehicleID===selectedId);if(!v)return;draft={...v};editing=true;render();};
-window.cancelEdit=()=>{editing=false;draft=null;render();};
-window.previewEdit=()=>{if(!draft)return;const v=rows.find(x=>x.VehicleID===selectedId);const changes=Object.keys(draft).filter(k=>String(draft[k]??'')!==String(v[k]??''));alert('保存前の確認（プレビューのみ）\\n'+(changes.length?changes.map(k=>k.trim()+': '+String(v[k]??'')+' → '+String(draft[k]??'')).join('\\n'):'変更なし')+'\\n※Supabase・スプシには保存されません');};
-document.addEventListener('input',e=>{if(!editing||!draft||!e.target.matches('[data-edit-field]'))return;const k=e.target.dataset.editField;if(LOCKED.has(k)||!VEHICLE_HEADERS.includes(k))return;draft[k]=e.target.value;});
-function render(){
- const found=filterVehicles(rows,$('q').value);
- $('count').textContent=found.length+'件表示（取得済み '+rows.length+'件）';
- if(selectedId){
-  const v=rows.find(x=>x.VehicleID===selectedId);
-  if(!v){showList();return;}
-  $('list').hidden=true;$('detail').hidden=false;$('q').disabled=true;
-  const groups=[['basic','車両情報'],['loan','貸出・返却'],['schedule','予定'],['files','写真・書類'],['system','管理情報']];
-  const labels=FIELD_GROUPS[detailGroup]||[];
-  const values=editing?draft:v;
-  const fields=labels.map(k=>'<div class="field"><b>'+escapeHTML(k.trim())+(LOCKED.has(k)?' 🔒':'')+'</b>'+(editing&&!LOCKED.has(k)?'<textarea data-edit-field="'+escapeHTML(k)+'">'+escapeHTML(values[k])+'</textarea>':escapeHTML(values[k]||'未登録'))+'</div>').join('');
-  $('detail').innerHTML='<button class="back" onclick="showList()">← 車両一覧に戻る</button><div class="card"><div class="plate">'+escapeHTML(v['車番'])+'</div><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['区分/ステータス'])+'</p><p class="small">'+(editing?'仮編集：入力内容は保存されません':'読込み専用：編集プレビューだけ試せます')+'</p>'+(editing?'<button onclick="previewEdit()">変更内容を確認（保存しない）</button> <button class="back" onclick="cancelEdit()">破棄</button>':'<button onclick="beginEdit()">編集画面を試す（保存不可）</button>')+'</div><div class="tabs">'+groups.map(([key,label])=>'<button data-group="'+key+'" class="'+(detailGroup===key?'active':'')+'">'+label+'</button>').join('')+'</div><div class="card">'+fields+'</div>';
-  return;
- }
- $('list').hidden=false;$('detail').hidden=true;
- $('list').innerHTML=found.map(v=>'<div class="card" role="button" tabindex="0" data-vehicle="'+escapeHTML(v.VehicleID)+'"><div class="row"><span class="plate">'+escapeHTML(v['車番'])+'</span><span class="tag">'+escapeHTML(v['区分/ステータス'])+'</span></div><p>使用者：'+escapeHTML(v['現在使用者']||'なし')+'</p><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['車種'])+' / '+escapeHTML(v['管理区分'])+'</p><p class="small">タップして63項目を確認 ›</p></div>').join('')||'<p class="small">該当車両がありません</p>';
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GOLD FIRST｜スマホ車両管理 Ver.9</title>
+<style>
+:root{font-family:system-ui,'Noto Sans JP',sans-serif;color:#213047;background:#eef3f7}*{box-sizing:border-box}body{margin:0}.app{max-width:510px;margin:auto;min-height:100dvh;background:#f7f9fc;padding-bottom:94px}.head{background:#173b64;color:white;padding:21px 18px 17px;position:sticky;top:0;z-index:2}.head small{opacity:.75}.head h1{font-size:20px;margin:5px 0 0}.main{padding:16px}.box{background:white;border:1px solid #e2e8ef;border-radius:16px;padding:16px;margin-bottom:13px;box-shadow:0 2px 7px #19334c08}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{text-align:center;padding:13px 5px}.stat strong{font-size:23px;display:block;color:#173b64}.stat small{font-size:11px;color:#718096}.action{width:100%;border:1px solid #dbe3ed;border-radius:13px;background:white;padding:15px;text-align:left;font-weight:750;font-size:15px;margin:7px 0;color:#24364b;cursor:pointer}.action span{display:block;font-weight:400;color:#6b7a8c;font-size:12px;margin-top:4px}.primary{background:#176cbd;color:white;border:0;text-align:center}.secondary{background:#edf5fc;color:#1761a2}.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(510px,100%);display:grid;grid-template-columns:repeat(4,1fr);background:white;border-top:1px solid #dbe3ed;z-index:4}.tabs button{border:0;background:white;padding:10px 2px;color:#64748b;font-size:11px;cursor:pointer}.tabs button.active{color:#176cbd;font-weight:800;background:#edf5fc}.tabs b{display:block;font-size:22px;margin-bottom:2px}.back{border:0;background:none;color:#176cbd;font-weight:700;font-size:15px;padding:0 0 13px;cursor:pointer}.item{width:100%;background:white;border:1px solid #dbe3ed;border-radius:12px;padding:14px;margin:8px 0;text-align:left;color:#24364b;cursor:pointer}.item strong{display:block;font-size:16px}.item small{color:#718096}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.muted{color:#718096;font-size:13px}.field{margin:12px 0}.field label{display:block;font-size:12px;color:#65748a;margin-bottom:5px}input,select,textarea{width:100%;border:1px solid #ccd7e3;border-radius:10px;padding:12px;font:inherit;background:white;color:#213047}textarea{min-height:75px}.pill{display:inline-block;border-radius:20px;background:#e5f4ec;color:#17663b;padding:5px 11px;font-size:12px;font-weight:700}.detailtabs{display:flex;gap:7px;overflow-x:auto;padding:5px 0 12px}.detailtabs button{border:1px solid #dbe3ed;border-radius:11px;background:#edf5fc;padding:10px;color:#1761a2;white-space:nowrap;cursor:pointer}.detailtabs button.active{background:#176cbd;color:white}.notice{background:#eaf4ff;border-radius:12px;padding:12px;margin:0 0 15px;color:#375c81;font-size:12px}.log{padding:11px 0;border-bottom:1px solid #e8edf3}.locked{padding:10px 0;border-bottom:1px solid #e8edf3}.locked b{display:block;color:#65748a;font-size:12px}.hidden{display:none!important}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}button:disabled{opacity:.5;cursor:not-allowed}
+</style></head><body><div class="app"><header class="head"><small>GOLD FIRST / スタッフ用アプリ</small><h1>🚗 車両・ドライバー管理</h1></header><main class="main"><div class="notice" id="state">スタッフ認証を確認中…</div><div id="content"></div></main><nav class="tabs" id="nav"></nav></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script type="module">
+import {fetchAllVehicles,filterVehicles} from './vehicle-reader.mjs';
+import {VEHICLE_HEADERS} from './vehicle-schema.mjs';
+const project='https://tgxrnrqxafytyqfwwsag.supabase.co',key='sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
+const client=window.supabase?.createClient(project,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const $=id=>document.getElementById(id),safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const groups=[['基本・車両情報',[0,1,2,3,4,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,56]],['使用者・契約情報',[5,6,7,8,9,10,11,12,13,14,15,16,17,18]]];
+const section={action:[45,46,47,48,49,52,53,54],schedule:[37,38,39,40,41,42,43,50,51,55],files:[57,58,59,61,62],history:[60,44]};
+const locked=new Set(['VehicleID','DriverID','車番','車体番号','現在使用者','区分/ステータス','管理区分','更新日時','引渡し','代車開始日','代車返却日','返却/12点検','予定反映状況']);
+let cars=[],page='home',carId=null,detailTab='basic',ledgerSection=0,query='',filter='すべて',draft=null,ready=false;
+const car=()=>cars.find(x=>x.VehicleID===carId);
+const dateKey=k=>/予定日|満了日|変更日|開始日|返却日/.test(k);
+const toDate=v=>{const m=String(v||'').match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);return m?m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0'):'';};
+const field=k=>{const v=draft?.[k]??'',disabled=locked.has(k),kind=dateKey(k)?'date':'text';return '<div class="field"><label>'+safe(k.trim())+(disabled?' 🔒':'')+'</label>'+(disabled?'<div class="locked">'+safe(v||'未登録')+'</div>':/備考/.test(k)?'<textarea data-field="'+safe(k)+'">'+safe(v)+'</textarea>':'<input data-field="'+safe(k)+'" type="'+kind+'" value="'+safe(kind==='date'?toDate(v):v)+'">')+'</div>';};
+function nav(){const opts=[['home','🏠','ホーム'],['cars','🚗','車両'],['drivers','👤','ドライバー'],['schedule','📅','予定']];$('nav').innerHTML=opts.map(([p,i,t])=>'<button data-page="'+p+'" class="'+((page===p)||(p==='cars'&&page==='car')?'active':'')+'"><b>'+i+'</b>'+t+'</button>').join('');}
+function go(p){page=p;draft=null;render();window.scrollTo(0,0);}
+function openCar(id){carId=id;detailTab='basic';ledgerSection=0;draft={...car()};page='car';render();window.scrollTo(0,0);}
+function changed(){const x=car();return Object.keys(draft||{}).filter(k=>String(x[k]??'')!==String(draft[k]??''));}
+function render(){nav();let h='';
+if(!ready){$('content').innerHTML='<div class="box">車両データを読み込んでいます…</div>';return;}
+if(page==='home'){h='<h2>今日の管理</h2><div class="stats"><div class="box stat"><strong>'+cars.length+'</strong><small>登録車両</small></div><div class="box stat"><strong>'+cars.filter(x=>x['区分/ステータス']==='貸出中').length+'</strong><small>貸出中</small></div><div class="box stat"><strong>'+cars.filter(x=>x['管理区分']&&x['管理区分']!=='通常管理').length+'</strong><small>要確認</small></div></div><h2>何をしますか？</h2><button class="action" data-page="cars">🚗 車両を探す・編集する<span>車両台帳63項目・貸出返却・予定・写真・書類</span></button><button class="action" data-page="drivers">👤 ドライバーを探す・登録する<span>次の開発対象：現在は車両台帳の使用者情報のみ</span></button><button class="action" data-page="schedule">📅 車両の予定を見る<span>車検・返却・代車など</span></button>';}
+if(page==='cars'){const a=filterVehicles(cars,query).filter(x=>filter==='すべて'||x['区分/ステータス']===filter||x['管理区分']===filter);h='<div class="row"><h2>🚗 車両一覧</h2><button class="action secondary" style="width:auto" data-info="新規車両登録は未接続です">＋ 車両追加</button></div><input id="search" placeholder="車番・使用者・車種で検索" value="'+safe(query)+'"><div class="detailtabs">'+['すべて','空車','貸出中','通常管理','修理・整備待ち','名変待ち'].map(x=>'<button data-filter="'+safe(x)+'" class="'+(filter===x?'active':'')+'">'+safe(x)+'</button>').join('')+'</div><p class="muted">'+a.length+'台表示</p>'+a.map(x=>'<button class="item" data-car="'+safe(x.VehicleID)+'"><div class="row"><strong>'+safe(x['車番'])+'</strong><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><small>'+safe(x['現在使用者']||'使用者未登録')+' ・ '+safe(x['管理区分']||'通常管理')+'</small></button>').join('');}
+if(page==='car'){const x=car();if(!x){go('cars');return;}h='<button class="back" data-page="cars">← 車両一覧へ</button><div class="box"><div class="row"><h2>'+safe(x['車番'])+'</h2><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><div class="muted">'+safe(x.VehicleID)+' ・ '+safe(x['管理区分'])+'</div><p>👤 現在使用者：<b>'+safe(x['現在使用者']||'なし')+'</b></p></div><div class="detailtabs">'+[['basic','基本情報'],['action','貸出・返却'],['schedule','予定'],['files','写真・書類'],['history','履歴']].map(([k,t])=>'<button data-tab="'+k+'" class="'+(detailTab===k?'active':'')+'">'+t+'</button>').join('')+'</div>';
+if(detailTab==='basic'){h+='<div class="box"><h2>車両台帳の編集（基本・契約情報）</h2><div class="notice">Ver.9デモと同じ画面構成です。実データを表示していますが、編集内容はまだ保存されません。</div><div class="detailtabs">'+groups.map(([n],i)=>'<button data-section="'+i+'" class="'+(ledgerSection===i?'active':'')+'">'+n+'</button>').join('')+'</div>'+groups[ledgerSection][1].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">編集を破棄</button></div>';}
+if(detailTab==='action'){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
+if(detailTab==='schedule'){h+='<div class="box"><h2>この車両の予定</h2><p class="muted">車検満了日：'+safe(x['車検満了日']||'未登録')+'</p>'+section.schedule.map(i=>{const k=VEHICLE_HEADERS[i];return '<div class="log"><b>'+safe(k.trim())+'</b><div class="muted">'+safe(x[k]||'未登録')+'</div></div>';}).join('')+'<button class="action secondary" data-info="予定登録は未接続です">＋ 予定を登録</button></div>';}
+if(detailTab==='files'){h+='<div class="box"><h2>📷 写真・書類</h2><div class="notice">ファイル登録・AI判定はまだ未接続です。</div>'+section.files.map(i=>{const k=VEHICLE_HEADERS[i],v=x[k];return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+(String(v||'').startsWith('https://')?'<a href="'+safe(v)+'" target="_blank" rel="noopener noreferrer">保存先を開く</a>':safe(v||'未登録'))+'</div></div>';}).join('')+'<button class="action secondary" data-info="写真撮影・保存は未接続です">📷 写真・書類を登録</button></div>';}
+if(detailTab==='history'){h+='<div class="box"><h2>操作履歴</h2><p class="muted">操作履歴の取得は未接続です。台帳の管理項目のみ表示します。</p>'+section.history.map(i=>{const k=VEHICLE_HEADERS[i];return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+safe(x[k]||'未登録')+'</div></div>';}).join('')+'</div>';}
 }
-$('detail').addEventListener('click',e=>{const el=e.target.closest('[data-group]');if(el){detailGroup=el.dataset.group;render();}});
-$('list').addEventListener('click',e=>{const el=e.target.closest('[data-vehicle]');if(el)openVehicle(el.dataset.vehicle);});
-$('list').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const el=e.target.closest('[data-vehicle]');if(el){e.preventDefault();openVehicle(el.dataset.vehicle);}}});
-async function load(reset=false){
- if(busy||!client)return;
- busy=true;$('load').disabled=true;$('q').disabled=true;
- $('status').className='small';$('status').textContent='認証・読込み中…';
- try{
-  const {data:{session},error:sessionError}=await client.auth.getSession();
-  if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');
-  token=session.access_token;
-  const fetched=await fetchAllVehicles({apiBase:endpoint,accessToken:token,publishableKey,limit:100});
-  rows.splice(0,rows.length,...fetched);
-  selectedId=null;editing=false;draft=null;
-  $('status').textContent=rows.length+'件取得完了（読込み専用）';
-  $('q').disabled=false;render();
- }catch(e){
-  rows.length=0;selectedId=null;render();
-  $('status').textContent='取得できません：'+(e.message||'通信エラー');
-  $('status').className='small error';$('q').disabled=true;
- }finally{busy=false;$('load').disabled=false;}
+if(page==='drivers')h='<h2>👤 ドライバー</h2><div class="box"><p>ドライバーマスターとの連携は次の開発対象です。</p><p class="muted">現在は車両一覧から使用者を確認できます。ここにはサンプルの個人情報を表示しません。</p><button class="action secondary" data-page="cars">車両から使用者を確認</button></div>';
+if(page==='schedule'){const dates=[];for(const x of cars)for(const i of section.schedule){const k=VEHICLE_HEADERS[i],v=x[k];if(v)dates.push({date:String(v),plate:x['車番'],id:x.VehicleID,type:k.trim()});}dates.sort((a,b)=>a.date.localeCompare(b.date));h='<h2>📅 車両予定</h2><div class="box"><p class="muted">車両台帳に登録済みの予定日を表示（読込み専用）</p>'+dates.slice(0,100).map(v=>'<button class="item" data-car="'+safe(v.id)+'"><strong>'+safe(v.date)+'　'+safe(v.type)+'</strong><small>'+safe(v.plate)+'</small></button>').join('')+'</div>';}
+$('content').innerHTML=h;
 }
-$('load').addEventListener('click',()=>load(true));
-async function init(){try{
- if(!client)throw Error('認証ライブラリを読み込めません');
- const {data:{user},error:userError}=await client.auth.getUser();
- if(userError||!user)throw Error('ログインが必要です。ポータルからログインしてください');
- const {data:access,error:accessError}=await client.rpc('gf_staff_access_self');
- if(accessError||!Array.isArray(access)||access[0]?.access_granted!==true)throw Error('スタッフ権限がありません');
- $('identity').textContent='ログイン中：'+(user.email||'');
- $('load').disabled=false;await load(true);
- }catch(e){$('identity').textContent='認証できませんでした';$('status').textContent=e.message||'認証エラー';$('status').className='small error';}}
-init();
-$('q').addEventListener('input',render);
+function preview(){const x=car(),diff=changed();alert('【仮編集・保存なし】\n'+(diff.length?diff.map(k=>k.trim()+': '+String(x[k]??'')+' → '+String(draft[k]??'')).join('\n'):'変更なし')+'\n\nSupabase・スプレッドシートには保存されません');}
+document.addEventListener('input',e=>{if(e.target.id==='search'){query=e.target.value;const pos=e.target.selectionStart;render();const el=$('search');el.focus();el.setSelectionRange(pos,pos);return;}const k=e.target.dataset.field;if(k&&draft&&!locked.has(k)&&VEHICLE_HEADERS.includes(k))draft[k]=e.target.value;});
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;if(d.page){go(d.page);return;}if(d.car){openCar(d.car);return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
+async function init(){try{if(!client)throw Error('認証ライブラリを読み込めません');const {data:{user},error:ue}=await client.auth.getUser();if(ue||!user)throw Error('スタッフログインが必要です');const {data:access,error:ae}=await client.rpc('gf_staff_access_self');if(ae||!Array.isArray(access)||access[0]?.access_granted!==true)throw Error('スタッフ権限がありません');$('state').textContent='読込み専用テスト版・ログイン確認済み。車両を取得中…';const {data:{session}}=await client.auth.getSession();if(!session?.access_token)throw Error('ログインセッションがありません');cars=await fetchAllVehicles({apiBase:project+'/functions/v1/gf-mobile-vehicles-read',accessToken:session.access_token,publishableKey:key,limit:100});ready=true;$('state').textContent='✓ 車両'+cars.length+'件取得済み｜編集・貸出・返却の保存は無効';render();}catch(e){$('state').textContent='取得できません：'+e.message+'　スタッフログイン画面に戻ってください';$('content').innerHTML='<a href="../portal/">スタッフログイン画面へ</a>';}}
+render();init();
 </script></body></html>
