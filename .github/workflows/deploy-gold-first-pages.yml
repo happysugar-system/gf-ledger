@@ -10,6 +10,7 @@ on:
       - '*.webmanifest'
       - 'company-admin/**'
       - 'portal/**'
+      - 'mobile-management/**'
       - '.github/workflows/deploy-gold-first-pages.yml'
   workflow_dispatch:
 permissions:
@@ -35,10 +36,14 @@ jobs:
           find . -maxdepth 1 -type f \( -name '*.html' -o -name '*.jpg' -o -name '*.png' -o -name '*.svg' -o -name '*.webmanifest' \) -exec cp {} _site/ \;
           cp -R company-admin _site/company-admin
           cp -R portal _site/portal
+          cp -R mobile-management _site/mobile-management
           test -f _site/index.html
           test -f _site/company-admin/index.html
           test -f _site/company-admin/ledger.html
           test -f _site/portal/index.html
+          test -f _site/mobile-management/index.html
+          test -f _site/mobile-management/vehicle-reader.mjs
+          test -f _site/mobile-management/vehicle-schema.mjs
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
