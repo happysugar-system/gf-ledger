@@ -1,0 +1,34 @@
+import { VEHICLE_HEADERS } from './vehicle-schema.mjs';
+
+// Read-only frontend adapter. The API must validate Supabase JWT AND staff access
+// on every request. Never connect directly to gf_vehicles from a public page.
+export function normalizeVehicle(row) {
+  if (!row || typeof row !== 'object') throw new TypeError('Invalid vehicle');
+  const data = row.vehicle_data && typeof row.vehicle_data === 'object' && !Array.isArray(row.vehicle_data) ? row.vehicle_data : {};
+  const ledger = Object.fromEntries(VEHICLE_HEADERS.map(h => [h, data[h] ?? '']));
+  ledger.VehicleID = row.vehicle_id ?? data.VehicleID ?? '';
+  ledger['車番'] = row.vehicle_number ?? data['車番'] ?? '';
+  ledger['更新日時'] = row.updated_at ?? data['更新日時'] ?? '';
+  return ledger;
+}
+export function filterVehicles(rows, search) {
+  const q = String(search ?? '').trim().toLocaleLowerCase('ja');
+  if (!q) return rows;
+  return rows.filter(v => [v['車番'], v.VehicleID, v['現在使用者'], v['車種']]
+    .some(x => String(x ?? '').toLocaleLowerCase('ja').includes(q)));
+}
+export async function fetchVehicles({ apiBase, accessToken, fetchImpl = fetch, signal, limit = 100 }) {
+  if (!/^https:\/\//.test(apiBase)) throw new Error('HTTPS API required');
+  if (!accessToken) throw new Error('Login required');
+  const size = Math.min(100, Math.max(1, Number(limit) || 100));
+  const url = new URL(apiBase.replace(/\/$/, '') + '/vehicles');
+  url.searchParams.set('limit', String(size));
+  const response = await fetchImpl(url.toString(), {
+    method: 'GET', headers: { Authorization: 'Bearer ' + accessToken, Accept: 'application/json' },
+    cache: 'no-store', signal
+  });
+  if (!response.ok) throw new Error('Vehicle API error: ' + response.status);
+  const payload = await response.json();
+  if (!Array.isArray(payload.vehicles)) throw new Error('Invalid vehicle API response');
+  return { vehicles: payload.vehicles.map(normalizeVehicle), nextCursor: payload.nextCursor ?? null };
+}
