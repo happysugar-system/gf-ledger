@@ -1,22 +1,42 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GOLD FIRST 車両一覧｜開発確認用</title>
-<style>body{font-family:system-ui,sans-serif;background:#f3f6fa;color:#18304b;margin:0}.wrap{max-width:650px;margin:auto;padding:18px}header{background:#173b64;color:#fff;padding:18px}h1{font-size:20px;margin:0}.card{background:white;border:1px solid #dce4ee;border-radius:14px;padding:15px;margin:12px 0}input,button{font:inherit;padding:12px;border-radius:9px;border:1px solid #c8d5e3}input{width:100%;box-sizing:border-box}button{background:#176cbd;color:white;cursor:pointer;border:0;margin-top:8px}button:disabled{opacity:.5}.small{font-size:12px;color:#5c7084}.error{color:#b32020}.plate{font-size:18px;font-weight:700}.row{display:flex;justify-content:space-between;gap:10px}.tag{background:#e7f1ff;border-radius:12px;padding:3px 8px;font-size:12px}</style>
+<style>body{font-family:system-ui,sans-serif;background:#f3f6fa;color:#18304b;margin:0}.wrap{max-width:650px;margin:auto;padding:18px}header{background:#173b64;color:#fff;padding:18px}h1{font-size:20px;margin:0}.card{background:white;border:1px solid #dce4ee;border-radius:14px;padding:15px;margin:12px 0}input,button{font:inherit;padding:12px;border-radius:9px;border:1px solid #c8d5e3}input{width:100%;box-sizing:border-box}button{background:#176cbd;color:white;cursor:pointer;border:0;margin-top:8px}button:disabled{opacity:.5}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.tabs button{background:#e7f1ff;color:#173b64;margin:0}.tabs button.active{background:#176cbd;color:white}.field{padding:9px 0;border-bottom:1px solid #edf1f5;overflow-wrap:anywhere}.field b{display:block;color:#52677d;font-size:12px}.back{background:#e7f1ff;color:#173b64}.small{font-size:12px;color:#5c7084}.error{color:#b32020}.plate{font-size:18px;font-weight:700}.row{display:flex;justify-content:space-between;gap:10px}.tag{background:#e7f1ff;border-radius:12px;padding:3px 8px;font-size:12px}</style>
 </head><body><header><h1>🚗 GOLD FIRST 車両検索｜開発確認用</h1></header>
 <div class="wrap"><div class="card"><b>🔒 読込み専用・スタッフ限定</b><p class="small">現在のスマホ管理アプリとは別の検証画面です。車両の変更・保存はできません。既存ポータルと同じSupabaseログイン状態を使用します。認証情報の手入力は不要です。ログインしていない場合はポータルに戻ってください。</p>
 <p id="identity" class="small">ログイン状態を確認しています…</p><a href="../portal/">スタッフログイン画面に戻る</a>
 <button id="load" disabled>車両一覧を更新</button><p id="status" role="status" class="small">未接続</p></div>
-<div class="card"><label for="q">車番・使用者・車種・VehicleIDで検索（全件取得後に検索）</label><input id="q" placeholder="車番などを入力" disabled><div class="row"><span id="count" class="small">0件</span><span id="more" class="small" hidden>残りを読み込み中…</span></div></div><div id="list"></div></div>
+<div class="card"><label for="q">車番・使用者・車種・VehicleIDで検索（全件取得後に検索）</label><input id="q" placeholder="車番などを入力" disabled><div class="row"><span id="count" class="small">0件</span><span id="more" class="small" hidden>残りを読み込み中…</span></div></div><div id="list"></div><div id="detail" hidden></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script type="module">
 import { fetchAllVehicles, filterVehicles } from './vehicle-reader.mjs';
+import { VEHICLE_HEADERS, FIELD_GROUPS } from './vehicle-schema.mjs';
 const endpoint='https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-mobile-vehicles-read';
 const $=id=>document.getElementById(id);
 const publishableKey='sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
 const client=window.supabase?.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co',publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
-const rows=[];let busy=false,token='';
+const rows=[];let busy=false,token='',selectedId=null,detailGroup='basic';
 function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function render(){const found=filterVehicles(rows,$('q').value);$('count').textContent=found.length+'件表示（取得済み '+rows.length+'件）';$('list').innerHTML=found.map(v=>'<div class="card"><div class="row"><span class="plate">'+escapeHTML(v['車番'])+'</span><span class="tag">'+escapeHTML(v['区分/ステータス'])+'</span></div><p>使用者：'+escapeHTML(v['現在使用者']||'なし')+'</p><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['車種'])+' / '+escapeHTML(v['管理区分'])+'</p></div>').join('')||'<p class="small">該当車両がありません</p>';}
+function showList(){selectedId=null;$('detail').hidden=true;$('list').hidden=false;$('q').disabled=!rows.length;render();}
+function openVehicle(id){selectedId=id;detailGroup='basic';render();}
+window.openVehicle=openVehicle;window.showList=showList;window.setDetailGroup=g=>{detailGroup=g;render();};
+function render(){
+ const found=filterVehicles(rows,$('q').value);
+ $('count').textContent=found.length+'件表示（取得済み '+rows.length+'件）';
+ if(selectedId){
+  const v=rows.find(x=>x.VehicleID===selectedId);
+  if(!v){showList();return;}
+  $('list').hidden=true;$('detail').hidden=false;$('q').disabled=true;
+  const groups=[['basic','車両情報'],['loan','貸出・返却'],['schedule','予定'],['files','写真・書類'],['system','管理情報']];
+  const labels=FIELD_GROUPS[detailGroup]||[];
+  $('detail').innerHTML='<button class="back" onclick="showList()">← 車両一覧に戻る</button><div class="card"><div class="plate">'+escapeHTML(v['車番'])+'</div><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['区分/ステータス'])+'</p><p class="small">読込み専用：編集・保存はできません</p></div><div class="tabs">'+groups.map(([key,label])=>'<button class="'+(detailGroup===key?'active':'')+'" onclick="setDetailGroup(\''+key+'\')">'+label+'</button>').join('')+'</div><div class="card">'+labels.map(k=>'<div class="field"><b>'+escapeHTML(k.trim())+'</b>'+escapeHTML(v[k]||'未登録')+'</div>').join('')+'</div>';
+  return;
+ }
+ $('list').hidden=false;$('detail').hidden=true;
+ $('list').innerHTML=found.map(v=>'<div class="card" role="button" tabindex="0" data-vehicle="'+escapeHTML(v.VehicleID)+'"><div class="row"><span class="plate">'+escapeHTML(v['車番'])+'</span><span class="tag">'+escapeHTML(v['区分/ステータス'])+'</span></div><p>使用者：'+escapeHTML(v['現在使用者']||'なし')+'</p><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['車種'])+' / '+escapeHTML(v['管理区分'])+'</p><p class="small">タップして63項目を確認 ›</p></div>').join('')||'<p class="small">該当車両がありません</p>';
+}
+$('list').addEventListener('click',e=>{const el=e.target.closest('[data-vehicle]');if(el)openVehicle(el.dataset.vehicle);});
+$('list').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const el=e.target.closest('[data-vehicle]');if(el){e.preventDefault();openVehicle(el.dataset.vehicle);}}});
 async function load(reset=false){
  if(busy||!client)return;
  busy=true;$('load').disabled=true;$('q').disabled=true;
@@ -27,10 +47,11 @@ async function load(reset=false){
   token=session.access_token;
   const fetched=await fetchAllVehicles({apiBase:endpoint,accessToken:token,publishableKey,limit:100});
   rows.splice(0,rows.length,...fetched);
+  selectedId=null;
   $('status').textContent=rows.length+'件取得完了（読込み専用）';
   $('q').disabled=false;render();
  }catch(e){
-  rows.length=0;render();
+  rows.length=0;selectedId=null;render();
   $('status').textContent='取得できません：'+(e.message||'通信エラー');
   $('status').className='small error';$('q').disabled=true;
  }finally{busy=false;$('load').disabled=false;}
