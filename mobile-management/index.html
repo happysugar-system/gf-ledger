@@ -6,7 +6,7 @@
 <div class="wrap"><div class="card"><b>🔒 読込み専用・スタッフ限定</b><p class="small">現在のスマホ管理アプリとは別の検証画面です。車両の変更・保存はできません。既存ポータルと同じSupabaseログイン状態を使用します。認証情報の手入力は不要です。ログインしていない場合はポータルに戻ってください。</p>
 <p id="identity" class="small">ログイン状態を確認しています…</p><a href="../index.html">ポータルに戻る</a>
 <button id="load" disabled>車両一覧を更新</button><p id="status" role="status" class="small">未接続</p></div>
-<div class="card"><label for="q">車番・使用者・車種・VehicleIDで検索</label><input id="q" placeholder="車番などを入力" disabled><div class="row"><span id="count" class="small">0件</span><button id="more" hidden>次の100件を読み込む</button></div></div><div id="list"></div></div>
+<div class="card"><label for="q">車番・使用者・車種・VehicleIDで検索（全件取得後に検索）</label><input id="q" placeholder="車番などを入力" disabled><div class="row"><span id="count" class="small">0件</span><span id="more" class="small" hidden>残りを読み込み中…</span></div></div><div id="list"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script type="module">
 import { fetchVehicles, filterVehicles } from './vehicle-reader.mjs';
@@ -17,10 +17,36 @@ const client=window.supabase?.createClient('https://tgxrnrqxafytyqfwwsag.supabas
 const rows=[];let cursor=null,busy=false,token='';
 function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function render(){const found=filterVehicles(rows,$('q').value);$('count').textContent=found.length+'件表示（取得済み '+rows.length+'件）';$('list').innerHTML=found.map(v=>'<div class="card"><div class="row"><span class="plate">'+escapeHTML(v['車番'])+'</span><span class="tag">'+escapeHTML(v['区分/ステータス'])+'</span></div><p>使用者：'+escapeHTML(v['現在使用者']||'なし')+'</p><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['車種'])+' / '+escapeHTML(v['管理区分'])+'</p></div>').join('')||'<p class="small">該当車両がありません</p>';}
-async function load(reset=false){if(busy||!client)return;busy=true;$('load').disabled=true;$('more').disabled=true;$('status').textContent='認証・読込み中…';
-try{const {data:{session},error:sessionError}=await client.auth.getSession();if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');token=session.access_token;const result=await fetchVehicles({apiBase:endpoint,accessToken:token,publishableKey,cursor:reset?null:cursor,limit:100});if(reset)rows.length=0;rows.push(...result.vehicles);cursor=result.nextCursor;$('q').disabled=false;$('more').hidden=!cursor;$('status').textContent='取得成功（読込み専用）';render();}
-catch(e){$('status').textContent='取得できません：'+(e.message||'通信エラー');$('status').className='small error';$('more').hidden=true;}
-finally{busy=false;$('load').disabled=false;$('more').disabled=false;}}
+async function load(reset=false){
+ if(busy||!client)return;
+ busy=true;$('load').disabled=true;$('q').disabled=true;
+ $('status').className='small';$('status').textContent='認証・読込み中…';
+ try{
+  const {data:{session},error:sessionError}=await client.auth.getSession();
+  if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');
+  token=session.access_token;
+  if(reset){rows.length=0;cursor=null;}
+  const seen=new Set();let pages=0;
+  do{
+   const requestCursor=cursor;
+   if(requestCursor&&seen.has(requestCursor))throw Error('ページ送りが循環しました');
+   if(requestCursor)seen.add(requestCursor);
+   const result=await fetchVehicles({apiBase:endpoint,accessToken:token,publishableKey,cursor:requestCursor,limit:100});
+   rows.push(...result.vehicles);
+   cursor=result.nextCursor;
+   pages++;
+   $('status').textContent=rows.length+'件を取得中…';
+   if(pages>100)throw Error('ページ数が上限を超えました');
+  }while(cursor);
+  const ids=rows.map(r=>r.VehicleID);
+  if(new Set(ids).size!==ids.length)throw Error('車両IDが重複しています');
+  $('status').textContent=rows.length+'件取得完了（読込み専用）';
+  $('q').disabled=false;render();
+ }catch(e){
+  $('status').textContent='取得できません：'+(e.message||'通信エラー');
+  $('status').className='small error';$('q').disabled=true;
+ }finally{busy=false;$('load').disabled=false;}
+}
 $('load').addEventListener('click',()=>{cursor=null;rows.length=0;load(true);});
 async function init(){try{
  if(!client)throw Error('認証ライブラリを読み込めません');
@@ -32,5 +58,5 @@ async function init(){try{
  $('load').disabled=false;await load(true);
  }catch(e){$('identity').textContent='認証できませんでした';$('status').textContent=e.message||'認証エラー';$('status').className='small error';}}
 init();
-$('more').addEventListener('click',()=>load());$('q').addEventListener('input',render);
+$('q').addEventListener('input',render);
 </script></body></html>
