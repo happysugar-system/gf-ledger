@@ -12,12 +12,13 @@
 import { fetchVehicles, filterVehicles } from './vehicle-reader.mjs';
 const endpoint='https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-mobile-vehicles-read';
 const $=id=>document.getElementById(id);
-const client=window.supabase?.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const publishableKey='sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
+const client=window.supabase?.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co',publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const rows=[];let cursor=null,busy=false,token='';
 function escapeHTML(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function render(){const found=filterVehicles(rows,$('q').value);$('count').textContent=found.length+'件表示（取得済み '+rows.length+'件）';$('list').innerHTML=found.map(v=>'<div class="card"><div class="row"><span class="plate">'+escapeHTML(v['車番'])+'</span><span class="tag">'+escapeHTML(v['区分/ステータス'])+'</span></div><p>使用者：'+escapeHTML(v['現在使用者']||'なし')+'</p><p class="small">'+escapeHTML(v.VehicleID)+' / '+escapeHTML(v['車種'])+' / '+escapeHTML(v['管理区分'])+'</p></div>').join('')||'<p class="small">該当車両がありません</p>';}
 async function load(reset=false){if(busy||!client)return;busy=true;$('load').disabled=true;$('more').disabled=true;$('status').textContent='認証・読込み中…';
-try{const {data:{session},error:sessionError}=await client.auth.getSession();if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');token=session.access_token;const result=await fetchVehicles({apiBase:endpoint,accessToken:token,cursor:reset?null:cursor,limit:100});if(reset)rows.length=0;rows.push(...result.vehicles);cursor=result.nextCursor;$('q').disabled=false;$('more').hidden=!cursor;$('status').textContent='取得成功（読込み専用）';render();}
+try{const {data:{session},error:sessionError}=await client.auth.getSession();if(sessionError||!session?.access_token)throw Error('ログインが必要です。ポータルからログインしてください');token=session.access_token;const result=await fetchVehicles({apiBase:endpoint,accessToken:token,publishableKey,cursor:reset?null:cursor,limit:100});if(reset)rows.length=0;rows.push(...result.vehicles);cursor=result.nextCursor;$('q').disabled=false;$('more').hidden=!cursor;$('status').textContent='取得成功（読込み専用）';render();}
 catch(e){$('status').textContent='取得できません：'+(e.message||'通信エラー');$('status').className='small error';$('more').hidden=true;}
 finally{busy=false;$('load').disabled=false;$('more').disabled=false;}}
 $('load').addEventListener('click',()=>{cursor=null;rows.length=0;load(true);});
