@@ -5,7 +5,9 @@ import { VEHICLE_HEADERS } from './vehicle-schema.mjs';
 export function normalizeVehicle(row) {
   if (!row || typeof row !== 'object') throw new TypeError('Invalid vehicle');
   const data = row.vehicle_data && typeof row.vehicle_data === 'object' && !Array.isArray(row.vehicle_data) ? row.vehicle_data : {};
-  const ledger = Object.fromEntries(VEHICLE_HEADERS.map(h => [h, data[h] ?? '']));
+  // Sheet headers for three schedule columns have leading spaces, but Supabase JSON keys do not.
+  // Preserve the original 63 Sheet headers in the normalized result.
+  const ledger = Object.fromEntries(VEHICLE_HEADERS.map(h => [h, data[h] ?? data[h.trimStart()] ?? '']));
   ledger.VehicleID = row.vehicle_id ?? data.VehicleID ?? '';
   ledger['車番'] = row.vehicle_number ?? data['車番'] ?? '';
   ledger['更新日時'] = row.updated_at ?? data['更新日時'] ?? '';
