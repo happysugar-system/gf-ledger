@@ -17,12 +17,13 @@ export function filterVehicles(rows, search) {
   return rows.filter(v => [v['車番'], v.VehicleID, v['現在使用者'], v['車種']]
     .some(x => String(x ?? '').toLocaleLowerCase('ja').includes(q)));
 }
-export async function fetchVehicles({ apiBase, accessToken, fetchImpl = fetch, signal, limit = 100 }) {
+export async function fetchVehicles({ apiBase, accessToken, fetchImpl = fetch, signal, limit = 100, cursor = null }) {
   if (!/^https:\/\//.test(apiBase)) throw new Error('HTTPS API required');
   if (!accessToken) throw new Error('Login required');
   const size = Math.min(100, Math.max(1, Number(limit) || 100));
-  const url = new URL(apiBase.replace(/\/$/, '') + '/vehicles');
+  const url = new URL(apiBase);
   url.searchParams.set('limit', String(size));
+  if (cursor) url.searchParams.set('cursor', String(cursor));
   const response = await fetchImpl(url.toString(), {
     method: 'GET', headers: { Authorization: 'Bearer ' + accessToken, Accept: 'application/json' },
     cache: 'no-store', signal
