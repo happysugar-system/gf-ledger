@@ -5,7 +5,7 @@
 // 静的GitHub Pagesに秘密鍵を置かないこと。認証・台数取得・登録はサーバー側で実装する。
 // 接続先とLIFF認証の検証が完了するまでは個人情報の送信を禁止する。
 // 既存の車両依頼が利用するLINE受付GASの公開URL。新しいGASデプロイ反映後に動作する。
-const GF161_AVAILABILITY_URL = 'https://script.google.com/macros/s/AKfycbx90uDpmZUquizH10Uq93g9rt5GGT5UDAEjKtcbIEYg05uWdOzATyLAe-D5POfsrmGO_A/exec';
+const GF161_AVAILABILITY_URL = 'https://script.google.com/macros/s/AKfycbyl6ZvZMtbKNMBZZSgol-sI8BbRI9c3K_a0oGX6Z6hzekP5Lio_lLFOfKSPYUd4prbccw/exec';
 let gf161AvailabilityReceived = false;
 window.GF161Availability = function(data) {
   if (!data || data.ok !== true || !Number.isSafeInteger(data.count) || data.count < 0) return;
