@@ -118,8 +118,8 @@ document.getElementById('form').addEventListener('submit',async e=>{
  e.preventDefault();
  if(!readyForSubmit||!window.liff||!liff.isLoggedIn()||!liff.getIDToken()){gfRequireLogin();return;}
  if(!e.currentTarget.reportValidity())return;
- const phone=phoneInput.value.replace(/[\\s\\-()]/g,'');
- if(!/^0\\d{9,10}$/.test(phone)){statusBox.textContent='電話番号を確認してください。';return;}
+ const phone=phoneInput.value.replace(/[\s()\-]/g,'');
+ if(!/^0\d{9,10}$/.test(phone)){statusBox.textContent='電話番号を確認してください。';return;}
  if(!pendingRequestId)pendingRequestId=crypto.randomUUID();
  submitButton.disabled=true;statusBox.textContent='デモ受付に保存しています…';
  try{
@@ -132,7 +132,7 @@ document.getElementById('form').addEventListener('submit',async e=>{
   })});
   const data=await response.json();
   if(!response.ok||!data.ok)throw Error(data.error||'保存できませんでした');
-  statusBox.textContent='デモ受付に保存しました。\\n受付識別子：'+data.request_id+'\\n※LINE受付管理への反映と代車予約の確定はまだ行われていません。';
+  statusBox.textContent='デモ受付に保存しました。\n受付識別子：'+data.request_id+'\n※LINE受付管理への反映と代車予約の確定はまだ行われていません。';
   submitButton.textContent='デモ受付保存済み';submitButton.disabled=true;readyForSubmit=false;
  }catch(err){statusBox.textContent=String(err.message||err);submitButton.disabled=false;}
 });
