@@ -7,21 +7,36 @@
 // 既存の車両依頼が利用するLINE受付GASの公開URL。新しいGASデプロイ反映後に動作する。
 const GF161_AVAILABILITY_URL = 'https://script.google.com/macros/s/AKfycbyl6ZvZMtbKNMBZZSgol-sI8BbRI9c3K_a0oGX6Z6hzekP5Lio_lLFOfKSPYUd4prbccw/exec';
 let gf161AvailabilityReceived = false;
+let gf161AvailabilityTimer = null;
 window.GF161Availability = function(data) {
-  if (!data || data.ok !== true || !Number.isSafeInteger(data.count) || data.count < 0) return;
+  if (!data || data.ok !== true || !Number.isSafeInteger(data.count) || data.count < 0) {
+    document.getElementById('count').textContent = '応答形式エラー';
+    return;
+  }
   gf161AvailabilityReceived = true;
+  if (gf161AvailabilityTimer) clearTimeout(gf161AvailabilityTimer);
   document.getElementById('count').textContent = data.count + '台';
 };
 function gf161LoadAvailability() {
-  document.getElementById('count').textContent = '確認中';
+  gf161AvailabilityReceived = false;
+  const count = document.getElementById('count');
+  count.textContent = '確認中';
   const script = document.createElement('script');
-  script.src = GF161_AVAILABILITY_URL + '?action=gf161_availability';
-  script.onerror = function() { document.getElementById('count').textContent = '取得できません'; };
-  document.head.appendChild(script);
-  setTimeout(function() {
-    if (!gf161AvailabilityReceived) document.getElementById('count').textContent = '取得できません';
+  // LINE内ブラウザの古い応答キャッシュを避ける。
+  script.src = GF161_AVAILABILITY_URL + '?action=gf161_availability&_=' + Date.now();
+  script.onerror = function() {
+    if (!gf161AvailabilityReceived) count.textContent = '取得できません（通信エラー）';
     script.remove();
-  }, 10000);
+  };
+  script.onload = function() {
+    if (!gf161AvailabilityReceived) count.textContent = '取得できません（応答未受信）';
+    script.remove();
+  };
+  gf161AvailabilityTimer = setTimeout(function() {
+    if (!gf161AvailabilityReceived && count.textContent === '確認中') count.textContent = '取得できません（時間切れ）';
+    script.remove();
+  }, 12000);
+  document.head.appendChild(script);
 }
 gf161LoadAvailability();
 const startInput=document.getElementById('start');
