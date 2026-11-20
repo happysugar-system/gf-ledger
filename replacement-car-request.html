@@ -23,6 +23,15 @@
   document.head.appendChild(script);
 })();
 </script><div class="warn" id="notice">ご登録済みの情報は自動表示されます。表示されない場合は、お名前と電話番号をご入力ください。※デモ受付として保存されます。代車の予約はまだ確定しません。</div><form id="form"><label for="name">お名前</label><input id="name" autocomplete="name" required maxlength="80" placeholder="お名前を入力してください"><div class="muted" id="identity">登録情報を確認しています。マイページ未登録の方も入力できます。</div><label for="phone">電話番号</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder="電話番号を入力してください"><label id="phoneChangedLabel" style="font-weight:400;display:none"><input id="phoneChanged" type="checkbox" style="width:auto"> 登録済みの電話番号を変更したい</label><div class="muted" id="phoneHelp">電話番号が表示されない場合はご入力ください。変更・登録の反映は送信機能の完成後に対応します。</div><label for="lease">現在GOLD FIRSTのリースをご利用中ですか？</label><select id="lease" required><option value="">選択してください</option><option>はい</option><option>いいえ</option><option>わからない</option></select><label for="repair">GOLD FIRSTへ修理入庫予定はありますか？</label><select id="repair" required><option value="">選択してください</option><option>はい</option><option>いいえ</option><option>未定</option></select><label for="start">利用開始希望日</label><input id="start" type="date" required><label style="font-weight:400"><input id="startUnknown" type="checkbox" style="width:auto"> 利用開始日はまだ決まっていない</label><label for="period">利用予定期間</label><select id="period" required><option value="">選択してください</option><option>1日</option><option>2〜3日</option><option>4〜7日</option><option>1週間以上</option><option>未定</option></select><label for="memo">その他のご希望（任意）</label><textarea id="memo"></textarea><button id="login" type="button" hidden>LINEで本人確認して申し込む</button><button id="submit" disabled>確認中…</button><div id="status" role="status"></div></form></section></main><script>
+// 初期化エラーを可視化（個人情報・トークンは表示しない）
+window.addEventListener('error', function (ev) {
+  var button = document.getElementById('submit');
+  var status = document.getElementById('status');
+  if (button && button.textContent === '確認中…') {
+    button.textContent = 'フォーム処理エラー';
+    if (status) status.textContent = 'JavaScriptエラー（行 ' + (ev.lineno || '?') + '）。画面の修正が必要です。';
+  }
+});
 window.addEventListener('load', function () {
   setTimeout(function () {
     var button = document.getElementById('submit');
