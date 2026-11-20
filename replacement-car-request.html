@@ -1,44 +1,33 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>GOLD FIRST｜代車手配申込（デモ）</title>
-<style>*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#222;font:16px/1.6 system-ui,-apple-system,"Noto Sans JP",sans-serif}.wrap{max-width:620px;margin:auto;padding:16px 12px 40px}.card{background:#fff;border-radius:18px;padding:22px 18px;box-shadow:0 3px 14px #0001}.availability{background:#edf5f1;border-radius:14px;text-align:center;padding:18px;margin-bottom:22px}.count{font-size:40px;font-weight:800;color:#17684e}h1{font-size:24px;margin:0 0 12px}label{display:block;font-weight:700;margin:17px 0 6px}input,select,textarea{width:100%;font:inherit;padding:13px;border:1px solid #ccd1d6;border-radius:10px;background:white}textarea{min-height:90px}.muted{font-size:13px;color:#667}.warn{background:#fff7e8;border-radius:10px;padding:12px;font-size:14px}button{border:0;background:#222;color:white;border-radius:12px;padding:15px;font:inherit;font-weight:700;width:100%;margin-top:20px}button:disabled{background:#aaa}#status{margin-top:12px;white-space:pre-wrap}</style><script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script></head><body><main class="wrap"><section class="card"><h1>🚗 代車手配のお申し込み</h1><div class="availability"><div>ただいま手配可能な代車</div><div class="count" id="count">確認中</div><div class="muted">車両台帳の「空車」から取得。申込時の確保を保証するものではありません。</div></div><div class="warn" id="notice">ご登録済みの情報は自動表示されます。表示されない場合は、お名前と電話番号をご入力ください。※デモ受付として保存されます。代車の予約はまだ確定しません。</div><form id="form"><label for="name">お名前</label><input id="name" autocomplete="name" required maxlength="80" placeholder="お名前を入力してください"><div class="muted" id="identity">登録情報を確認しています。マイページ未登録の方も入力できます。</div><label for="phone">電話番号</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder="電話番号を入力してください"><label id="phoneChangedLabel" style="font-weight:400;display:none"><input id="phoneChanged" type="checkbox" style="width:auto"> 登録済みの電話番号を変更したい</label><div class="muted" id="phoneHelp">電話番号が表示されない場合はご入力ください。変更・登録の反映は送信機能の完成後に対応します。</div><label for="lease">現在GOLD FIRSTのリースをご利用中ですか？</label><select id="lease" required><option value="">選択してください</option><option>はい</option><option>いいえ</option><option>わからない</option></select><label for="repair">GOLD FIRSTへ修理入庫予定はありますか？</label><select id="repair" required><option value="">選択してください</option><option>はい</option><option>いいえ</option><option>未定</option></select><label for="start">利用開始希望日</label><input id="start" type="date" required><label style="font-weight:400"><input id="startUnknown" type="checkbox" style="width:auto"> 利用開始日はまだ決まっていない</label><label for="period">利用予定期間</label><select id="period" required><option value="">選択してください</option><option>1日</option><option>2〜3日</option><option>4〜7日</option><option>1週間以上</option><option>未定</option></select><label for="memo">その他のご希望（任意）</label><textarea id="memo"></textarea><button id="login" type="button" hidden>LINEで本人確認して申し込む</button><button id="submit" disabled>確認中…</button><div id="status" role="status"></div></form></section></main><script>
+<style>*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#222;font:16px/1.6 system-ui,-apple-system,"Noto Sans JP",sans-serif}.wrap{max-width:620px;margin:auto;padding:16px 12px 40px}.card{background:#fff;border-radius:18px;padding:22px 18px;box-shadow:0 3px 14px #0001}.availability{background:#edf5f1;border-radius:14px;text-align:center;padding:18px;margin-bottom:22px}.count{font-size:40px;font-weight:800;color:#17684e}h1{font-size:24px;margin:0 0 12px}label{display:block;font-weight:700;margin:17px 0 6px}input,select,textarea{width:100%;font:inherit;padding:13px;border:1px solid #ccd1d6;border-radius:10px;background:white}textarea{min-height:90px}.muted{font-size:13px;color:#667}.warn{background:#fff7e8;border-radius:10px;padding:12px;font-size:14px}button{border:0;background:#222;color:white;border-radius:12px;padding:15px;font:inherit;font-weight:700;width:100%;margin-top:20px}button:disabled{background:#aaa}#status{margin-top:12px;white-space:pre-wrap}</style><script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script></head><body><main class="wrap"><section class="card"><h1>🚗 代車手配のお申し込み</h1><div class="availability"><div>ただいま手配可能な代車</div><div class="count" id="count">読み込み中（GF161修正版）</div><div class="muted">車両台帳の「空車」から取得。申込時の確保を保証するものではありません。</div></div><script>
+// GF161 表示専用。申込・認証処理から独立して実行する。
+(function () {
+  var el = document.getElementById('count');
+  var received = false;
+  var timer;
+  window.GF161Availability = function (data) {
+    if (!data || data.ok !== true || typeof data.count !== 'number' || !Number.isSafeInteger(data.count) || data.count < 0) {
+      el.textContent = '取得失敗（応答形式）';
+      return;
+    }
+    received = true;
+    clearTimeout(timer);
+    el.textContent = data.count + '台';
+  };
+  var script = document.createElement('script');
+  script.src = 'https://script.google.com/macros/s/AKfycbyl6ZvZMtbKNMBZZSgol-sI8BbRI9c3K_a0oGX6Z6hzekP5Lio_lLFOfKSPYUd4prbccw/exec?action=gf161_availability&_=' + Date.now();
+  script.onerror = function () { if (!received) el.textContent = '取得失敗（通信）'; };
+  script.onload = function () { if (!received) el.textContent = '取得失敗（応答）'; };
+  timer = setTimeout(function () { if (!received && el.textContent.indexOf('読み込み中') === 0) el.textContent = '取得失敗（時間切れ）'; }, 12000);
+  document.head.appendChild(script);
+})();
+</script><div class="warn" id="notice">ご登録済みの情報は自動表示されます。表示されない場合は、お名前と電話番号をご入力ください。※デモ受付として保存されます。代車の予約はまだ確定しません。</div><form id="form"><label for="name">お名前</label><input id="name" autocomplete="name" required maxlength="80" placeholder="お名前を入力してください"><div class="muted" id="identity">登録情報を確認しています。マイページ未登録の方も入力できます。</div><label for="phone">電話番号</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder="電話番号を入力してください"><label id="phoneChangedLabel" style="font-weight:400;display:none"><input id="phoneChanged" type="checkbox" style="width:auto"> 登録済みの電話番号を変更したい</label><div class="muted" id="phoneHelp">電話番号が表示されない場合はご入力ください。変更・登録の反映は送信機能の完成後に対応します。</div><label for="lease">現在GOLD FIRSTのリースをご利用中ですか？</label><select id="lease" required><option value="">選択してください</option><option>はい</option><option>いいえ</option><option>わからない</option></select><label for="repair">GOLD FIRSTへ修理入庫予定はありますか？</label><select id="repair" required><option value="">選択してください</option><option>はい</option><option>いいえ</option><option>未定</option></select><label for="start">利用開始希望日</label><input id="start" type="date" required><label style="font-weight:400"><input id="startUnknown" type="checkbox" style="width:auto"> 利用開始日はまだ決まっていない</label><label for="period">利用予定期間</label><select id="period" required><option value="">選択してください</option><option>1日</option><option>2〜3日</option><option>4〜7日</option><option>1週間以上</option><option>未定</option></select><label for="memo">その他のご希望（任意）</label><textarea id="memo"></textarea><button id="login" type="button" hidden>LINEで本人確認して申し込む</button><button id="submit" disabled>確認中…</button><div id="status" role="status"></div></form></section></main><script>
 'use strict';
 // 静的GitHub Pagesに秘密鍵を置かないこと。認証・台数取得・登録はサーバー側で実装する。
 // 接続先とLIFF認証の検証が完了するまでは個人情報の送信を禁止する。
 // 既存の車両依頼が利用するLINE受付GASの公開URL。新しいGASデプロイ反映後に動作する。
 const GF161_AVAILABILITY_URL = 'https://script.google.com/macros/s/AKfycbyl6ZvZMtbKNMBZZSgol-sI8BbRI9c3K_a0oGX6Z6hzekP5Lio_lLFOfKSPYUd4prbccw/exec';
-let gf161AvailabilityReceived = false;
-let gf161AvailabilityTimer = null;
-window.GF161Availability = function(data) {
-  if (!data || data.ok !== true || !Number.isSafeInteger(data.count) || data.count < 0) {
-    document.getElementById('count').textContent = '応答形式エラー';
-    return;
-  }
-  gf161AvailabilityReceived = true;
-  if (gf161AvailabilityTimer) clearTimeout(gf161AvailabilityTimer);
-  document.getElementById('count').textContent = data.count + '台';
-};
-function gf161LoadAvailability() {
-  gf161AvailabilityReceived = false;
-  const count = document.getElementById('count');
-  count.textContent = '確認中';
-  const script = document.createElement('script');
-  // LINE内ブラウザの古い応答キャッシュを避ける。
-  script.src = GF161_AVAILABILITY_URL + '?action=gf161_availability&_=' + Date.now();
-  script.onerror = function() {
-    if (!gf161AvailabilityReceived) count.textContent = '取得できません（通信エラー）';
-    script.remove();
-  };
-  script.onload = function() {
-    if (!gf161AvailabilityReceived) count.textContent = '取得できません（応答未受信）';
-    script.remove();
-  };
-  gf161AvailabilityTimer = setTimeout(function() {
-    if (!gf161AvailabilityReceived && count.textContent === '確認中') count.textContent = '取得できません（時間切れ）';
-    script.remove();
-  }, 12000);
-  document.head.appendChild(script);
-}
-gf161LoadAvailability();
 const startInput=document.getElementById('start');
 const startUnknown=document.getElementById('startUnknown');
 startUnknown.addEventListener('change',()=>{startInput.disabled=startUnknown.checked;startInput.required=!startUnknown.checked;if(startUnknown.checked)startInput.value='';});
