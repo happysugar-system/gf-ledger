@@ -70,6 +70,7 @@ const receptionGateway={
   return data;
  },
  listVehicleRequests(){return this.request('list')},
+ detailVehicleRequest(receipt_id){return this.request('detail',{receipt_id})},
  saveVehicleRequest(record){return this.request('save',{record})}
 };
 const gfAdapter={
@@ -162,7 +163,7 @@ let receptionRows=[],drafts=[];const recBox=document.querySelector('#receptions'
 function drawMetrics(){const statuses=['未対応','対応中','完了'];const nums=document.querySelectorAll('#home .metric strong');statuses.forEach((st,i)=>nums[i].textContent=receptionRows.length?receptionRows.filter(r=>i===1?['受付済','対応中','確認待ち'].includes(r.ステータス):r.ステータス===st).length:'—');nums[3].textContent=receptionRows.length?receptionRows.filter(r=>r.契約状況!=='契約完了').length:'—'}
 function drawReception(){drawMetrics();const q=document.querySelector('#search').value.trim().toLowerCase(),cat=document.querySelector('#categoryFilter').value,st=document.querySelector('#statusFilter').value;recBox.replaceChildren();const filtered=receptionRows.filter(r=>(r.受付ID+' '+r.ドライバー名).toLowerCase().includes(q)&&(!cat||r.受付種別===cat)&&(!st||r.ステータス===st));if(!filtered.length){recBox.textContent='該当する受付はありません。';return}filtered.forEach(r=>{const card=document.createElement('div');card.className='item';const h=document.createElement('h3');h.textContent=r.ドライバー名||'氏名未登録';const info=document.createElement('p');info.className='muted';info.textContent=r.受付ID+' / '+r.受付種別+' / '+r.ステータス+' / '+r.受付内容;const btn=document.createElement('button');btn.className='primary';btn.textContent='受付詳細を見る';btn.onclick=()=>showReception(r);card.append(h,info,btn);recBox.append(card)})}
 document.querySelector('#categoryFilter').onchange=drawReception;document.querySelector('#statusFilter').onchange=drawReception;
-let selectedReception=null;function showReception(r){
+let selectedReception=null;async function showReception(r,detailLoaded=false){
  selectedReception=r;const detail=document.querySelector('#receptionDetail');detail.classList.remove('hidden');
  const fields=document.querySelector('#receptionFields');fields.replaceChildren();
  const raw=r.raw||{},value=(...keys)=>{for(const key of keys){const v=raw[key]??r[key];if(v!==undefined&&v!==null&&String(v).trim())return String(v).trim()}return ''};
@@ -178,6 +179,19 @@ let selectedReception=null;function showReception(r){
  const contentText=value('受付内容');if(contentText){const block=document.createElement('div');block.className='item';const title=document.createElement('h4');title.textContent='申込内容';block.append(title);const items=contentText.replace(/<br\s*\/?\s*>/gi,'\n').split(/\n|\s+\/\s+/).map(x=>x.trim()).filter(Boolean).filter(x=>!/^照合キー\s*[：:]/.test(x));const order=['納車希望','納車予定','稼働開始希望','稼働エリア'];items.sort((a,b)=>{const rank=x=>{const n=order.findIndex(k=>x.startsWith(k));return n<0?99:n};return rank(a)-rank(b)});for(const item of items){const row=document.createElement('div');row.style.cssText='padding:8px 0;border-bottom:1px solid #e5e7eb;white-space:pre-wrap';row.textContent=item;block.append(row)}fields.append(block)}
 const contract=document.querySelector('#requestContractPanel');contract.classList.toggle('hidden',r.受付種別!=='車両依頼');document.querySelector('#requestContractStatus').textContent='契約状況：'+(r.契約状況||'未確認');const mainEmail=value('契約者メールアドレス','メールアドレス'),emergencyEmail=value('緊急連絡先メールアドレス','緊急連絡先メアド');document.querySelector('#gfMainRecipient').textContent=mainEmail||'未登録';document.querySelector('#gfEmergencyRecipient').textContent=emergencyEmail||'未登録';document.querySelector('#gfCopyMain').onclick=()=>mainEmail?navigator.clipboard.writeText(mainEmail).catch(()=>prompt('コピーしてください',mainEmail)):alert('メールアドレスが未登録です');document.querySelector('#gfCopyEmergency').onclick=()=>emergencyEmail?navigator.clipboard.writeText(emergencyEmail).catch(()=>prompt('コピーしてください',emergencyEmail)):alert('メールアドレスが未登録です');
  document.querySelector('#receptionStatus').value=r.ステータス||'未対応';document.querySelector('#receptionAssignee').value=r.担当者||'';document.querySelector('#receptionMemo').value=r.対応メモ||'';
+ if(!detailLoaded&&r.受付種別==='車両依頼'&&receptionAuthorized){
+  const notice=document.createElement('p');notice.className='muted';notice.textContent='申込者の詳細情報を取得しています…';fields.prepend(notice);
+  try{
+   const result=await receptionGateway.detailVehicleRequest(r.受付ID);
+   if(selectedReception!==r)return;
+   const detailData=result.詳細||{};
+   r.raw={...r.raw,...detailData};
+   showReception(r,true);
+   return;
+  }catch(e){
+   notice.textContent='詳細情報を取得できませんでした（'+(e.message||'通信エラー')+'）。受付IDの紐付けや詳細シートを確認してください。';
+  }
+ }
  detail.scrollIntoView({behavior:'smooth',block:'start'});
 }
 document.querySelector('#receptionSave').onclick=async()=>{if(!selectedReception)return;const updated={...selectedReception,ステータス:document.querySelector('#receptionStatus').value,担当者:document.querySelector('#receptionAssignee').value,対応メモ:document.querySelector('#receptionMemo').value};if(selectedReception.受付ID.startsWith('DEMO-')){Object.assign(selectedReception,updated);drawReception();alert('デモ上の変更を反映しました。本番データは変更していません。');return}if(!gfAdapter.bridge?.saveVehicleRequest){alert('共通ログインの認証済み接続が未設定のため、本番保存は行いません');return}try{const result=await gfAdapter.save(updated);if(!result||result.成功!==true)throw Error('保存成功の確認が取れませんでした');Object.assign(selectedReception,updated);drawReception();alert('保存しました')}catch(e){alert('保存に失敗しました：'+e.message)}};document.querySelector('#receptionToLoan').onclick=()=>{const r=selectedReception;if(!r)return;document.getElementById('receipt').value=r.受付ID||'';tab('loan');if(r.DriverID){document.getElementById('driver').value=r.DriverID;document.getElementById('driver').dispatchEvent(new Event('change'))}if(r.VehicleID){document.getElementById('vehicle').value=r.VehicleID;document.getElementById('vehicle').dispatchEvent(new Event('change'))}};
