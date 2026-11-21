@@ -164,14 +164,14 @@ let selectedReception=null;function showReception(r){
  const fields=document.querySelector('#receptionFields');fields.replaceChildren();
  const raw=r.raw||{},value=(...keys)=>{for(const key of keys){const v=raw[key]??r[key];if(v!==undefined&&v!==null&&String(v).trim())return String(v).trim()}return ''};
  const line=(label,keys,type)=>{const item=document.createElement('div');item.className='item';const title=document.createElement('strong');title.textContent=label;const content=document.createElement('div');content.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px';const v=value(...keys);const span=document.createElement('span');span.textContent=v||'未登録';content.append(span);
- if(v&&type==='tel'&&/^[+0-9()\\-\\s]{8,25}$/.test(v)){const a=document.createElement('a');a.className='btn';a.href='tel:'+v.replace(/[()\\-\\s]/g,'');a.textContent='📞 電話する';content.append(a)}
- if(v&&type==='mail'&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v)){const a=document.createElement('a');a.className='btn';a.href='mailto:'+v;a.textContent='✉️ メール作成';content.append(a)}
+ if(v&&type==='tel'&&/^[+0-9()\-\s]{8,25}$/.test(v)){const a=document.createElement('a');a.className='btn';a.href='tel:'+v.replace(/[()\-\s]/g,'');a.textContent='📞 電話する';content.append(a)}
+ if(v&&type==='mail'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){const a=document.createElement('a');a.className='btn';a.href='mailto:'+v;a.textContent='✉️ メール作成';content.append(a)}
  item.append(title,content);fields.append(item)};
  line('受付番号',['受付ID','受付番号']);line('受付カテゴリ',['受付種別']);line('氏名',['ドライバー名','氏名','申込者氏名']);line('電話番号',['電話番号','携帯電話番号','携帯番号','契約者電話番号'],'tel');line('メールアドレス',['契約者メールアドレス','メールアドレス','Email'],'mail');
  const heading=document.createElement('h4');heading.textContent='緊急連絡先';fields.append(heading);
  line('緊急連絡先氏名',['緊急連絡先氏名','緊急連絡先名']);line('緊急連絡先電話番号',['緊急連絡先電話番号','緊急連絡先TEL'],'tel');line('緊急連絡先メールアドレス',['緊急連絡先メールアドレス','緊急連絡先メアド'],'mail');
  line('受付内容',['受付内容','内容']);line('受付日時',['受付日時']);
- const folder=value('写真フォルダURL');if(/^https:\/\/drive\\.google\\.com\//.test(folder)){const a=document.createElement('a');a.href=folder;a.target='_blank';a.rel='noopener noreferrer';a.textContent='写真フォルダを開く';fields.append(a)}
+ const folder=value('写真フォルダURL');if(/^https:\/\/drive\.google\.com\//.test(folder)){const a=document.createElement('a');a.href=folder;a.target='_blank';a.rel='noopener noreferrer';a.textContent='写真フォルダを開く';fields.append(a)}
  const contract=document.querySelector('#requestContractPanel');contract.classList.toggle('hidden',r.受付種別!=='車両依頼');document.querySelector('#requestContractStatus').textContent='契約状況：'+(r.契約状況||'未確認');
  document.querySelector('#receptionStatus').value=r.ステータス||'未対応';document.querySelector('#receptionAssignee').value=r.担当者||'';document.querySelector('#receptionMemo').value=r.対応メモ||'';
  detail.scrollIntoView({behavior:'smooth',block:'start'});
