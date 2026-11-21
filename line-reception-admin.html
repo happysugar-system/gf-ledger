@@ -71,6 +71,7 @@ const receptionGateway={
  },
  listVehicleRequests(){return this.request('list')},
  detailVehicleRequest(receipt_id){return this.request('detail',{receipt_id})},
+ saveContractStatus(receipt_id,contract_status){return this.request('save_contract',{receipt_id,contract_status})},
  saveVehicleRequest(record){return this.request('save',{record})}
 };
 const gfAdapter={
@@ -177,7 +178,29 @@ let selectedReception=null;async function showReception(r,detailLoaded=false){
  line('受付内容',['受付内容','内容']);line('受付日時',['受付日時']);
  const folder=value('写真フォルダURL');if(/^https:\/\/drive\.google\.com\//.test(folder)){const a=document.createElement('a');a.href=folder;a.target='_blank';a.rel='noopener noreferrer';a.textContent='写真フォルダを開く';fields.append(a)}
  const contentText=value('受付内容');if(contentText){const block=document.createElement('div');block.className='item';const title=document.createElement('h4');title.textContent='申込内容';block.append(title);const items=contentText.replace(/<br\s*\/?\s*>/gi,'\n').split(/\n|\s+\/\s+/).map(x=>x.trim()).filter(Boolean).filter(x=>!/^照合キー\s*[：:]/.test(x));const order=['納車希望','納車予定','稼働開始希望','稼働エリア'];items.sort((a,b)=>{const rank=x=>{const n=order.findIndex(k=>x.startsWith(k));return n<0?99:n};return rank(a)-rank(b)});for(const item of items){const row=document.createElement('div');row.style.cssText='padding:8px 0;border-bottom:1px solid #e5e7eb;white-space:pre-wrap';row.textContent=item;block.append(row)}fields.append(block)}
-const contract=document.querySelector('#requestContractPanel');contract.classList.toggle('hidden',r.受付種別!=='車両依頼');const contractStatus=value('契約状況')||'未送信';const contractSelect=document.querySelector('#gfRequestContractStatus');contractSelect.value=['未送信','送信済み','契約完了'].includes(contractStatus)?contractStatus:'未送信';document.querySelector('#gfContractStatusNote').textContent='現在の契約状況：'+contractStatus+'。旧GF116の確認条件とマイページ同期を確認中のため、保存はまだ無効です。';const mainEmail=value('契約者メールアドレス','メールアドレス'),emergencyEmail=value('緊急連絡先メールアドレス','緊急連絡先メアド');document.querySelector('#gfMainRecipient').textContent=mainEmail||'未登録';document.querySelector('#gfEmergencyRecipient').textContent=emergencyEmail||'未登録';document.querySelector('#gfCopyMain').onclick=()=>mainEmail?navigator.clipboard.writeText(mainEmail).catch(()=>prompt('コピーしてください',mainEmail)):alert('メールアドレスが未登録です');document.querySelector('#gfCopyEmergency').onclick=()=>emergencyEmail?navigator.clipboard.writeText(emergencyEmail).catch(()=>prompt('コピーしてください',emergencyEmail)):alert('メールアドレスが未登録です');
+const contract=document.querySelector('#requestContractPanel');contract.classList.toggle('hidden',r.受付種別!=='車両依頼');const contractStatus=value('契約状況')||'未送信';const contractSelect=document.querySelector('#gfRequestContractStatus');contractSelect.value=['未送信','送信済み','契約完了'].includes(contractStatus)?contractStatus:'未送信';const contractNote=document.querySelector('#gfContractStatusNote'),contractSave=document.querySelector('#gfContractSave');
+ const rawContract=r.raw||{},detailReady=detailLoaded&&Object.prototype.hasOwnProperty.call(rawContract,'受付番号');
+ const ready=rawContract['免許証確認']==='確認OK'&&rawContract['住民票確認']==='確認OK'&&['既存','新規'].includes(rawContract['既存ドライバー確認'])&&rawContract['契約内容確認']==='確認OK'&&(rawContract['既存ドライバー確認']!=='既存'||!!rawContract['確認DriverID']);
+ contractSave.disabled=!detailReady;
+ contractNote.textContent=!detailReady?'詳細情報を取得してから保存できます。':'現在の契約状況：'+contractStatus+(ready?'（書類・契約確認済み）':'（未送信以外は書類・契約確認が必要）');
+ contractSelect.onchange=()=>{contractSave.disabled=!detailReady||contractSelect.value===contractStatus||(contractSelect.value!=='未送信'&&!ready)};
+ contractSave.onclick=async()=>{
+  if(!detailReady||selectedReception!==r)return;
+  const next=contractSelect.value;
+  if(next!=='未送信'&&!ready){alert('書類・ドライバー・契約内容の確認を完了してください。');return}
+  if(!confirm('契約ステータスを「'+next+'」に変更してマイページへ同期しますか？'))return;
+  contractSave.disabled=true;contractNote.textContent='契約ステータスを保存・同期しています…';
+  try{
+   const result=await receptionGateway.saveContractStatus(r.受付ID,next);
+   if(selectedReception!==r)return;
+   r.raw['契約状況']=result.契約状況||next;r.契約状況=r.raw['契約状況'];
+   showReception(r,true);
+   contractNote.textContent='保存しました。マイページ同期：'+(result.マイページ同期?'完了':'変更なし');
+  }catch(e){
+   contractNote.textContent='保存・同期を確認できませんでした：'+e.message+'。再操作前に最新の受付情報を確認してください。';
+   contractSave.disabled=true;
+  }
+ };const mainEmail=value('契約者メールアドレス','メールアドレス'),emergencyEmail=value('緊急連絡先メールアドレス','緊急連絡先メアド');document.querySelector('#gfMainRecipient').textContent=mainEmail||'未登録';document.querySelector('#gfEmergencyRecipient').textContent=emergencyEmail||'未登録';document.querySelector('#gfCopyMain').onclick=()=>mainEmail?navigator.clipboard.writeText(mainEmail).catch(()=>prompt('コピーしてください',mainEmail)):alert('メールアドレスが未登録です');document.querySelector('#gfCopyEmergency').onclick=()=>emergencyEmail?navigator.clipboard.writeText(emergencyEmail).catch(()=>prompt('コピーしてください',emergencyEmail)):alert('メールアドレスが未登録です');
  document.querySelector('#receptionStatus').value=r.ステータス||'未対応';document.querySelector('#receptionAssignee').value=r.担当者||'';document.querySelector('#receptionMemo').value=r.対応メモ||'';
  if(!detailLoaded&&r.受付種別==='車両依頼'&&receptionAuthorized){
   const notice=document.createElement('p');notice.className='muted';notice.textContent='申込者の詳細情報を取得しています…';fields.prepend(notice);
