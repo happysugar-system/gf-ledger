@@ -1,0 +1,27 @@
+name: Reception two-document checks regression
+on:
+  pull_request:
+    paths:
+      - 'line-reception-admin.html'
+      - 'supabase/functions/gf-line-reception-admin/index.ts'
+      - 'tests/reception-two-docs.test.mjs'
+      - '.github/workflows/reception-two-docs.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'line-reception-admin.html'
+      - 'supabase/functions/gf-line-reception-admin/index.ts'
+      - 'tests/reception-two-docs.test.mjs'
+      - '.github/workflows/reception-two-docs.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/reception-two-docs.test.mjs
