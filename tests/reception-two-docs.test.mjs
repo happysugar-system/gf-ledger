@@ -32,3 +32,5 @@ test('契約とマイページの内部整合性は維持',()=>{
  assert.match(api,/gf_mypage_applications_prod/);
  assert.match(api,/gf_reception_access/);
 });
+
+// Read-only regression verification.
