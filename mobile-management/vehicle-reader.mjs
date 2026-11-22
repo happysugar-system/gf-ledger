@@ -8,6 +8,9 @@ export function normalizeVehicle(row) {
   // Sheet headers for three schedule columns have leading spaces, but Supabase JSON keys do not.
   // Preserve the original 63 Sheet headers in the normalized result.
   const ledger = Object.fromEntries(VEHICLE_HEADERS.map(h => [h, data[h] ?? data[h.trimStart()] ?? '']));
+  // 次回予定は既存63列とは別の追加列。APIが返す場合だけ表示する。
+  ledger['次の予定'] = data['次の予定'] ?? '';
+  ledger['次の予定日'] = data['次の予定日'] ?? '';
   ledger.VehicleID = row.vehicle_id ?? data.VehicleID ?? '';
   ledger['車番'] = row.vehicle_number ?? data['車番'] ?? '';
   ledger['更新日時'] = row.updated_at ?? data['更新日時'] ?? '';
