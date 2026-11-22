@@ -41,3 +41,11 @@ test('申込・契約ステータスを残す',()=>{
  assert.match(reception,/契約完了/);
  assert.match(reception,/申込|受付/);
 });
+
+test('複数車両のDriverIDは画面とAPIの両方で保存拒否',()=>{
+ assert.match(editor,/vehicles\.filter\(x=>x\.driver_id===current\.driver_id\)\.length>1/);
+ assert.match(editor,/multiple_vehicles_need_review/);
+ assert.match(api,/vehicle_data->>DriverID/);
+ assert.match(api,/assignments\?\.length!==1/);
+ assert.match(api,/multiple_vehicles_need_review/);
+});
