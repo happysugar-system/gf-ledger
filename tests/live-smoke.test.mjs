@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const BASE='https://happysugar-system.github.io/gf-ledger';
 const API='https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-vehicle-progress-admin';
 const ORIGIN='https://happysugar-system.github.io';
+// Read-only live health checks; never send an authorized write.
 
 test('公開ページ：車両進捗管理が表示できる',async()=>{
   const res=await fetch(BASE+'/vehicle-progress-admin.html',{signal:AbortSignal.timeout(15000)});
@@ -34,4 +35,15 @@ test('進捗API: 認証なしでの保存は拒否する（書込なし）',asyn
 test('進捗API: 許可外Originからの保存は拒否する（書込なし）',async()=>{
   const res=await fetch(API,{method:'POST',headers:{origin:'https://example.org','content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});
   assert.equal(res.status,403);
+});
+
+test('公開マイページ：申込受付・契約締結を含む7段階コードが配信されている',async()=>{
+  const res=await fetch('https://happysugar-system.github.io/gf-mypage-demo/',{signal:AbortSignal.timeout(15000)});
+  assert.equal(res.status,200);
+  const html=await res.text();
+  for(const label of ['申込受付','契約締結','車両準備中','車両手配済み','名義変更前','名義変更中','名義変更済み'])
+    assert.ok(html.includes("'"+label+"'"),'missing: '+label);
+  assert.match(html,/id="deliveryAvailableDate"/);
+  assert.match(html,/id="deliveryConfirmedDate"/);
+  assert.match(html,/gf_driver_vehicle_progress/);
 });
