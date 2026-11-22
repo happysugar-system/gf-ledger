@@ -29,12 +29,15 @@ Deno.serve(async req=>{
  }
  const driverId=clean(body.driver_id),vehicleId=clean(body.vehicle_id),stage=clean(body.stage);
  if(!/^D\d{6}$/.test(driverId)||!vehicleId||vehicleId.length>100||!STAGES.includes(stage)||!validDate(body.delivery_available_date)||!validDate(body.delivery_confirmed_date))return send(400,{error:"invalid_progress"});
- const [{data:vehicles,error:ve},{data:apps,error:ae}]=await Promise.all([
+ const [{data:vehicles,error:ve},{data:assignments,error:assignError},{data:apps,error:ae}]=await Promise.all([
  db.from("gf_vehicles").select("vehicle_id,vehicle_data").eq("vehicle_id",vehicleId).limit(2),
+ db.from("gf_vehicles").select("vehicle_id").eq("vehicle_data->>DriverID",driverId).limit(2),
  db.from("gf_mypage_applications_prod").select("contract_status,updated_at").eq("driver_id",driverId).order("updated_at",{ascending:false}).limit(1)
  ]);
- if(ve||ae)return send(503,{error:"progress_validation_unavailable"});
+ if(ve||assignError||ae)return send(503,{error:"progress_validation_unavailable"});
  if(vehicles?.length!==1||clean(vehicles[0].vehicle_data?.DriverID)!==driverId)return send(409,{error:"vehicle_driver_link_mismatch"});
+ // A driver can have historical vehicles. Never guess which one receives MyPage progress.
+ if(assignments?.length!==1||assignments[0].vehicle_id!==vehicleId)return send(409,{error:"multiple_vehicles_need_review"});
  if(!apps?.length||!["契約完了","契約締結済","契約締結済み"].includes(clean(apps[0].contract_status)))return send(409,{error:"contract_not_completed"});
  const {data:current,error:ce}=await db.from("gf_driver_vehicle_progress").select("*").eq("driver_id",driverId).maybeSingle();
  if(ce)return send(503,{error:"progress_read_failed"});
