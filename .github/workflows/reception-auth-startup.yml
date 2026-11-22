@@ -1,0 +1,25 @@
+name: Reception auth startup regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'line-reception-admin.html'
+      - 'tests/reception-auth-startup.test.mjs'
+      - '.github/workflows/reception-auth-startup.yml'
+  pull_request:
+    paths:
+      - 'line-reception-admin.html'
+      - 'tests/reception-auth-startup.test.mjs'
+      - '.github/workflows/reception-auth-startup.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/reception-auth-startup.test.mjs
