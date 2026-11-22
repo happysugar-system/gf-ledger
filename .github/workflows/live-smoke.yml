@@ -1,5 +1,9 @@
 name: Production web and authentication smoke
 on:
+  pull_request:
+    paths:
+      - 'tests/live-smoke.test.mjs'
+      - '.github/workflows/live-smoke.yml'
   push:
     branches: [main]
     paths:
