@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const BASE='https://happysugar-system.github.io/gf-ledger';
 const API='https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-vehicle-progress-admin';
 const ORIGIN='https://happysugar-system.github.io';
+// Read-only live health checks; never send an authorized write.
 
 test('公開ページ：車両進捗管理が表示できる',async()=>{
   const res=await fetch(BASE+'/vehicle-progress-admin.html',{signal:AbortSignal.timeout(15000)});
