@@ -1,0 +1,24 @@
+name: Production web and authentication smoke
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/live-smoke.test.mjs'
+      - '.github/workflows/live-smoke.yml'
+      - 'vehicle-progress-admin.html'
+      - 'index.html'
+  workflow_dispatch:
+  schedule:
+    - cron: '17 23 * * 1'
+permissions:
+  contents: read
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/live-smoke.test.mjs
