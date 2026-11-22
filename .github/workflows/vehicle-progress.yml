@@ -1,0 +1,22 @@
+name: GOLD FIRST progress safe regression
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'line-reception-admin.html'
+      - 'vehicle-progress-admin.html'
+      - 'supabase/functions/gf-vehicle-progress-admin/index.ts'
+      - 'tests/vehicle-progress.test.mjs'
+      - '.github/workflows/vehicle-progress.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/vehicle-progress.test.mjs
