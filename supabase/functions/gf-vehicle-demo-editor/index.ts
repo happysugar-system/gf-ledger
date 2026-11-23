@@ -17,6 +17,16 @@ if(!a.data)return reply(403,{error:"forbidden"});
 let p;try{p=await req.json()}catch{return reply(400,{error:"invalid_json"})}
 if(!p||p.vehicle_id!=="V999999")return reply(400,{error:"invalid_vehicle"});
 const uuid=(v:unknown)=>typeof v==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+if(p.action==="gas_health"){
+const secret=Deno.env.get("GF_VEHICLE_DEMO_SYNC_TOKEN");
+if(!secret||secret.length<32)return reply(503,{error:"gas_token_missing"});
+try{
+const res=await fetch("https://script.google.com/macros/s/AKfycbzTzeQKR5vMiqBR4JLCCoknooSJNRlaOq4tzaN6uq-DX3ClqQHMhF691kkiRRGh6DiakQ/exec",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"health_check",token:secret}),signal:AbortSignal.timeout(20000)});
+const r=await res.json();
+if(!res.ok||r.ok!==true||r.mode!=="demo"||r.vehicle_id!=="V999999")return reply(503,{error:"gas_health_failed"});
+return reply(200,{ok:true,vehicle_id:"V999999"});
+}catch{return reply(503,{error:"gas_connection_failed"});}
+}
 if(p.action==="save"){
 if(!uuid(p.request_id)||typeof p.expected!=="boolean"||typeof p.desired!=="boolean")return reply(400,{error:"invalid_request"});
 const r=await db.rpc("gf_vehicle_demo_enqueue",{p_actor:user.id,p_request:p.request_id,p_expected:p.expected,p_desired:p.desired});
