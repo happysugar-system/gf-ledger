@@ -14,6 +14,12 @@ Deno.serve(async req=>{
  let p;try{p=JSON.parse(await req.text());}catch{return reply(400,{error:"invalid_json"});}
  if(!p||typeof p!=="object")return reply(400,{error:"invalid_request"});
  const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+ if(p.action==="observe"){
+  if(p.vehicle_id!=="V999999"||typeof p.gps!=="boolean")return reply(400,{error:"invalid_observation"});
+  const {data,error}=await db.from("gf_vehicle_replica_test").upsert({vehicle_id:"V999999",gps:p.gps,observed_at:new Date().toISOString()}).select("vehicle_id,gps").single();
+  if(error)return reply(503,{error:"observation_failed"});
+  return reply(200,data);
+ }
  if(p.action==="claim"){
   const {data,error}=await db.rpc("gf_vehicle_save_claim_test");
   if(error)return reply(503,{error:"claim_failed"});
