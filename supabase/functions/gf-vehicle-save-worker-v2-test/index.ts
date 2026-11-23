@@ -11,6 +11,7 @@ let p;try{p=await req.json()}catch{return reply(400,{error:"invalid_json"})}
 if(!p||p.vehicle_id!=="V999999")return reply(400,{error:"invalid_vehicle"});
 const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 if(p.action==="health")return reply(200,{ok:true,mode:"demo_v2"});
+if(p.action==="observe"){const r=await db.rpc("gf_vehicle_v2_observe_test",{p_fields:p.fields});return r.error?reply(400,{error:"observe_failed"}):reply(200,{observed:r.data===true});}
 if(p.action==="claim"){const r=await db.rpc("gf_vehicle_v2_claim_test");return r.error?reply(503,{error:"claim_failed"}):reply(200,{request:r.data?.[0]??null});}
 if(p.action==="finish"){const uuid=(v:unknown)=>typeof v==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);if(!uuid(p.request_id)||!uuid(p.lease)||!["replica_verified","conflict","reconciliation_required"].includes(p.state))return reply(400,{error:"invalid_request"});const r=await db.rpc("gf_vehicle_v2_finish_test",{p_request:p.request_id,p_lease:p.lease,p_fields:p.fields??null,p_state:p.state});return r.error?reply(409,{error:"finish_failed"}):reply(200,{state:r.data});}
 return reply(400,{error:"invalid_action"});
