@@ -31,7 +31,16 @@ if(p.action==="save"){
 if(!uuid(p.request_id)||typeof p.expected!=="boolean"||typeof p.desired!=="boolean")return reply(400,{error:"invalid_request"});
 const r=await db.rpc("gf_vehicle_demo_enqueue",{p_actor:user.id,p_request:p.request_id,p_expected:p.expected,p_desired:p.desired});
 if(r.error)return reply(r.error.code==="23505"||r.error.message==="conflict"?409:503,{error:"save_not_accepted"});
-return reply(202,{request_id:r.data,state:"accepted"});
+let immediate=false;
+const secret=Deno.env.get("GF_VEHICLE_DEMO_SYNC_TOKEN");
+if(secret&&secret.length>=32){
+try{
+const res=await fetch("https://script.google.com/macros/s/AKfycbzTzeQKR5vMiqBR4JLCCoknooSJNRlaOq4tzaN6uq-DX3ClqQHMhF691kkiRRGh6DiakQ/exec",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"save_now",token:secret}),signal:AbortSignal.timeout(15000)});
+const g=await res.json();
+immediate=res.ok&&g.ok===true&&g.mode==="demo"&&g.vehicle_id==="V999999"&&g.status==="worker_finished";
+}catch{/* queued request remains for scheduled worker */}
+}
+return reply(202,{request_id:r.data,state:"accepted",immediate});
 }
 if(p.action==="read"||p.action==="status"){
 const r=await db.from("gf_vehicle_replica_test").select("gps,observed_at").eq("vehicle_id","V999999").single();
