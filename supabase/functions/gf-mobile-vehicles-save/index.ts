@@ -19,7 +19,21 @@ Deno.serve(async(req:Request)=>{
  if((Array.isArray(staff)?staff[0]:staff)?.access_granted!==true)return reply(403,{error:"staff_access_denied"});
  let p;
  try{const raw=await req.text();if(raw.length>4096)return reply(413,{error:"request_too_large"});p=JSON.parse(raw);}catch{return reply(400,{error:"invalid_json"});}
- if(!p||typeof p.vehicleId!=="string"||!/^V[0-9]{6}$/.test(p.vehicleId)||!p.changes||!p.expected||Object.keys(p.changes).length!==1||Object.keys(p.expected).length!==1||typeof p.changes["GPS有無"]!=="boolean"||typeof p.expected["GPS有無"]!=="boolean")return reply(400,{error:"invalid_request"});
+ const allowed=new Set(["GPS有無","代車貸出先","代車貸出エリア","代車貸出備考"]);
+ const object=(v:unknown)=>v!==null&&typeof v==="object"&&!Array.isArray(v);
+ if(!object(p))return reply(400,{error:"invalid_request"});
+ if(p.action==="status"){
+  if(typeof p.request_id!=="string"||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.request_id))return reply(400,{error:"invalid_request_id"});
+  return reply(503,{error:"writer_not_connected",saved:false});
+ }
+ if(p.action!=="save"||typeof p.request_id!=="string"||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.request_id)||typeof p.vehicleId!=="string"||!/^V[0-9]{6}$/.test(p.vehicleId)||p.vehicleId==="V999999"||!object(p.changes)||!object(p.expected))return reply(400,{error:"invalid_request"});
+ const keys=Object.keys(p.changes);
+ if(!keys.length||keys.length!==Object.keys(p.expected).length||keys.some(k=>!allowed.has(k)||!Object.prototype.hasOwnProperty.call(p.expected,k)))return reply(400,{error:"invalid_fields"});
+ for(const k of keys){
+  const a=p.expected[k],b=p.changes[k];
+  if(a===b)return reply(400,{error:"unchanged_field"});
+  for(const v of [a,b])if(k==="GPS有無"?typeof v!=="boolean":typeof v!=="string"||v.length>1000||/^\s*[=+@-]/.test(v))return reply(400,{error:"invalid_value"});
+ }
  // Never report a successful save until the canonical sheet writer is connected and verified.
  return reply(503,{error:"writer_not_connected",saved:false});
 });
