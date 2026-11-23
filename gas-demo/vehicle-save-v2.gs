@@ -64,3 +64,14 @@ function GFV2_自動同期開始(){
  if(!triggers.length)ScriptApp.newTrigger('GFV2_自動同期').timeBased().everyMinutes(1).create();
  for(const t of triggers.slice(1))ScriptApp.deleteTrigger(t);
 }
+
+function GFV2_dispatch_(body){
+ const token=PropertiesService.getScriptProperties().getProperty('GF_VEHICLE_DEMO_SYNC_TOKEN');
+ if(!token||token.length<32||body.token!==token)return {ok:false,error:'unauthorized'};
+ if(body.action!=='save_v2_now')return {ok:false,error:'invalid_action'};
+ GFV2_自動同期();
+ return {ok:true,mode:'demo_v2',vehicle_id:'V999999'};
+}
+function GFV2_自動同期停止(){
+ for(const t of ScriptApp.getProjectTriggers())if(t.getHandlerFunction()==='GFV2_自動同期')ScriptApp.deleteTrigger(t);
+}
