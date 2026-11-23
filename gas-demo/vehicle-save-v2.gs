@@ -52,3 +52,15 @@ function GFV2_保存ワーカー(){
  console.log(JSON.stringify({request_id:q.request_id,state}));
  }finally{lock.releaseLock();}
 }
+
+function GFV2_初回同期(){
+ const lock=LockService.getScriptLock();lock.waitLock(10000);
+ try{const fields=GFV2_read_(GFV2_sheet_()),r=GFV2_api_({action:'observe',fields});console.log(JSON.stringify({observed:r.observed}));return r.observed;}finally{lock.releaseLock();}
+}
+function GFV2_自動同期(){GFV2_保存ワーカー();GFV2_初回同期();}
+function GFV2_自動同期開始(){
+ GFV2_接続確認();if(!GFV2_初回同期())throw Error('pending request');
+ const triggers=ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='GFV2_自動同期');
+ if(!triggers.length)ScriptApp.newTrigger('GFV2_自動同期').timeBased().everyMinutes(1).create();
+ for(const t of triggers.slice(1))ScriptApp.deleteTrigger(t);
+}
