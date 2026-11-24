@@ -21,7 +21,11 @@ export function createSaveController({api,storage,userId,uuid=()=>crypto.randomU
   if(busy)throw Error('保存処理中です');busy=true;
   try{
    let p=pending();
-   if(p)return await confirm(p,onStatus);
+   if(p){
+    try{await api.status(p.request_id);}
+    catch(e){if(e.status===404){try{await api.enqueue(p);}catch(err){if(err.status===400||err.status===413){storage.removeItem(key);throw err;}if(err.status===401||err.status===403)throw err;}}else if(e.status&&e.status<500)throw e;}
+    return await confirm(p,onStatus);
+   }
    if(!Object.keys(request.changes).length)return 'unchanged';
    p={...request,request_id:uuid()};storage.setItem(key,JSON.stringify(p));
    try{await api.enqueue(p);}catch(e){if(e.status===400||e.status===413){storage.removeItem(key);throw e;}if(e.status===401||e.status===403)throw e;}
