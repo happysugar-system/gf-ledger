@@ -1,0 +1,174 @@
+--- a/gas/名変割当同期.gs
++++ b/gas/名変割当同期.gs
+@@ -13,32 +13,28 @@
+ function GFW_records_(){const s=GFW_newSheet_(),h=GFW_headerMap_(s),v=s.getDataRange().getDisplayValues(),out=[];for(let i=1;i<v.length;i++){const r=v[i],name=(r[h['氏名']]||'').trim();if(!name)continue;out.push({sourceRow:Number(r[h['受付ID']]),sheetRow:i+1,name,company:r[h['所属会社名']]||'',base:r[h['稼働エリア']]||'',memo:r[h['備考']]||'',progress:r[h['進捗']]||'',status:r[h['ステータス']]||'',vehicleId:r[h['割当VehicleID']]||''});}return out;}
+ function GFW_history_(){const s=GFW_newBook_().getSheetByName(GFW_NEW_LOG);if(!s||s.getLastRow()<2)return [];return s.getRange(2,1,s.getLastRow()-1,10).getDisplayValues().map(r=>({time:r[0],sourceRow:Number(r[1]),name:r[2],company:r[3],base:r[4],vehicleId:r[5],plate:r[6],previous:r[7],action:r[8],memo:r[9]}));}
+ function GFW_logSheet_(){const b=GFW_newBook_();let s=b.getSheetByName(GFW_NEW_LOG);if(!s){s=b.insertSheet(GFW_NEW_LOG);s.getRange(1,1,1,10).setValues([GFW_NEW_LOG_HEADERS]);s.setFrozenRows(1);}else if(s.getRange(1,1,1,10).getDisplayValues()[0].join('|')!==GFW_NEW_LOG_HEADERS.join('|'))throw Error('割当履歴の見出しが違います。既存シートを確認');if(!s.isSheetHidden() && b.getSheets().filter(x=>!x.isSheetHidden()).length>1)s.hideSheet();return s;}
+-function GF_名変待ち一覧取得(){const all=GFW_records_(),history=GFW_history_();const waiting=all.filter(x=>!['割当済み','取消','完了'].includes(x.status));const sh=GF_sheet_(),h=GF_headers_(sh),vinCol=GF_col_(h,'車体番号');const vinValues=vinCol&&sh.getLastRow()>1?sh.getRange(2,vinCol,sh.getLastRow()-1,1).getDisplayValues().flat():[];const cars=GF_一覧取得().cars.filter(x=>String(x.status||'').trim()==='空車').map(x=>({id:x.id,plate:x.plate,region:x.region,group:x.group,vin:vinCol?String(vinValues[x.row-2]||'').trim():''}));return {waiting,history:history.filter(x=>x.action==='割当'||x.action==='取消').reverse().slice(0,200),cars};}
++function GF_名変待ち一覧取得(){const all=GFW_records_(),history=GFW_history_();const waiting=all.filter(x=>!['割当済み','取消','完了'].includes(x.status));const sh=GF_sheet_(),h=GF_headers_(sh),vinCol=GF_col_(h,'車体番号');const vinValues=vinCol&&sh.getLastRow()>1?sh.getRange(2,vinCol,sh.getLastRow()-1,1).getDisplayValues().flat():[];const freeIds=new Set(sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn()).getDisplayValues().filter(r=>!r[GF_col_(h,'DriverID')-1]&&!r[GF_col_(h,'現在使用者')-1]).map(r=>r[GF_col_(h,'VehicleID')-1]):[]);const cars=GF_一覧取得().cars.filter(x=>String(x.status||'').trim()==='空車'&&freeIds.has(x.id)).map(x=>({id:x.id,plate:x.plate,region:x.region,group:x.group,vin:vinCol?String(vinValues[x.row-2]||'').trim():''}));return {waiting,history:history.filter(x=>x.action==='割当'||x.action==='取消').reverse().slice(0,200),cars};}
+ function GF_名変待ち診断(){const r=GF_名変待ち一覧取得();Logger.log('名変待ち=%s件 / 履歴=%s件 / 空車=%s台',r.waiting.length,r.history.length,r.cars.length);r.waiting.forEach(x=>Logger.log('受付ID=%s %s / %s / %s',x.sourceRow,x.name,x.company,x.base));return {waiting:r.waiting.length,history:r.history.length,availableCars:r.cars.length};}
+-/** 割当連携：ドライバーマスターの氏名は同姓同名を考慮し、一意の場合のみ採用。
+- * 未登録は仮登録（D000001形式で採番）。同姓同名複数は停止して手動確認。
+- * 既存の車両依頼フォームには触れない。
+- */
+-function GFW_normName_(v){return String(v||'').normalize('NFKC').replace(/[\s　]/g,'').trim();}
+-function GFW_driverSheet_(){const sh=GFW_newBook_().getSheetByName('ドライバーマスター');if(!sh)throw Error('ドライバーマスターが見つかりません');return sh;}
++function GFW_driverSheet_(){
++ const sh=GFW_newBook_().getSheetByName('ドライバーマスター');
++ if(!sh)throw Error('ドライバーマスターが見つかりません');
++ return sh;
++}
+ function GFW_driverPlan_(person){
+- const sh=GFW_driverSheet_(),h=GFW_headerMap_(sh);
+- if(h['DriverID']===undefined||h['氏名']===undefined)throw Error('ドライバーマスターにDriverID・氏名列が必要です');
+- const data=sh.getDataRange().getDisplayValues(),hits=[];let max=0;
+- for(let i=1;i<data.length;i++){
+-  const id=String(data[i][h['DriverID']]||'').trim(),m=id.match(/^D(\d+)$/i);if(m)max=Math.max(max,Number(m[1]));
+-  if(GFW_normName_(data[i][h['氏名']])===GFW_normName_(person.name))hits.push({row:i+1,id,data:data[i]});
+- }
+- if(hits.length>1)throw Error('同姓同名のドライバーが複数います。DriverIDを確認してください: '+person.name);
+- const found=hits[0];if(found&&!found.id)throw Error('既存ドライバーにDriverIDがありません。先に修正してください: '+person.name);
+- if(found){
+-  for(const [field,value] of [['所属会社名',person.company],['稼働エリア',person.base]]){
+-   if(h[field]!==undefined&&value&&found.data[h[field]]&&GFW_normName_(found.data[h[field]])!==GFW_normName_(value))
+-    throw Error('ドライバーマスターの'+field+'が名変待ち管理と不一致です。確認してください: '+person.name);
+-  }
+- }
+- const id=found?found.id:'D'+String(max+1).padStart(6,'0');
+- return {sh,h,row:found?found.row:sh.getLastRow()+1,id,isNew:!found};
++ const waiting=GFW_newSheet_(),h=GFW_headerMap_(waiting);
++ if(h['LINE受付ID']===undefined||h.DriverID===undefined)throw Error('LINE受付ID・DriverID列が必要です');
++ const get=key=>waiting.getRange(person.sheetRow,h[key]+1).getDisplayValue().trim();
++ const bookId=PropertiesService.getScriptProperties().getProperty('GFW_GF138_LINE_BOOK_ID');
++ if(!bookId)throw Error('GF138のLINE受付ブック設定がありません');
++ const identity=GFA_割当DriverIDを照合_(get('LINE受付ID'),get('DriverID'),{
++  line:SpreadsheetApp.openById(bookId),vehicle:GFW_newBook_()
++ });
++ if(identity.state!=='resolved')throw Error(identity.state==='registration_review_required'?'GF138の受付照合が要確認です':'GF138の登録完了を待っています');
++ const sh=GFW_driverSheet_(),dh=GFW_headerMap_(sh);
++ const ids=sh.getRange(2,dh.DriverID+1,sh.getLastRow()-1,1).getDisplayValues();
++ const rows=ids.flatMap(([id],i)=>id.trim()===identity.driver_id?[i+2]:[]);
++ if(rows.length!==1)throw Error('DriverIDが一意ではありません');
++ return {sh,row:rows[0],id:identity.driver_id};
+ }
+ function GFW_snapshot_(edits){return edits.map(e=>({sh:e.sh,row:e.row,col:e.col,value:e.sh.getRange(e.row,e.col).getValue()}));}
+ function GFW_apply_(edits){for(const e of edits){const c=e.sh.getRange(e.row,e.col);if(c.getFormula())throw Error('数式セルは変更できません: '+e.sh.getName()+' '+e.row+','+e.col);c.setValue(e.value);}}
+@@ -54,9 +50,11 @@
+  if(!p||!Number.isInteger(p.sourceRow)||typeof p.name!=='string'||typeof p.vehicleId!=='string')throw Error('割当データが不正です');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+-  const person=GFW_records_().find(x=>x.sourceRow===p.sourceRow);
++  const matchesForReceipt=GFW_records_().filter(x=>x.sourceRow===p.sourceRow);
++  if(matchesForReceipt.length!==1)throw Error('受付IDを一意に特定できません');
++  const person=matchesForReceipt[0];
+   if(!person||person.name!==p.name||['割当済み','取消','完了'].includes(person.status))throw Error('受付情報が変更済みです。再読み込みしてください');
+-  const s=GF_sheet_(),h=GF_headers_(s),required=['VehicleID','現在使用者','車番','区分/ステータス','DriverID'];
++  const s=GF_sheet_(),h=GF_headers_(s),required=['VehicleID','現在使用者','車番','区分/ステータス','DriverID','管理区分'];
+   for(const name of required)if(!GF_col_(h,name))throw Error('車両台帳に必須列がありません: '+name);
+   const n=s.getLastRow()-1;if(n<1)throw Error('車両台帳が空です');
+   const ids=s.getRange(2,GF_col_(h,'VehicleID'),n,1).getDisplayValues().flat();
+@@ -66,23 +64,27 @@
+   if(read('現在使用者')||read('DriverID'))throw Error('既に使用者またはDriverIDがあります。上書きしません');
+   const plate=read('車番');if(!plate)throw Error('車番が空欄です');
+   const d=GFW_driverPlan_(person),dh=GFW_linkColumns_(d.sh);
+-  if(!d.isNew){const assigned=d.sh.getRange(d.row,dh['割当VehicleID']+1).getDisplayValue().trim();if(assigned&&assigned!==p.vehicleId)throw Error('このドライバーには別の車両が割当済みです: '+assigned);}
++  {const assigned=d.sh.getRange(d.row,dh['割当VehicleID']+1).getDisplayValue().trim();if(assigned&&assigned!==p.vehicleId)throw Error('このドライバーには別の車両が割当済みです: '+assigned);}
+   const m=GFW_newSheet_(),mh=GFW_headerMap_(m),mr=person.sheetRow,log=GFW_logSheet_(),edits=[];
+   const addV=(name,val)=>{const c=GF_col_(h,name);if(c)edits.push({sh:s,row,col:c,value:val});};
+-  addV('現在使用者',person.name);addV('DriverID',d.id);addV('区分/ステータス','貸出中');
++  const driverCol=GF_col_(h,'DriverID');
++  if(s.getRange(2,driverCol,n,1).getDisplayValues().some(([id])=>id.trim()===d.id))throw Error('このドライバーは割当済みです');
++  const previousManagement=read('管理区分');
++  addV('現在使用者',person.name);addV('DriverID',d.id);addV('管理区分','車両準備中');
+   for(const [name,val] of [['所属会社名',person.company],['稼働エリア',person.base]])if(val&&GF_col_(h,name)&&!read(name))addV(name,val);
+   addV('更新日時',new Date());
+-  if(d.isNew){GFW_edit_(edits,d.sh,dh,d.row,'DriverID',d.id);GFW_edit_(edits,d.sh,dh,d.row,'氏名',person.name);}
+-  for(const [name,val] of [['所属会社名',person.company],['稼働エリア',person.base]])if(val&&(d.isNew||!d.sh.getRange(d.row,dh[name]===undefined?dh['氏名']+1:dh[name]+1).getDisplayValue()))GFW_edit_(edits,d.sh,dh,d.row,name,val);
+   GFW_edit_(edits,d.sh,dh,d.row,'割当VehicleID',p.vehicleId);GFW_edit_(edits,d.sh,dh,d.row,'割当車番',plate);
+-  for(const [name,val] of [['ステータス','割当済み'],['割当VehicleID',p.vehicleId],['割当車番',plate],['割当日時',new Date()]])GFW_edit_(edits,m,mh,mr,name,val);
++  for(const [name,val] of [['DriverID',d.id],['ステータス','割当済み'],['割当VehicleID',p.vehicleId],['割当車番',plate],['割当日時',new Date()]])GFW_edit_(edits,m,mh,mr,name,val);
+   const snap=GFW_snapshot_(edits);
+   try{
+    GFW_apply_(edits);
+-   log.appendRow([new Date(),person.sourceRow,person.name,person.company,person.base,p.vehicleId,plate,'','割当',JSON.stringify({driverId:d.id,driverCreated:d.isNew,memo:String(p.memo||'').slice(0,200)})]);
++   log.appendRow([new Date(),person.sourceRow,person.name,person.company,person.base,p.vehicleId,plate,'','割当',JSON.stringify({driverId:d.id,driverCreated:false,previousManagement,memo:String(p.memo||'').slice(0,200)})]);
+    SpreadsheetApp.flush();
+   }catch(err){try{GFW_restore_(snap);SpreadsheetApp.flush();}catch(re){throw Error('割当処理が失敗し、復元にも失敗。手動確認が必要: '+err.message+' / '+re.message);}throw Error('割当失敗。変更を復元しました: '+err.message);}
+-  return {ok:true,name:person.name,plate,vehicleId:p.vehicleId,driverId:d.id,driverCreated:d.isNew};
++  let queueId;
++  try{queueId=GFW_queueAdd_(p.vehicleId,'割当',d.id);}
++  catch(e){throw Error('割当保存済み／同期キュー登録失敗。再割当せず同期依頼を確認してください');}
++  return {ok:true,name:person.name,plate,vehicleId:p.vehicleId,driverId:d.id,driverCreated:false,queueId};
+  }finally{lock.releaseLock();}
+ }
+ /** 取消：車両と名変待ちを戻す。ドライバー本人の登録は削除しない。 */
+@@ -90,26 +92,34 @@
+  if(!p||!Number.isInteger(p.sourceRow))throw Error('受付IDが不正です');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+-  const person=GFW_records_().find(x=>x.sourceRow===p.sourceRow);if(!person)throw Error('受付が見つかりません');
++  const matchesForReceipt=GFW_records_().filter(x=>x.sourceRow===p.sourceRow);
++  if(matchesForReceipt.length!==1)throw Error('受付IDを一意に特定できません');
++  const person=matchesForReceipt[0];if(!person)throw Error('受付が見つかりません');
+   const latest=GFW_history_().filter(x=>x.sourceRow===p.sourceRow).slice(-1)[0];if(!latest||latest.action!=='割当')throw Error('取消可能な割当がありません');
+   const s=GF_sheet_(),h=GF_headers_(s),n=s.getLastRow()-1,ids=s.getRange(2,GF_col_(h,'VehicleID'),n,1).getDisplayValues().flat();
+   const rows=ids.map((x,i)=>x===latest.vehicleId?i+2:0).filter(Boolean);if(rows.length!==1)throw Error('対象車両が特定できません');
+   const row=rows[0],val=name=>s.getRange(row,GF_col_(h,name)).getDisplayValue().trim();
+   if(val('現在使用者')!==latest.name)throw Error('車両の現在使用者が変更されています。自動取消できません');
+-  if(val('区分/ステータス')!=='貸出中'&&val('区分/ステータス')!=='空車')throw Error('車両ステータスが変更済みです。手動確認してください');
+-  const d=GFW_driverPlan_(person);if(d.isNew)throw Error('該当DriverIDがドライバーマスターにありません。手動確認してください');
+-  if(val('DriverID')&&val('DriverID')!==d.id)throw Error('DriverIDが不一致です');
++  const d=GFW_driverPlan_(person);
++  if(val('DriverID')!==d.id||person.vehicleId!==latest.vehicleId)throw Error('割当のDriverIDまたはVehicleIDが一致しません');
++  let assignment;
++  try{assignment=JSON.parse(latest.memo);}catch(e){throw Error('割当履歴の確認が必要です');}
++  if(!assignment||assignment.driverId!==d.id||typeof assignment.previousManagement!=='string'||val('管理区分')!=='車両準備中')
++   throw Error('割当時の管理区分を確認してください');
+   const dh=GFW_linkColumns_(d.sh),m=GFW_newSheet_(),mh=GFW_headerMap_(m),edits=[];
+   const add=(sh,row,col,value)=>{if(col)edits.push({sh,row,col,value});};
+   add(s,row,GF_col_(h,'現在使用者'),'');add(s,row,GF_col_(h,'DriverID'),'');
+-  if(val('区分/ステータス')==='貸出中')add(s,row,GF_col_(h,'区分/ステータス'),'空車');
++  add(s,row,GF_col_(h,'管理区分'),assignment.previousManagement);
+   add(s,row,GF_col_(h,'更新日時'),new Date());
+   if(d.sh.getRange(d.row,dh['割当VehicleID']+1).getDisplayValue().trim()===latest.vehicleId){GFW_edit_(edits,d.sh,dh,d.row,'割当VehicleID','');GFW_edit_(edits,d.sh,dh,d.row,'割当車番','');}
+   for(const [name,value] of [['ステータス','名変待ち'],['割当VehicleID',''],['割当車番',''],['割当日時','']])GFW_edit_(edits,m,mh,person.sheetRow,name,value);
+   const snap=GFW_snapshot_(edits);
+   try{GFW_apply_(edits);GFW_logSheet_().appendRow([new Date(),person.sourceRow,person.name,person.company,person.base,latest.vehicleId,latest.plate,latest.name,'取消',String(p.memo||'').slice(0,500)]);SpreadsheetApp.flush();}
+   catch(err){GFW_restore_(snap);SpreadsheetApp.flush();throw Error('取消失敗。変更を復元しました: '+err.message);}
+-  return {ok:true};
++  let queueId;
++  try{queueId=GFW_queueAdd_(latest.vehicleId,'取消','');}
++  catch(e){throw Error('取消保存済み／同期キュー登録失敗。再取消せず同期依頼を確認してください');}
++  return {ok:true,vehicleId:latest.vehicleId,queueId};
+  }finally{lock.releaseLock();}
+ }
+ /** 一度だけ実行：旧社長シートと旧割当履歴を新スプシへ移行。既存新シートには重複追加しない。 */
+@@ -158,19 +168,12 @@
+ function GF_名変待ち車両割当(p){
+  // 既存の割当本体で車両台帳・ドライバーマスター・名変待ち管理を更新
+  const result=GFW_割当本体_(p);
+- try{result.queueId=GFW_queueAdd_(result.vehicleId,'割当',result.driverId);}
+- catch(e){throw Error('【割当保存済み／同期キュー登録失敗】再割当しないでください。VehicleID='+result.vehicleId+' / '+e.message);}
+  try{GFW_linkDriver_(result.vehicleId,result.driverId);result.link='設定済み';}
+  catch(e){result.link='リンク未設定: '+e.message;Logger.log(result.link);}
+  return result;
+ }
+ function GF_名変待ち割当取消(p){
+- const person=GFW_records_().find(x=>x.sourceRow===Number(p&&p.sourceRow));
+- if(!person)throw Error('対象の受付がありません');
+- const vehicleId=person.vehicleId;
+  const result=GFW_取消本体_(p);
+- if(vehicleId){try{result.queueId=GFW_queueAdd_(vehicleId,'取消','');}
+- catch(e){throw Error('【取消保存済み／同期キュー登録失敗】再取消しないでください。VehicleID='+vehicleId+' / '+e.message);}}
+  return result;
+ }
+ /** 過去の割当を再操作せずに同期依頼。名変待ち管理の割当VehicleIDを使用。 */
+@@ -182,7 +185,7 @@
+  let registered=0,skipped=0;
+  for(const p of rows){
+   const matches=data.filter(r=>r[ix('VehicleID')]===p.vehicleId);
+-  if(matches.length!==1||matches[0][ix('現在使用者')]!==p.name||matches[0][ix('区分/ステータス')]!=='貸出中'){skipped++;Logger.log('要確認：'+p.name+' / '+p.vehicleId);continue;}
++  if(matches.length!==1||matches[0][ix('現在使用者')]!==p.name||!matches[0][ix('DriverID')]){skipped++;Logger.log('要確認：'+p.name+' / '+p.vehicleId);continue;}
+   if(q.some(r=>r[2]===p.vehicleId&&r[3]==='割当'&&['待機','実行中','完了'].includes(r[5]))){skipped++;continue;}
+   const did=matches[0][ix('DriverID')]||'';
+   GFW_queueAdd_(p.vehicleId,'割当',did);registered++;
