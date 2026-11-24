@@ -17,3 +17,23 @@ jobs:
         with:
           node-version: '22'
       - run: node --test tests/vehicle-save-controller.test.mjs tests/vehicle-ordinary-validation.test.mjs tests/vehicle-basic-patch.test.mjs
+  sql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: disposable_test_only
+          POSTGRES_DB: vehicle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: psql -h 127.0.0.1 -U postgres -d vehicle_test -f tests/sql/vehicle-production-integration.test.sql
+        env:
+          PGPASSWORD: disposable_test_only
