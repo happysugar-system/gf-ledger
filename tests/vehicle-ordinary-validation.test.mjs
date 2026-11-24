@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateOrdinaryValue as v} from '../mobile-management/vehicle-ordinary-validation.mjs';
+import {validateOrdinaryValue as validate} from '../mobile-management/vehicle-ordinary-validation.mjs';
+const v=(field,value,meta)=>validate(field,value,{formula:false,protected:false,merged:false,...meta});
 test('preserves leading zeros',()=>assert.equal(v('GPS番号','00123',{kind:'text'}),'00123'));
 test('native checkbox',()=>{assert.equal(v('GPS有無',false,{kind:'checkbox'}),false);assert.throws(()=>v('GPS有無','false',{kind:'checkbox'}));});
 test('dropdown',()=>{assert.equal(v('駆動','4WD',{kind:'list',options:['4WD']}),'4WD');assert.throws(()=>v('駆動','other',{kind:'list',options:['4WD']}));});
@@ -8,3 +9,6 @@ test('numeric bounds',()=>{assert.equal(v('走行距離(km)',0,{kind:'number',mi
 test('blank policy',()=>{assert.equal(v('備考','',{kind:'text',allowBlank:true}),'');assert.throws(()=>v('備考','',{kind:'text'}));});
 test('reject unsafe or unknown cells',()=>{for(const m of [{kind:'text',formula:true},{kind:'text',protected:true},{kind:'unknown'}])assert.throws(()=>v('備考','abc',m));assert.throws(()=>v('備考','=1+1',{kind:'text'}));});
 test('workflow and identity cannot use ordinary writer',()=>{for(const k of ['納車予定日','現在使用者','VehicleID'])assert.throws(()=>v(k,'abc',{kind:'text'}));});
+
+test('unknown rule cannot be cleared',()=>assert.throws(()=>v('備考','',{kind:'unknown',allowBlank:true})));
+test('missing safety metadata fails closed',()=>assert.throws(()=>validate('備考','abc',{kind:'text'})));
