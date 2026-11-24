@@ -131,9 +131,12 @@ el("refresh").addEventListener("click",()=>task(async()=>{
 }));
 el("save").addEventListener("click",()=>task(async()=>{
  if(localStorage.getItem(storage()))throw Error("すでに確認中の受付があります。");
- await refresh();
- if(blocked||snapshot.driverId!=="D999901")throw Error("現在の車両は編集できません。");
  const target=values(),available=target[1],confirmed=target[2];
+ const latest=await api("read");
+ const stillCurrent=latest.vehicle_id===snapshot?.vehicleId&&latest.driver_id===snapshot?.driverId&&
+   JSON.stringify(latest.values)===JSON.stringify(snapshot?.values);
+ if(!stillCurrent||latest.blocked){await refresh();throw Error("保存前に台帳が更新されました。最新状態を確認してください。");}
+ if(blocked||snapshot.driverId!=="D999901")throw Error("現在の車両は編集できません。");
  if(!stages.includes(target[0]))throw Error("現在のテストで使える進捗名を入力してください。");
  if(available&&confirmed&&confirmed<available)throw Error("納車確定日が納車可能日より前です。");
  if(!confirm("検証用の車両台帳に進捗・日付の変更を保存しますか？"))return;
