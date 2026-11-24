@@ -54,7 +54,7 @@ begin
   end loop;
   -- Compare replica before merging changed keys only; other fields untouched.
   update public.gf_vehicles set vehicle_data=vehicle_data||q.changes,updated_at=clock_timestamp() where vehicle_id=q.vehicle_id and vehicle_data @> q.expected;
-  if not found then p_state:='reconciliation_required'; end if;
+  if not found and not exists(select 1 from public.gf_vehicles where vehicle_id=q.vehicle_id and vehicle_data @> q.changes) then p_state:='reconciliation_required'; end if;
  end if;
  update public.gf_vehicle_save_queue set state=p_state,verified_fields=case when p_state='replica_verified' then p_fields else null end,verified_at=case when p_state='replica_verified' then clock_timestamp() else null end where request_id=p_request;
  return jsonb_build_object('state',p_state);
