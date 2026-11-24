@@ -1,4 +1,4 @@
-// Draft only: authenticated request validation, deliberately no database or GAS writes.
+// Draft only. Production activation requires reviewed deployment and explicit environment gate.
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 const origin="https://happysugar-system.github.io";
 const cors={"Access-Control-Allow-Origin":origin,"Access-Control-Allow-Methods":"POST, OPTIONS","Access-Control-Allow-Headers":"authorization, apikey, content-type","Vary":"Origin","Content-Type":"application/json","Cache-Control":"no-store"};
@@ -18,13 +18,20 @@ Deno.serve(async(req:Request)=>{
  if(se)return reply(503,{error:"authorization_unavailable"});
  if((Array.isArray(staff)?staff[0]:staff)?.access_granted!==true)return reply(403,{error:"staff_access_denied"});
  let p;
- try{const raw=await req.text();if(raw.length>4096)return reply(413,{error:"request_too_large"});p=JSON.parse(raw);}catch{return reply(400,{error:"invalid_json"});}
+ try{const raw=await req.text();if(raw.length>32768)return reply(413,{error:"request_too_large"});p=JSON.parse(raw);}catch{return reply(400,{error:"invalid_json"});}
+ if(url!=="https://tgxrnrqxafytyqfwwsag.supabase.co"||Deno.env.get("GF_VEHICLE_PRODUCTION_WRITE_ENABLED")!=="true")return reply(503,{error:"writer_disabled"});
+ const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+ if(!serviceKey)return reply(503,{error:"service_unavailable"});
+ const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
  const allowed=new Set(["GPS有無","代車貸出先","代車貸出エリア","代車貸出備考"]);
  const object=(v:unknown)=>v!==null&&typeof v==="object"&&!Array.isArray(v);
  if(!object(p))return reply(400,{error:"invalid_request"});
  if(p.action==="status"){
   if(typeof p.request_id!=="string"||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.request_id))return reply(400,{error:"invalid_request_id"});
-  return reply(503,{error:"writer_not_connected",saved:false});
+  const {data,error}=await admin.from("gf_vehicle_save_queue").select("request_id,vehicle_id,state,verified_fields,verified_at").eq("actor_id",identity.user.id).eq("request_id",p.request_id).maybeSingle();
+  if(error)return reply(503,{error:"status_unavailable"});
+  if(!data)return reply(404,{error:"request_not_found"});
+  return reply(200,{...data,vehicleId:data.vehicle_id});
  }
  if(p.action!=="save"||typeof p.request_id!=="string"||! /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.request_id)||typeof p.vehicleId!=="string"||!/^V[0-9]{6}$/.test(p.vehicleId)||p.vehicleId==="V999999"||!object(p.changes)||!object(p.expected))return reply(400,{error:"invalid_request"});
  const keys=Object.keys(p.changes);
@@ -35,5 +42,7 @@ Deno.serve(async(req:Request)=>{
   for(const v of [a,b])if(k==="GPS有無"?typeof v!=="boolean":typeof v!=="string"||v.length>1000||/^\s*[=+@-]/.test(v))return reply(400,{error:"invalid_value"});
  }
  // Never report a successful save until the canonical sheet writer is connected and verified.
- return reply(503,{error:"writer_not_connected",saved:false});
+ const {data,error}=await admin.rpc("gf_vehicle_save_enqueue",{p_actor:identity.user.id,p_request:p.request_id,p_vehicle:p.vehicleId,p_expected:p.expected,p_changes:p.changes});
+ if(error)return reply(error.code==="P0001"||error.code==="23505"?409:503,{error:"enqueue_unconfirmed"});
+ return reply(202,data);
 });
