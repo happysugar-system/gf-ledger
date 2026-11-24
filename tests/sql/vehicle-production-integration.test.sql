@@ -30,3 +30,21 @@ reset role;
 do $$ begin
  if has_function_privilege('anon','public.gf_vehicle_save_claim()','execute') or has_function_privilege('authenticated','public.gf_vehicle_save_claim()','execute') then raise exception 'permission leak'; end if;
 end $$;
+
+insert into public.gf_vehicles values('V000002','{"GPS有無":"","代車貸出先":"","代車貸出エリア":"","代車貸出備考":""}',now());
+set role service_role;
+do $$
+declare q jsonb; r jsonb; a uuid:='00000000-0000-4000-8000-000000000001'; id uuid:='00000000-0000-4000-8000-000000000003';
+begin
+ r:=public.gf_vehicle_save_enqueue(a,id,'V000002','{"代車貸出先":""}','{"代車貸出先":"テスト"}');
+ q:=public.gf_vehicle_save_claim();
+ r:=public.gf_vehicle_save_finish(id,(q->>'lease')::uuid,'replica_verified','{"GPS有無":"","代車貸出先":"テスト","代車貸出エリア":"","代車貸出備考":""}');
+ if r->>'state' is distinct from 'replica_verified' then raise exception 'blank GPS loan save failed'; end if;
+ if not exists(select 1 from public.gf_vehicles where vehicle_id='V000002' and vehicle_data @> '{"GPS有無":"","代車貸出先":"テスト"}') then raise exception 'blank GPS not preserved'; end if;
+ id:='00000000-0000-4000-8000-000000000004';
+ r:=public.gf_vehicle_save_enqueue(a,id,'V000002','{"GPS有無":""}','{"GPS有無":true}');
+ q:=public.gf_vehicle_save_claim();
+ r:=public.gf_vehicle_save_finish(id,(q->>'lease')::uuid,'replica_verified','{"GPS有無":true,"代車貸出先":"テスト","代車貸出エリア":"","代車貸出備考":""}');
+ if r->>'state' is distinct from 'replica_verified' then raise exception 'blank to checked failed'; end if;
+end $$;
+reset role;
