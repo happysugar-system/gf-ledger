@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - 'fix/demo-save-confirmation-20261124'
+      - main
 permissions:
   contents: read
 jobs:
