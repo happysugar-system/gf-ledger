@@ -39,7 +39,8 @@ Deno.serve(async(req:Request)=>{
  for(const k of keys){
   const a=p.expected[k],b=p.changes[k];
   if(a===b)return reply(400,{error:"unchanged_field"});
-  for(const v of [a,b])if(k==="GPS有無"?typeof v!=="boolean":typeof v!=="string"||v.length>1000||/^\s*[=+@-]/.test(v))return reply(400,{error:"invalid_value"});
+  if(k==="GPS有無"&&typeof b!=="boolean")return reply(400,{error:"invalid_gps_change"});
+  for(const v of [a,b])if(k==="GPS有無"?(v!==""&&typeof v!=="boolean"):typeof v!=="string"||v.length>1000||/^\s*[=+@-]/.test(v))return reply(400,{error:"invalid_value"});
  }
  // Never report a successful save until the canonical sheet writer is connected and verified.
  const {data,error}=await admin.rpc("gf_vehicle_save_enqueue",{p_actor:identity.user.id,p_request:p.request_id,p_vehicle:p.vehicleId,p_expected:p.expected,p_changes:p.changes});
