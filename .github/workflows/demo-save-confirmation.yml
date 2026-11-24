@@ -1,0 +1,20 @@
+name: Demo save confirmation
+on:
+  pull_request:
+    paths:
+      - 'mobile-management/demo-save*'
+      - '.github/workflows/demo-save-confirmation.yml'
+  push:
+    branches:
+      - 'fix/demo-save-confirmation-20261124'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test mobile-management/demo-save-confirmation.test.mjs
