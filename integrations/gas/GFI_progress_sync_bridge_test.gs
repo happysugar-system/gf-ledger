@@ -39,23 +39,3 @@ function GFI_進捗管理同期_() {
     return {status:'synced',stage:record['管理区分']};
   } finally {lock.releaseLock();}
 }
-/** 稼働中の GFI_UI受付処理 をこの完全版に置換。重複定義にしないこと。 */
-function GFI_UI受付処理(){
-  GFI_確認_();
-  const claimed=GFI_UI通信_({action:'claim'});
-  const q=claimed.request;
-  if(q){
-    try {
-      if(!['assign','cancel'].includes(q.action))throw Error('受付種別不正');
-      GFI_実行_(q.action==='assign');
-      GFI_UI通信_({action:'finish',request_id:q.request_id});
-      console.log('画面受付・保存照合完了 '+q.request_id);
-    }catch(e){
-      try{GFI_UI通信_({action:'fail',request_id:q.request_id});}
-      catch(f){console.error('受付状態要確認: '+f.message);}
-      throw e;
-    }
-  }
-  const state=GFI_進捗管理同期_();
-  console.log('車両台帳→Supabase進捗 '+state.status);
-}
