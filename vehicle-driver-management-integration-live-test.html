@@ -1,0 +1,126 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GOLD FIRST｜スマホ車両管理 Ver.9</title>
+<style>
+:root{font-family:system-ui,'Noto Sans JP',sans-serif;color:#213047;background:#eef3f7}*{box-sizing:border-box}body{margin:0}.app{max-width:510px;margin:auto;min-height:100dvh;background:#f7f9fc;padding-bottom:94px}.head{background:#173b64;color:white;padding:21px 18px 17px;position:sticky;top:0;z-index:2}.head small{opacity:.75}.head h1{font-size:20px;margin:5px 0 0}.main{padding:16px}.box{background:white;border:1px solid #e2e8ef;border-radius:16px;padding:16px;margin-bottom:13px;box-shadow:0 2px 7px #19334c08}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{text-align:center;padding:13px 5px}.stat strong{font-size:23px;display:block;color:#173b64}.stat small{font-size:11px;color:#718096}.action{width:100%;border:1px solid #dbe3ed;border-radius:13px;background:white;padding:15px;text-align:left;font-weight:750;font-size:15px;margin:7px 0;color:#24364b;cursor:pointer}.action span{display:block;font-weight:400;color:#6b7a8c;font-size:12px;margin-top:4px}.primary{background:#176cbd;color:white;border:0;text-align:center}.secondary{background:#edf5fc;color:#1761a2}.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(510px,100%);display:grid;grid-template-columns:repeat(4,1fr);background:white;border-top:1px solid #dbe3ed;z-index:4}.tabs button{border:0;background:white;padding:10px 2px;color:#64748b;font-size:11px;cursor:pointer}.tabs button.active{color:#176cbd;font-weight:800;background:#edf5fc}.tabs b{display:block;font-size:22px;margin-bottom:2px}.back{border:0;background:none;color:#176cbd;font-weight:700;font-size:15px;padding:0 0 13px;cursor:pointer}.item{width:100%;background:white;border:1px solid #dbe3ed;border-radius:12px;padding:14px;margin:8px 0;text-align:left;color:#24364b;cursor:pointer}.item strong{display:block;font-size:16px}.item small{color:#718096}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.muted{color:#718096;font-size:13px}.field{margin:12px 0}.field label{display:block;font-size:12px;color:#65748a;margin-bottom:5px}input,select,textarea{width:100%;border:1px solid #ccd7e3;border-radius:10px;padding:12px;font:inherit;background:white;color:#213047}textarea{min-height:75px}.pill{display:inline-block;border-radius:20px;background:#e5f4ec;color:#17663b;padding:5px 11px;font-size:12px;font-weight:700}.detailtabs{display:flex;gap:7px;overflow-x:auto;padding:5px 0 12px}.detailtabs button{border:1px solid #dbe3ed;border-radius:11px;background:#edf5fc;padding:10px;color:#1761a2;white-space:nowrap;cursor:pointer}.detailtabs button.active{background:#176cbd;color:white}.notice{background:#eaf4ff;border-radius:12px;padding:12px;margin:0 0 15px;color:#375c81;font-size:12px}.log{padding:11px 0;border-bottom:1px solid #e8edf3}.locked{padding:10px 0;border-bottom:1px solid #e8edf3}.locked b{display:block;color:#65748a;font-size:12px}.hidden{display:none!important}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}button:disabled{opacity:.5;cursor:not-allowed}
+</style></head><body><div class="app"><header class="head"><small>GOLD FIRST / スタッフ用アプリ</small><h1>🚗 車両・ドライバー管理</h1></header><main class="main"><div class="notice" id="state">統合検証版：実保存は TEST-001 のみ。その他は従来のサンプルです。</div><div id="content"></div><section id="savePanel" hidden></section><section id="integrationPanel" class="box" hidden><h3>実保存テスト</h3><p>TEST-001 ／ テスト運転者A ／ D999901</p><form id="login"><label>テスト用メール<input id="email" type="email" required autocomplete="username"></label><label>パスワード<input id="pw" type="password" required autocomplete="current-password"></label><button>ログイン</button></form><button id="assign" disabled>車両割当</button><button id="cancel" disabled>割当取消</button><button id="check" disabled>保存状況を確認</button><p id="msg" role="status" aria-live="polite">ログインしてください</p></section></main><nav class="tabs" id="nav"></nav></div>
+<script type="module">
+import { normalizeVehicle, filterVehicles } from './mobile-management/vehicle-reader.mjs';
+import { mountDemoSave, FIELDS as SAVE_FIELDS } from './mobile-management/demo-save-basic.staged.mjs';
+import { VEHICLE_HEADERS } from './mobile-management/vehicle-schema.mjs';
+const $=id=>document.getElementById(id),safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const groups=[['基本・車両情報',[0,1,2,3,4,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,56]],['使用者・契約情報',[5,6,7,8,9,10,11,12,13,14,15,16,17,18]]];
+const section={action:[45,46,47,48,49,52,53,54],schedule:[37,38,39,40,41,42,43,50,51,55],files:[57,58,59,61,62],history:[60,44]};
+const locked=new Set(['VehicleID','DriverID','車番','車体番号','現在使用者','区分/ステータス','管理区分','更新日時','引渡し','代車開始日','代車返却日','返却/12点検','予定反映状況']);
+let waiting=[],waitingError='',waitingSyncedAt=null,carView='vehicles',selectedAssignments={},cars=[],page='home',carId=null,detailTab='basic',ledgerSection=0,query='',filter='すべて',draft=null,ready=false,planDrafts=[];
+const car=()=>cars.find(x=>x.VehicleID===carId);
+const dateKey=k=>/予定日|満了日|変更日|開始日|返却日/.test(k);
+const toDate=v=>{const m=String(v||'').match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);return m?m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0'):'';};
+const field=k=>{const v=draft?.[k]??'',disabled=locked.has(k),kind=dateKey(k)?'date':'text';return '<div class="field"><label>'+safe(k.trim())+(disabled?' 🔒':'')+'</label>'+(disabled?'<div class="locked">'+safe(v||'未登録')+'</div>':/備考/.test(k)?'<textarea data-field="'+safe(k)+'">'+safe(v)+'</textarea>':'<input data-field="'+safe(k)+'" type="'+kind+'" value="'+safe(kind==='date'?toDate(v):v)+'">')+'</div>';};
+const managementGroup=x=>String(x['管理区分']||'').trim()||'通常管理';
+const groupNames=()=>['すべて','空車',...new Set(cars.map(managementGroup).filter(x=>x!=='通常管理'&&x!=='空車')),'通常管理'];
+const matchesGroup=(x,name)=>name==='すべて'||(name==='空車'?String(x['区分/ステータス']||'').trim()==='空車':managementGroup(x)===name);
+const planTypes=[['車検','車検予定日'],['12点検',' 12点検予定日'],['名義変更','名変予定日'],['整備',' 整備予定日'],['板金',' 板金予定日'],['納車予定','納車予定日'],['返却予定','返却予定日'],['代車開始予定','代車予定日'],['代車返却予定','代車返却予定日']];
+const validDriveLink=value=>{const raw=String(value||'').trim();if(!raw)return null;const id=raw.match(/^[a-zA-Z0-9_-]{25,}$/);if(id)return 'https://drive.google.com/drive/folders/'+encodeURIComponent(raw);try{const u=new URL(raw);if(u.protocol!=='https:'||!['drive.google.com','docs.google.com'].includes(u.hostname))return null;return u.href;}catch{return null;}};
+const fileLink=(k,value)=>{const url=validDriveLink(value);return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+(url?'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer">📂 Google Driveで開く ↗</a>':safe(value||'未登録（台帳にリンクがありません）'))+'</div></div>';};
+const scheduleItems=(onlyId=null)=>{const out=[];for(const x of cars){if(onlyId&&x.VehicleID!==onlyId)continue;for(const [name,k] of planTypes){const v=x[k];if(v)out.push({date:String(v),type:name,plate:x['車番'],id:x.VehicleID});}}return out.sort((a,b)=>a.date.localeCompare(b.date));};
+const scheduleRows=items=>items.length?items.map(v=>'<button class="item" data-car="'+safe(v.id)+'"><strong>'+safe(v.date)+'　'+safe(v.type)+'</strong><small>'+safe(v.plate)+'</small></button>').join(''):'<p class="muted">登録済みの予定はありません</p>';
+function nav(){const opts=[['home','🏠','ホーム'],['cars','🚗','車両'],['drivers','👤','ドライバー'],['schedule','📅','予定']];$('nav').innerHTML=opts.map(([p,i,t])=>'<button data-page="'+p+'" class="'+((page===p)||(p==='cars'&&page==='car')?'active':'')+'"><b>'+i+'</b>'+t+'</button>').join('');}
+function go(p){if(p==='drivers')driverId=null;if(p==='cars')carView='vehicles';page=p;draft=null;render();window.scrollTo(0,0);}
+function openCar(id){carId=id;detailTab='basic';ledgerSection=0;draft={...car()};page='car';render();window.scrollTo(0,0);}
+function changed(){const x=car();return Object.keys(draft||{}).filter(k=>String(x[k]??'')!==String(draft[k]??''));}
+function render(){nav();let h='';
+if(!ready){$('content').innerHTML='<div class="box">車両データを読み込んでいます…</div>';return;}
+if(page==='home'){h='<h2>今日の管理</h2><div class="stats"><div class="box stat"><strong>'+cars.length+'</strong><small>登録車両</small></div><div class="box stat"><strong>'+cars.filter(x=>x['区分/ステータス']==='貸出中').length+'</strong><small>貸出中</small></div><div class="box stat"><strong>'+cars.filter(x=>x['管理区分']&&x['管理区分']!=='通常管理').length+'</strong><small>要確認</small></div></div><h2>何をしますか？</h2><button class="action" data-page="cars">🚗 車両を探す・編集する<span>車両台帳63項目・貸出返却・予定・写真・書類</span></button><button class="action" data-page="drivers">👤 ドライバーを探す<span>登録済み車両との紐付けを確認</span></button><button class="action" data-page="schedule">📅 車両の予定を見る<span>車検・返却・代車など</span></button>';}
+if(page==='cars' && carView==='waiting'){const available=cars.filter(x=>x.VehicleID==='DEMO-V02'&&String(x['区分/ステータス']||'').trim()==='空車'&&!x.DriverID&&!x['現在使用者']);h='<h2>名変待ち・車両割当</h2><div class="detailtabs"><button data-carview="vehicles">車両一覧</button><button class="active" data-carview="waiting">名変待ち・車両割当（'+waiting.length+'）</button></div><div class="notice">サンプルの名変待ち受付です。空車を選んでサンプル内の割当を実行できます。再読み込みで初期化されます。</div>'+(waitingSyncedAt?'<p class="muted">取込日時：'+safe(new Date(waitingSyncedAt).toLocaleString('ja-JP'))+'</p>':'')+(waitingError?'<div class="box">名変待ちデータの取得エラー：'+safe(waitingError)+'</div>':'')+waiting.filter(x=>x['ステータス']==='名変待ち'&&!x['割当VehicleID']).map(x=>'<div class="box"><h3>'+safe(x['氏名'])+'</h3><p class="muted">'+safe(x['所属会社名']||'会社未登録')+' ・ '+safe(x['稼働エリア']||'エリア未登録')+' ・ '+safe(x['希望日']||'希望日未登録')+'</p><p class="muted">進捗：'+safe(x['進捗']||'未登録')+' / 備考：'+safe(x['備考']||'なし')+'</p><div class="field"><label>割り当てる空車を選択</label><select data-assignment="'+safe(x['受付ID'])+'"><option value="">車両を選択してください</option>'+available.map(v=>'<option value="'+safe(v.VehicleID)+'" '+(selectedAssignments[x['受付ID']]===v.VehicleID?'selected':'')+'>'+safe(v['車番'])+' / '+safe(v['車種'])+' / '+safe(v.VehicleID)+'</option>').join('')+'</select></div><button class="action primary" data-assign-preview="'+safe(x['受付ID'])+'">この車両を割り当てる（サンプル）</button></div>').join('')+'<div class="box"><p class="muted">未割当の名変待ち：'+waiting.filter(x=>x['ステータス']==='名変待ち'&&!x['割当VehicleID']).length+'件 / 空車候補：'+available.length+'台</p></div>';}
+else{if(page==='cars'){const a=filterVehicles(cars,query).filter(x=>matchesGroup(x,filter));h='<div class="row"><h2>🚗 車両管理</h2><button class="action secondary" style="width:auto" data-info="新規車両登録は未接続です">＋ 車両追加</button></div><div class="detailtabs"><button data-carview="vehicles" class="'+(carView==='vehicles'?'active':'')+'">車両一覧</button><button data-carview="waiting" class="'+(carView==='waiting'?'active':'')+'">名変待ち・車両割当（'+waiting.length+'）</button></div><input id="search" placeholder="車番・使用者・車種で検索" value="'+safe(query)+'"><p class="muted">管理区分ごとの車両一覧</p><div class="detailtabs">'+groupNames().map(x=>'<button data-filter="'+safe(x)+'" class="'+(filter===x?'active':'')+'">'+safe(x)+'（'+(x==='すべて'?cars.length:cars.filter(v=>matchesGroup(v,x)).length)+'）</button>').join('')+'</div><p class="muted">'+a.length+'台表示</p>'+a.map(x=>'<button class="item" data-car="'+safe(x.VehicleID)+'"><div class="row"><strong>'+safe(x['車番'])+'</strong><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><small>'+safe(x['現在使用者']||'使用者未登録')+' ・ '+safe(managementGroup(x))+'</small></button>').join('')||'<p class="muted">該当する車両はありません</p>';}
+}
+
+if(page==='car'){const x=car();if(!x){go('cars');return;}h='<button class="back" data-page="cars">← 車両一覧へ</button><div class="box"><div class="row"><h2>'+safe(x['車番'])+'</h2><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><div class="muted">'+safe(x.VehicleID)+' ・ '+safe(x['管理区分'])+'</div><p>👤 現在使用者：<b>'+safe(x['現在使用者']||'なし')+'</b></p></div><div class="detailtabs">'+[['basic','基本情報'],['action','貸出・返却'],['schedule','予定'],['files','写真・書類'],['history','履歴']].map(([k,t])=>'<button data-tab="'+k+'" class="'+(detailTab===k?'active':'')+'">'+t+'</button>').join('')+'</div>';
+const driver = drivers.find(person => person.id === x.DriverID);
+if (driver) h += '<div class="box"><button class="item" data-driver="'+safe(driver.id)+'">'+safe(driver.name)+'の詳細</button></div>';
+if(detailTab==='basic' && x.VehicleID==='V999999'){
+ h+='<div id="inlineSaveHost"></div><div class="box"><h3>その他の台帳情報（確認のみ）</h3><div class="detailtabs">'+groups.map(([n],i)=>'<button data-section="'+i+'" class="'+(ledgerSection===i?'active':'')+'">'+n+'</button>').join('')+'</div>'+groups[ledgerSection][1].map(i=>VEHICLE_HEADERS[i]).filter(k=>!SAVE_FIELDS.includes(k)).map(k=>'<div class="field"><label>'+safe(k)+'</label><div>'+safe(x[k]??'')+'</div></div>').join('')+'</div>';
+}else if(detailTab==='basic'){h+='<div class="box"><h2>車両台帳の編集（確認のみ）</h2><div class="detailtabs">'+groups.map(([n],i)=>'<button data-section="'+i+'" class="'+(ledgerSection===i?'active':'')+'">'+n+'</button>').join('')+'</div>'+groups[ledgerSection][1].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
+if(detailTab==='action'){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
+if(detailTab==='schedule'){h+='<div class="box"><h2>この車両の予定</h2><p>📅 車検満了日：'+safe(x['車検満了日']||'未登録')+'</p><p class="muted">引渡し予定は納車予定日として管理します。</p><div class="field"><label>予定種類</label><select id="planType">'+planTypes.map(([name])=>'<option>'+safe(name)+'</option>').join('')+'</select></div><div class="field"><label>予定日</label><input type="date" id="planDate"></div><button class="action primary" data-plan-preview="1">予定を登録（保存前確認のみ）</button><h3>車両台帳に登録されている予定日</h3>'+scheduleRows(scheduleItems(x.VehicleID))+'</div>';}
+
+if(detailTab==='files'){h+='<div class="box"><h2>📷 写真・書類</h2><p class="muted">車両台帳に登録済みのDriveリンクを開きます。アクセス権限が必要な場合があります。</p><h3>保存済みの写真・書類</h3>'+[57,58,61].map(i=>{const k=VEHICLE_HEADERS[i];return fileLink(k,x[k]);}).join('')+'<h3>写真・書類を追加</h3><div class="field"><label>車両状態写真を選択（複数可）</label><input type="file" accept="image/*" multiple></div><div class="field"><label>車両書類3点を選択（複数可）</label><input type="file" accept="image/*,.pdf" multiple></div><button class="action secondary" data-info="撮影・ファイル選択は可能ですが、アップロードとAI判定は未接続です">📤 写真・書類を保存（準備中）</button><h3>フォルダ備考</h3><p class="muted">備考は入力できますが、現在は保存前の確認のみです。</p>'+field('フォルダ備考')+'<button class="action primary" data-preview="1">備考の変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">備考の変更を破棄</button></div>';}
+
+if(detailTab==='history'){h+='<div class="box"><h2>操作履歴</h2><p class="muted">操作履歴の取得は未接続です。台帳の管理項目のみ表示します。</p>'+section.history.map(i=>{const k=VEHICLE_HEADERS[i];return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+safe(x[k]||'未登録')+'</div></div>';}).join('')+'</div>';}
+}
+if (page === 'drivers') {
+  const person = drivers.find(driver => driver.id === driverId);
+  if (person) {
+    const vehicles = cars.filter(vehicle => vehicle.DriverID === person.id);
+    h = '<button class="back" data-page="drivers">← ドライバー一覧へ</button>'
+      + '<div class="box"><h2>'+safe(person.name)+'</h2><p>'+safe(person.id)+'</p>'
+      + '<p>所属会社　'+safe(person.company)+'</p><h3>紐付け車両</h3>'
+      + (vehicles.map(vehicle => '<button class="item" data-car="'+safe(vehicle.VehicleID)+'">'
+        +safe(vehicle['車番'])+' ・ '+safe(vehicle.VehicleID)+'</button>').join('') || '<p>紐付け車両はありません</p>')
+      + '</div>';
+  } else {
+    h = '<h2>ドライバー</h2><p class="muted">サンプルのドライバー情報</p>'
+      + drivers.map(driver => '<button class="item" data-driver="'+safe(driver.id)+'"><strong>'
+        +safe(driver.name)+'</strong><small>'+safe(driver.id)+' ・ '+safe(driver.company)+'</small></button>').join('');
+  }
+}
+if(page==='schedule'){h='<h2>📅 車両予定</h2><div class="box"><h3>登録済みの予定（台帳データ）</h3><p class="muted">車両を選ぶと、予定の追加画面を開けます。登録はまだ保存されません。</p>'+scheduleRows(scheduleItems())+'</div><div class="box"><h2>予定の種類</h2><p class="muted">'+planTypes.map(([name])=>name).join(' ／ ')+'</p></div>';}
+
+$('integrationPanel').hidden=!(page==='cars'&&carView==='waiting');
+const panel=$('savePanel'); if(panel.parentElement!==document.querySelector('main')) document.querySelector('main').append(panel); panel.hidden=true;
+$('content').innerHTML=h;
+const host=$('inlineSaveHost');if(host){host.append(panel);panel.hidden=false;}
+}
+function preview(){const x=car(),diff=changed();alert('【仮編集・保存なし】\n'+(diff.length?diff.map(k=>k.trim()+': '+String(x[k]??'')+' → '+String(draft[k]??'')).join('\n'):'変更なし')+'\n\nSupabase・スプレッドシートには保存されません');}
+document.addEventListener('input',e=>{if($('savePanel').contains(e.target))return;if(e.target.id==='search'){query=e.target.value;const pos=e.target.selectionStart;render();const el=$('search');el.focus();el.setSelectionRange(pos,pos);return;}const k=e.target.dataset.field;if(k&&draft&&!locked.has(k)&&VEHICLE_HEADERS.includes(k))draft[k]=e.target.value;});
+document.addEventListener('change',e=>{const id=e.target.dataset.assignment;if(id)selectedAssignments[id]=e.target.value;});
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;if(d.openSave){$('content').hidden=true;$('nav').hidden=true;$('nav').style.display='none';saveEditor.open();window.scrollTo(0,0);return;}if(d.driver){go('drivers');driverId=d.driver;render();return;}if(d.page){go(d.page);return;}if(d.car){openCar(d.car);return;}if(d.carview){carView=d.carview;render();return;}if(d.assignPreview){const person=waiting.find(x=>x['受付ID']===d.assignPreview),id=selectedAssignments[d.assignPreview],vehicle=cars.find(x=>x.VehicleID===id);if(!person||!vehicle){alert('空車を選択してください');return;}const driver=drivers.find(x=>x.id===person.DriverID);if(!driver||vehicle['区分/ステータス']!=='空車'||vehicle.DriverID||vehicle['現在使用者']||person['割当VehicleID']||person['ステータス']!=='名変待ち'||vehicle.VehicleID!=='DEMO-V02'){alert('割当条件を満たしていません');return;}if(!confirm('【サンプル内の割当】\n'+driver.name+' → '+vehicle['車番']+'\n本番・スプレッドシートには保存しません。'))return;Object.assign(vehicle,{DriverID:driver.id,'現在使用者':driver.name,'所属会社名':driver.company,'稼働エリア':person['稼働エリア'],'管理区分':'車両準備中'});person['割当VehicleID']=vehicle.VehicleID;delete selectedAssignments[person['受付ID']];render();alert('サンプル内の割当が完了しました。車両一覧とドライバー詳細で確認できます。');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\n'+car()['車番']+'\n'+type+'：'+day+'\n\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
+const drivers = [
+  {id:'D999901',name:'テスト運転者A',company:'テスト法人'},
+  { id: 'DEMO-D01', name: 'テストドライバー A', company: 'テスト運送' },
+  { id: 'DEMO-D02', name: 'テストドライバー B', company: 'サンプル物流' },
+];
+let driverId = null;
+cars = [
+ normalizeVehicle({vehicle_id:'TEST-V01',vehicle_number:'TEST-001',vehicle_data:{'区分/ステータス':'空車','管理区分':'通常管理'}}),
+  normalizeVehicle({
+    vehicle_id: 'V999999', vehicle_number: 'テスト 01',
+    vehicle_data: { DriverID: 'DEMO-D01', '現在使用者': 'テストドライバー A',
+      '区分/ステータス': '貸出中', '車種': '軽バン', '車検満了日': '2027-02-18',
+      '車検予定日': '2027-02-12' },
+  }),
+  normalizeVehicle({
+    vehicle_id: 'DEMO-V02', vehicle_number: 'テスト 02',
+    vehicle_data: { '区分/ステータス': '空車', '車種': '軽バン' },
+  }),
+];
+waiting = [{
+  '受付ID': 'DEMO-R01', DriverID: 'DEMO-D02', '氏名': 'テストドライバー B', '所属会社名': 'サンプル物流',
+  '稼働エリア': '千葉', 'ステータス': '名変待ち',
+}];
+const saveEditor = mountDemoSave($('savePanel'), () => {
+  $('savePanel').hidden = true;
+  $('content').hidden = false;
+  $('nav').hidden = false;
+  $('nav').style.display = '';
+  render();
+}, fields => {
+  Object.assign(cars.find(vehicle => vehicle.VehicleID === 'V999999'), fields);
+  if (carId === 'V999999' && draft) Object.assign(draft, fields);
+});
+$('savePanel').querySelector('[data-back]').hidden=true;
+ready = true;
+render();
+window.addEventListener('gfi-verified',e=>{const v=cars.find(x=>x.VehicleID==='TEST-V01'),a=e.detail==='assign';Object.assign(v,{DriverID:a?'D999901':'','現在使用者':a?'テスト運転者A':'','管理区分':a?'車両準備中':'通常管理','所属会社名':a?'テスト法人':'','稼働エリア':a?'テスト地域':''});render();});
+</script><script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
+const url='https://zwprphmfgobkektzsuti.supabase.co',key='sb_publishable__wtlccECQwOVd3-LvRVFYQ_2dCUlPVR',client=createClient(url,key,{auth:{persistSession:false}});
+const el=id=>document.getElementById(id);let user,busy=false;
+const storage=()=> 'gfi-ui-test:'+user.id;
+const buttons=()=>{const pending=user&&localStorage.getItem(storage());el('assign').disabled=el('cancel').disabled=!user||busy||!!pending;el('check').disabled=!user||busy||!pending;};
+async function api(action,id){const {data:{session}}=await client.auth.getSession();if(!session)throw Error('再ログインしてください');const r=await fetch(url+'/functions/v1/gf-assignment-integration-ui-test',{method:'POST',headers:{authorization:'Bearer '+session.access_token,apikey:key,'content-type':'application/json'},body:JSON.stringify({action,request_id:id,vehicle_id:'TEST-V01'}),signal:AbortSignal.timeout(20000)});if(!r.ok){const e=Error('受付確認エラー HTTP '+r.status);e.status=r.status;throw e}return r.json()}
+async function run(fn){if(busy)return;busy=true;buttons();try{await fn()}catch(e){el('msg').textContent=e.message}finally{busy=false;buttons()}}
+async function poll(p){for(let i=0;i<40;i++){let r;try{r=await api('status',p.id)}catch(e){if(e.status===404){el('msg').textContent='未受付のため同じ受付IDで再送します';await api(p.action,p.id);continue}throw e}if(r.state==='verified'&&r.verified_at&&r.action===p.action&&r.vehicle_id==='TEST-V01'){localStorage.removeItem(storage());window.dispatchEvent(new CustomEvent('gfi-verified',{detail:p.action}));el('msg').textContent=(p.action==='assign'?'割当':'取消')+'：台帳・Supabase反映確認済み';return}if(['reconciliation_required','rejected'].includes(r.state)){el('msg').textContent='管理者確認が必要です。再送しないでください。';return}el('msg').textContent='自動同期待ち：'+r.state;await new Promise(r=>setTimeout(r,5000))}el('msg').textContent='確認待ちです。保存状況を確認してください。'}
+el('login').onsubmit=e=>{e.preventDefault();run(async()=>{const r=await client.auth.signInWithPassword({email:el('email').value.trim(),password:el('pw').value});el('pw').value='';if(r.error)throw Error('ログイン失敗');user=r.data.user;el('login').hidden=true;el('msg').textContent='ログイン成功。操作を選択してください。';if(localStorage.getItem(storage()))await poll(JSON.parse(localStorage.getItem(storage())))})};
+for(const action of ['assign','cancel'])el(action).onclick=()=>run(async()=>{if(localStorage.getItem(storage()))throw Error('受付確認中');if(!confirm(action==='assign'?'テスト車両を割り当てますか？':'テスト車両の割当を取り消しますか？'))return;const p={id:crypto.randomUUID(),action};localStorage.setItem(storage(),JSON.stringify(p));await api(action,p.id);await poll(p)});
+el('check').onclick=()=>run(async()=>{const p=JSON.parse(localStorage.getItem(storage())||'null');if(p)await poll(p)});
+</script></body></html>
