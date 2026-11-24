@@ -108,7 +108,7 @@ function GFI_進捗台帳保存_(expected, fields) {
       }};
     });
     Sheets.Spreadsheets.batchUpdate({requests}, v.s.getParent().getId());
-    const saved = GF_LedgerProgressSnapshot_(GFI_進捗台帳読取_(GFI_確認_().v));
+    const saved = GFI_進捗保存結果読取_(v);
     if (saved.vehicleId !== expected.vehicleId || saved.driverId !== expected.driverId ||
         JSON.stringify(saved.values) !== JSON.stringify(GF_LedgerProgressValues_(patch))) {
       throw new Error('台帳保存結果を照合できません');
@@ -300,4 +300,26 @@ function GFI_進捗接続診断_読取のみ() {
   const remote=GFI_通信_({action:'read'});
   if(remote.vehicle_id!=='TEST-V01')throw Error('検証DB読取NG');
   console.log('進捗テスト接続OK。既存トリガーはそのまま使用できます。');
+}
+
+function GFI_進捗保存結果読取_(vehicle) {
+  const bookId = vehicle.s.getParent().getId();
+  const name = "'" + vehicle.s.getName().replace(/'/g, "''") + "'";
+  const ranges = ['VehicleID','DriverID',...GF_LEDGER_PROGRESS_COLUMNS].map(key => {
+    const i = vehicle.h.indexOf(key);
+    if (i < 0) throw Error('列不足 ' + key);
+    let n=i+1, col='';
+    while(n){n--;col=String.fromCharCode(65+n%26)+col;n=Math.floor(n/26);}
+    return name+'!'+col+'2';
+  });
+  const result=Sheets.Spreadsheets.Values.batchGet(bookId,{ranges,valueRenderOption:'UNFORMATTED_VALUE',dateTimeRenderOption:'SERIAL_NUMBER'});
+  const record={};
+  ['VehicleID','DriverID',...GF_LEDGER_PROGRESS_COLUMNS].forEach((key,i)=>{
+    let value=result.valueRanges[i].values?.[0]?.[0] ?? '';
+    if(GF_LEDGER_PROGRESS_COLUMNS.slice(1).includes(key)&&typeof value==='number'){
+      value=new Date(Math.round((value-25569)*86400000)).toISOString().slice(0,10);
+    }
+    record[key]=value;
+  });
+  return GF_LedgerProgressSnapshot_(record);
 }
