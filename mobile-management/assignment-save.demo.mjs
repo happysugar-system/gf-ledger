@@ -19,10 +19,11 @@ export async function mountAssignment(root, payload, onVerified) {
   }
   async function check(id){
     const r=await api('status',id);
-    if(r.state==='replica_verified'&&r.verified_at&&r.vehicle_id===payload.vehicle_id&&r.waiting_id===payload.waiting_id&&r.driver_id===payload.driver_id){msg.textContent='スプレッドシート保存・Supabase反映を確認しました。';onVerified();return;}
+    if(r.state==='replica_verified'&&r.verified_at&&r.vehicle_id===payload.vehicle_id&&r.waiting_id===payload.waiting_id&&r.driver_id===payload.driver_id){msg.textContent='スプレッドシート保存・Supabase反映を確認しました。';onVerified();return true;}
     msg.textContent='受付状態：'+({pending:'スプレッドシート反映待ち',sheet_saved:'Supabase反映待ち',rejected:'拒否',reconciliation_required:'管理者確認が必要'}[r.state]||'確認待ち');
+    return ['rejected','reconciliation_required'].includes(r.state);
   }
   async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){msg.textContent=e.message}finally{busy=false}}
-  form.onsubmit=e=>{e.preventDefault();run(async()=>{const r=await client.auth.signInWithPassword({email:email.value.trim(),password:password.value});password.value='';if(r.error)throw Error('ログインできません');user=r.data.user;let id=localStorage.getItem(storageKey());if(!id){id=crypto.randomUUID();localStorage.setItem(storageKey(),id)}await api('save',id);await check(id)})};
+  form.onsubmit=e=>{e.preventDefault();run(async()=>{const r=await client.auth.signInWithPassword({email:email.value.trim(),password:password.value});password.value='';if(r.error)throw Error('ログインできません');user=r.data.user;let id=localStorage.getItem(storageKey());if(!id){id=crypto.randomUUID();localStorage.setItem(storageKey(),id)}await api('save',id);for(let i=0;i<25;i++){if(await check(id))return;await new Promise(resolve=>setTimeout(resolve,5000));}msg.textContent='自動確認の時間を超えました。保存状況を確認を押してください。'})};
   form.querySelector('[data-check]').onclick=()=>run(async()=>{if(!user)throw Error('ログインしてください');const id=localStorage.getItem(storageKey());if(!id)throw Error('受付がありません');await check(id)});
 }
