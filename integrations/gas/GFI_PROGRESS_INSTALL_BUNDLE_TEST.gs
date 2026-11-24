@@ -1,0 +1,303 @@
+/** GOLD FIRST 割当・進捗一体化：検証専用GAS（本番利用禁止）
+ * 既存コード.gsのGFI_実行_とGFI_画面受付追加.gsのGFI_UI受付処理は
+ * 先に削除してください（下の同名関数へ置き換えます）。
+ * 既存のGFI_確認_,GFI_通信_,GFI_反映_,GFI_UI通信_,GFI_UI自動同期設定は残す。
+ * 既存Script Propertiesは変更せず、追加設定も不要。
+ * 左のサービスから「Google Sheets API」を有効化してください。
+ */
+
+// ----- integrations/gas/gf-ledger-progress-test.gs -----
+/** 車両台帳を正本とする進捗処理。GASの既存認可・同期処理から呼び出す。 */
+const GF_LEDGER_PROGRESS_COLUMNS = ['管理区分', '納車可能日', '納車確定日'];
+
+function GF_LedgerProgressDate_(input) {
+  if (input === '' || input == null) return '';
+  if (typeof input !== 'string') throw new Error('日付形式が不正です');
+  const parts = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/.exec(input.trim());
+  if (!parts) throw new Error('日付形式が不正です');
+  const iso = parts[1] + '-' + parts[2].padStart(2, '0') + '-' + parts[3].padStart(2, '0');
+  const day = new Date(iso + 'T00:00:00Z');
+  if (!Number.isFinite(day.getTime()) || day.toISOString().slice(0, 10) !== iso) {
+    throw new Error('実在する日付を入力してください');
+  }
+  return iso;
+}
+
+function GF_LedgerProgressValues_(record) {
+  const stage = String(record['管理区分'] ?? '').trim();
+  if (stage.length > 100 || /[\r\n]/.test(stage)) throw new Error('管理区分が不正です');
+  const available = GF_LedgerProgressDate_(record['納車可能日']);
+  const confirmed = GF_LedgerProgressDate_(record['納車確定日']);
+  if (available && confirmed && confirmed < available) {
+    throw new Error('納車確定日は納車可能日以降を指定してください');
+  }
+  return [stage, available, confirmed];
+}
+
+function GF_LedgerProgressSnapshot_(record) {
+  return {
+    vehicleId: String(record.VehicleID ?? ''),
+    driverId: String(record.DriverID ?? ''),
+    values: GF_LedgerProgressValues_(record),
+  };
+}
+
+function GF_LedgerProgressPlan_(current, expected, fields) {
+  const snapshot = GF_LedgerProgressSnapshot_(current);
+  if (!snapshot.vehicleId || !/^D\d{6}$/.test(snapshot.driverId)) {
+    throw new Error('割当済みの車両を選択してください');
+  }
+  if (expected?.vehicleId !== snapshot.vehicleId || expected?.driverId !== snapshot.driverId ||
+      JSON.stringify(expected?.values) !== JSON.stringify(snapshot.values)) {
+    throw new Error('台帳が更新されました。再読み込みしてください');
+  }
+  if (!fields || GF_LEDGER_PROGRESS_COLUMNS.some(key => typeof fields[key] !== 'string')) {
+    throw new Error('進捗項目をすべて指定してください');
+  }
+  const values = GF_LedgerProgressValues_(fields);
+  return Object.fromEntries(GF_LEDGER_PROGRESS_COLUMNS.map((key, index) => [key, values[index]]));
+}
+
+function GF_LedgerProgressCancelGuard_(record) {
+  const [stage, available, confirmed] = GF_LedgerProgressValues_(record);
+  if (stage !== '車両準備中' || available || confirmed) {
+    throw new Error('進捗または納車日が登録されています。取消前に台帳を確認してください');
+  }
+}
+
+function GFI_進捗台帳読取_(vehicle) {
+  const record = {...vehicle.r};
+  const timezone = vehicle.s.getParent().getSpreadsheetTimeZone();
+  for (const key of GF_LEDGER_PROGRESS_COLUMNS.slice(1)) {
+    const index = vehicle.h.indexOf(key);
+    if (index < 0) throw new Error('台帳に列がありません ' + key);
+    const raw = vehicle.s.getRange(2, index + 1).getValue();
+    record[key] = raw instanceof Date ? Utilities.formatDate(raw, timezone, 'yyyy-MM-dd') : raw;
+  }
+  return record;
+}
+
+/** スタンドアロンGASの検証用。既存のGFI確認処理と同じロックを使う。 */
+function GFI_進捗台帳保存_(expected, fields) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const {v, w, d} = GFI_確認_();
+    if (w.r['ステータス'] !== '割当済' || w.r['割当VehicleID'] !== v.r.VehicleID ||
+        d.r['割当VehicleID'] !== v.r.VehicleID || w.r.DriverID !== v.r.DriverID ||
+        d.r.DriverID !== v.r.DriverID) {
+      throw new Error('割当情報が一致しません');
+    }
+    for (const key of GF_LEDGER_PROGRESS_COLUMNS) {
+      if (!v.h.includes(key)) throw new Error('台帳に列がありません ' + key);
+    }
+    const patch = GF_LedgerProgressPlan_(GFI_進捗台帳読取_(v), expected, fields);
+    const requests = Object.entries(patch).map(([key, value]) => {
+      const index = v.h.indexOf(key);
+      if (v.s.getRange(2, index + 1).getFormula()) throw new Error('数式セル ' + key);
+      const cell = {};
+      if (value) {
+        cell.userEnteredValue = key === '管理区分'
+          ? {stringValue: value}
+          : {numberValue: Date.parse(value + 'T00:00:00Z') / 86400000 + 25569};
+      }
+      return {updateCells: {
+        start: {sheetId: v.s.getSheetId(), rowIndex: 1, columnIndex: index},
+        rows: [{values: [cell]}],
+        fields: 'userEnteredValue',
+      }};
+    });
+    Sheets.Spreadsheets.batchUpdate({requests}, v.s.getParent().getId());
+    const saved = GF_LedgerProgressSnapshot_(GFI_進捗台帳読取_(GFI_確認_().v));
+    if (saved.vehicleId !== expected.vehicleId || saved.driverId !== expected.driverId ||
+        JSON.stringify(saved.values) !== JSON.stringify(GF_LedgerProgressValues_(patch))) {
+      throw new Error('台帳保存結果を照合できません');
+    }
+    return saved;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ----- integrations/gas/GFI_progress_sync_bridge_test.gs -----
+/** 検証用。現行GFIと同じスタンドアロンGASでのみ使用。データ正本は車両台帳。 */
+const GFI_PROGRESS_ALLOWED_TEST_=['車両準備中','車両手配済み','名義変更前','名義変更中','名義変更済み'];
+const GFI_PROGRESS_KEYS_TEST_=['管理区分','納車可能日','納車確定日'];
+function GFI_進捗管理正規化_(record) {
+  const values=GF_LedgerProgressValues_(record);
+  const assigned=record.DriverID==='D999901';
+  if(record.VehicleID!=='TEST-V01'||record['区分/ステータス']!=='空車')throw Error('検証車両不一致');
+  if(assigned) {
+    if(!GFI_PROGRESS_ALLOWED_TEST_.includes(values[0]))throw Error('未対応の管理区分: '+values[0]);
+    if(record['現在使用者']!=='テスト運転者A')throw Error('使用者不一致');
+  } else if(record.DriverID===''&&record['現在使用者']===''&&
+            values[0]==='通常管理'&&!values[1]&&!values[2]){
+    // Cancellation is safe only while both delivery dates are empty.
+  } else throw Error('割当状態不一致');
+  return {...record,'管理区分':values[0],'納車可能日':values[1],'納車確定日':values[2]};
+}
+function GFI_進捗管理同期_() {
+  const lock=LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const {v,w,d}=GFI_確認_();
+    if(v.r.DriverID==='D999901'&&
+       (w.r['ステータス']!=='割当済'||w.r['割当VehicleID']!=='TEST-V01'||
+        d.r['割当VehicleID']!=='TEST-V01'))throw Error('3シートの割当が一致しません');
+    if(v.r.DriverID===''&&
+       (w.r['ステータス']!=='名変待ち'||w.r['割当VehicleID']!==''||
+        d.r['割当VehicleID']!==''))throw Error('3シートの取消が一致しません');
+    const snapshot=GFI_進捗台帳読取_(v);
+    const record=GFI_進捗管理正規化_(snapshot);
+    const remote=GFI_通信_({action:'read'});
+    if(remote.vehicle_id!=='TEST-V01'||!remote.record)throw Error('Supabase車両不一致');
+    const same=Object.keys(record).length===Object.keys(remote.record).length&&
+       Object.entries(record).every(([key,val])=>remote.record[key]===val);
+    if(same)return {status:'unchanged'};
+    GFI_反映_(record);
+    const current=GFI_進捗管理正規化_(GFI_進捗台帳読取_(GFI_確認_().v));
+    if(GFI_PROGRESS_KEYS_TEST_.some(k=>current[k]!==record[k])||
+       current.DriverID!==record.DriverID)throw Error('台帳が同期中に変更されました。次回再確認してください');
+    return {status:'synced',stage:record['管理区分']};
+  } finally {lock.releaseLock();}
+}
+
+// ----- integrations/gas/GFI_runner_cancel_guard_replace_test.gs -----
+/** 既存GFI_実行_の完全置換。検証用3シートのみ。取消ガードは同じロック内で実行。 */
+function GFI_実行_(assign) {
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try {
+    const {v,w,d}=GFI_確認_();
+    const driverId=w.r.DriverID;
+    if(!driverId||driverId!==d.r.DriverID)throw Error('DriverID照合失敗');
+    const progress=GFI_進捗台帳読取_(v);
+    if(assign) {
+      if(progress['納車可能日']||progress['納車確定日'])throw Error('割当前の納車日残存');
+    } else {
+      GF_LedgerProgressCancelGuard_(progress);
+    }
+    const edits=[
+      [v,{'管理区分':assign?'車両準備中':'通常管理','現在使用者':assign?'テスト運転者A':'',
+          DriverID:assign?driverId:'','所属会社名':assign?'テスト法人':'','稼働エリア':assign?'テスト地域':''}],
+      [w,{'ステータス':assign?'割当済':'名変待ち','割当VehicleID':assign?'TEST-V01':'','割当車番':assign?'TEST-001':''}],
+      [d,{'割当VehicleID':assign?'TEST-V01':'','割当車番':assign?'TEST-001':''}]
+    ];
+    const changes=[];
+    for(const [x,e] of edits)for(const [k,value] of Object.entries(e)){
+      const i=x.h.indexOf(k);
+      if(i<0)throw Error('列不足 '+k);
+      const c=x.s.getRange(2,i+1);
+      if(c.getFormula())throw Error('数式セル '+k);
+      changes.push({c,value});
+    }
+    if(GFI_通信_({action:'health'}).ok!==true)throw Error('接続確認失敗');
+    const oldV=v.r,oldW=w.r,oldD=d.r;
+    const blank=oldV['管理区分']==='通常管理'&&!oldV.DriverID&&!oldV['現在使用者']&&
+      !oldV['所属会社名']&&!oldV['稼働エリア']&&oldW['ステータス']==='名変待ち'&&
+      !oldW['割当VehicleID']&&!oldW['割当車番']&&!oldD['割当VehicleID']&&!oldD['割当車番'];
+    const full=oldV['管理区分']==='車両準備中'&&oldV.DriverID===driverId&&
+      oldV['現在使用者']==='テスト運転者A'&&oldV['所属会社名']==='テスト法人'&&
+      oldV['稼働エリア']==='テスト地域'&&oldW['ステータス']==='割当済'&&
+      oldW['割当VehicleID']==='TEST-V01'&&oldW['割当車番']==='TEST-001'&&
+      oldD['割当VehicleID']==='TEST-V01'&&oldD['割当車番']==='TEST-001';
+    if(!blank&&!full)throw Error('状態不整合: 手動確認が必要');
+    for(const {c,value} of changes)c.setValue(value);
+    SpreadsheetApp.flush();
+    const after=GFI_確認_();
+    for(const [x,e] of [[after.v,edits[0][1]],[after.w,edits[1][1]],[after.d,edits[2][1]]]) {
+      for(const [k,value] of Object.entries(e))
+        if(x.r[k]!==value)throw Error('台帳照合失敗 '+k);
+    }
+    try{GFI_反映_(after.v.r);}
+    catch(e){throw Error('台帳保存済み・DB未確認。同じ操作で再試行: '+e.message);}
+    console.log((assign?'割当':'取消')+'：台帳3シート・Supabase照合完了');
+  } finally {lock.releaseLock();}
+}
+
+// ----- integrations/gas/GFI_progress_queue_extension_test.gs -----
+/** GOLD FIRST テストGASの既存GFI_UI受付処理を置換する完全版。
+ * 既存GFI_UI通信_/GFI_実行_/GFI_確認_を流用。その他は検証専用。 */
+function GFI_進捗受付通信_(payload) {
+  const token=PropertiesService.getScriptProperties().getProperty('GF_VEHICLE_DEMO_SYNC_TOKEN');
+  if(!token)throw Error('既存の検証用トークンがありません');
+  const url='https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-assignment-progress-queue-worker-test';
+  const response=UrlFetchApp.fetch(url,{
+    method:'post',contentType:'application/json',
+    headers:{'x-gf-sync-token':token},
+    payload:JSON.stringify(payload),muteHttpExceptions:true
+  });
+  if(response.getResponseCode()!==200) {
+    throw Error('進捗受付通信 HTTP '+response.getResponseCode()+' '+response.getContentText().slice(0,150));
+  }
+  return JSON.parse(response.getContentText());
+}
+function GFI_進捗受付処理_() {
+  const {request:q}=GFI_進捗受付通信_({action:'claim'});
+  if(!q)return {status:'no_pending'};
+  try {
+    if(q.vehicle_id!=='TEST-V01'||q.expected?.vehicleId!=='TEST-V01'||
+       q.expected?.driverId!=='D999901')throw Error('検証受付ID不一致');
+    const target=GF_LedgerProgressValues_(q.fields);
+    if(!GFI_PROGRESS_ALLOWED_TEST_.includes(target[0]))throw Error('検証用管理区分不一致');
+    let saved;
+    try {
+      saved=GFI_進捗台帳保存_(q.expected,q.fields);
+    } catch(error) {
+      // A crashed acknowledgement can leave the sheet saved.
+      // Treat it as recovered only when all three values and both IDs match exactly.
+      const {v,w,d}=GFI_確認_();
+      const current=GF_LedgerProgressSnapshot_(GFI_進捗台帳読取_(v));
+      const recover=current.vehicleId==='TEST-V01'&&current.driverId==='D999901'&&
+        w.r['ステータス']==='割当済'&&w.r['割当VehicleID']==='TEST-V01'&&
+        d.r['割当VehicleID']==='TEST-V01'&&
+        JSON.stringify(current.values)===JSON.stringify(target);
+      if(!recover)throw error;
+      saved=current;
+    }
+    if(saved.vehicleId!=='TEST-V01'||JSON.stringify(saved.values)!==JSON.stringify(target)) {
+      throw Error('保存結果照合失敗');
+    }
+    GFI_進捗管理同期_();
+    const finished=GFI_進捗受付通信_({action:'finish',request_id:q.request_id});
+    if(finished.state!=='verified'||!finished.verified_at)throw Error('DB確定照合失敗');
+    console.log('進捗保存・台帳・Supabase・マイページ情報照合済 '+q.request_id);
+    return {status:'verified'};
+  } catch(e) {
+    try{GFI_進捗受付通信_({action:'fail',request_id:q.request_id});}
+    catch(f){console.error('進捗受付の要確認状態: '+f.message);}
+    throw e;
+  }
+}
+/** 既存のGFI_UI受付処理を置換。GASトリガーは同じ名前を再利用する。 */
+function GFI_UI受付処理() {
+  GFI_確認_();
+  const q=GFI_UI通信_({action:'claim'}).request;
+  if(q){
+    try {
+      if(!['assign','cancel'].includes(q.action))throw Error('受付種別不正');
+      GFI_実行_(q.action==='assign');
+      GFI_UI通信_({action:'finish',request_id:q.request_id});
+      console.log('画面受付・保存照合完了 '+q.request_id);
+    } catch(e) {
+      try{GFI_UI通信_({action:'fail',request_id:q.request_id});}
+      catch(f){console.error('既存受付の要確認状態: '+f.message);}
+      throw e;
+    }
+  }
+  // An existing assignment/cancel run completes before progress claims.
+  GFI_進捗受付処理_();
+  // Also reconcile direct manual edits to the test ledger.
+  const state=GFI_進捗管理同期_();
+  console.log('進捗台帳直接編集同期: '+state.status);
+}
+function GFI_進捗接続診断_読取のみ() {
+  GFI_確認_();
+  if(typeof Sheets==='undefined'||!Sheets.Spreadsheets?.batchUpdate) {
+    throw Error('Apps Script 左側のサービスから Google Sheets API を追加してください');
+  }
+  const p=GFI_進捗受付通信_({action:'health'});
+  if(!p.ok)throw Error('進捗受付接続NG');
+  const remote=GFI_通信_({action:'read'});
+  if(remote.vehicle_id!=='TEST-V01')throw Error('検証DB読取NG');
+  console.log('進捗テスト接続OK。既存トリガーはそのまま使用できます。');
+}
