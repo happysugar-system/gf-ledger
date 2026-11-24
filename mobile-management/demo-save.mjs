@@ -68,6 +68,7 @@ export class DemoSave {
           }
         }
       }
+      if (!error.status || error.status >= 500) return 'accepted';
       throw error;
     }
     return 'accepted';
@@ -156,8 +157,16 @@ export function mountDemoSave(root, onClose, onRead) {
   };
   async function check() {
     for (let count = 0; count < 24; count++) {
-      const state = await controller.check();
-      if (messages[state]) { display(); message(messages[state]); return; }
+      let state;
+      try { state = await controller.check(); }
+      catch (error) {
+        if (error.status && error.status < 500) throw error;
+        message('通信が不安定です。再送せず保存状況を確認しています…');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        continue;
+      }
+      if (state === 'not_received' && count < 3) { await new Promise(resolve => setTimeout(resolve, 3000)); continue; }
+      if (messages[state]) { message(messages[state]); display(); return; }
       message('保存処理中です。反映を確認しています…');
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
