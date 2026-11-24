@@ -14,6 +14,11 @@ Deno.serve(async req=>{
  if(req.headers.get("x-gf-sync-token")!==secret)return reply(401,{error:"unauthorized"});
  let p;try{p=await req.json()}catch{return reply(400,{error:"json"})}
  if(p?.action==="health")return reply(200,{ok:true});
+ if(p?.action==="read"){
+  const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  const out=await db.from("gf_assignment_integration_replica_test").select("vehicle_id,record").eq("vehicle_id","TEST-V01").single();
+  return out.error?reply(503,{error:"read"}):reply(200,out.data);
+ }
  if(p?.action!=="save")return reply(400,{error:"action"});
  const r=p.record;
  if(!r||typeof r!=="object"||Array.isArray(r))return reply(400,{error:"record"});
