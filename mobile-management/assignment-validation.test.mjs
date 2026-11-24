@@ -1,0 +1,11 @@
+import {prepareAssignment} from './assignment-validation.mjs';
+import assert from 'node:assert/strict';
+const vehicle={VehicleID:'DEMO-V02','区分/ステータス':'空車'};
+const waiting={受付ID:'DEMO-R01',DriverID:'DEMO-D02',ステータス:'名変待ち'};
+const driver={id:'DEMO-D02'};
+assert.deepEqual(prepareAssignment(vehicle,waiting,driver),{vehicle_id:'DEMO-V02',waiting_id:'DEMO-R01',driver_id:'DEMO-D02'});
+for(const v of [{...vehicle,DriverID:'other'},{...vehicle,'現在使用者':'other'},{...vehicle,'区分/ステータス':'貸出中'}]) assert.throws(()=>prepareAssignment(v,waiting,driver));
+assert.throws(()=>prepareAssignment(vehicle,{...waiting,割当VehicleID:'other'},driver));
+assert.throws(()=>prepareAssignment(vehicle,waiting,{id:'other'}));
+assert.throws(()=>prepareAssignment(vehicle,{...waiting,ステータス:'終了'},driver));
+console.log('assignment validation: 7 cases passed');
