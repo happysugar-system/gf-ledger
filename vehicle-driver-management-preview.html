@@ -4,7 +4,7 @@
 </style></head><body><div class="app"><header class="head"><small>GOLD FIRST / スタッフ用アプリ</small><h1>🚗 車両・ドライバー管理</h1></header><main class="main"><div class="notice" id="state">サンプルデータで操作できます。予定・割当は確認画面までです。</div><div id="content"></div><section id="savePanel" hidden></section></main><nav class="tabs" id="nav"></nav></div>
 <script type="module">
 import { normalizeVehicle, filterVehicles } from './mobile-management/vehicle-reader.mjs';
-import { mountDemoSave } from './mobile-management/demo-save.mjs';
+import { mountDemoSave } from './mobile-management/demo-save-basic.staged.mjs';
 import { VEHICLE_HEADERS } from './mobile-management/vehicle-schema.mjs';
 const $=id=>document.getElementById(id),safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const groups=[['基本・車両情報',[0,1,2,3,4,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,56]],['使用者・契約情報',[5,6,7,8,9,10,11,12,13,14,15,16,17,18]]];
@@ -38,7 +38,7 @@ if(page==='car'){const x=car();if(!x){go('cars');return;}h='<button class="back"
 const driver = drivers.find(person => person.id === x.DriverID);
 if (driver) h += '<div class="box"><button class="item" data-driver="'+safe(driver.id)+'">'+safe(driver.name)+'の詳細</button></div>';
 if (x.VehicleID === 'V999999') {
-  h += '<div class="box"><button class="action primary" data-open-save="1">GPS・代車貸出情報を保存する</button><p class="muted">テスト用アカウントでログインします。</p></div>';
+  h += '<div class="box"><button class="action primary" data-open-save="1">基本情報・GPS・代車貸出情報を保存する</button><p class="muted">テスト用アカウントでログインします。</p></div>';
 }
 if(detailTab==='basic'){h+='<div class="box"><h2>車両台帳の編集（基本・契約情報）</h2><div class="notice">Ver.9デモと同じ画面構成です。サンプル車両の編集内容を確認できます。</div><div class="detailtabs">'+groups.map(([n],i)=>'<button data-section="'+i+'" class="'+(ledgerSection===i?'active':'')+'">'+n+'</button>').join('')+'</div>'+groups[ledgerSection][1].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">編集を破棄</button></div>';}
 if(detailTab==='action'){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
