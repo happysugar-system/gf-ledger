@@ -12,7 +12,7 @@ begin
   if k not in ('GPS有無','代車貸出先','代車貸出エリア','代車貸出備考') or p_expected->k=p_changes->k then raise exception 'invalid_field'; end if;
   for v in select p_expected->k union all select p_changes->k loop
    if k='GPS有無' then
-    if jsonb_typeof(v)<>'boolean' then raise exception 'invalid_boolean'; end if;
+    if jsonb_typeof(p_changes->k)<>'boolean' or (jsonb_typeof(v)<>'boolean' and v<>'""'::jsonb) then raise exception 'invalid_boolean'; end if;
    elsif jsonb_typeof(v)<>'string' or length(v#>>'{}')>1000 or (v#>>'{}') ~ '^[[:space:]]*[=+@-]' then raise exception 'invalid_text'; end if;
   end loop;
  end loop;
@@ -50,7 +50,7 @@ begin
  if p_state='replica_verified' then
   if jsonb_typeof(p_fields) is distinct from 'object' or not coalesce(p_fields @> q.changes,false) or (select count(*) from jsonb_object_keys(p_fields))<>4 then raise exception 'unverified_fields'; end if;
   foreach k in array array['GPS有無','代車貸出先','代車貸出エリア','代車貸出備考'] loop
-   if jsonb_typeof(p_fields->k) is distinct from (case when k='GPS有無' then 'boolean' else 'string' end) then raise exception 'invalid_observation'; end if;
+   if not coalesce(case when k='GPS有無' then jsonb_typeof(p_fields->k)='boolean' or p_fields->k='""'::jsonb else jsonb_typeof(p_fields->k)='string' end,false) then raise exception 'invalid_observation'; end if;
   end loop;
   -- Compare replica before merging changed keys only; other fields untouched.
   update public.gf_vehicles set vehicle_data=vehicle_data||q.changes,updated_at=clock_timestamp() where vehicle_id=q.vehicle_id and vehicle_data @> q.expected;
