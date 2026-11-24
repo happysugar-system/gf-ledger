@@ -1,0 +1,64 @@
+--- a/gas/30_車両同期.gs
++++ b/gas/30_車両同期.gs
+@@ -134,7 +134,7 @@
+ 
+  */
+ 
+-function 車両台帳の1台を同期する(行番号, 現在使用者変更 = false) {
++function 車両台帳の1台を同期する(行番号, 現在使用者変更 = false, 名変割当 = null) {
+ 
+   let GF_段階開始 = Date.now();
+ 
+@@ -192,6 +192,15 @@
+ 
+       行データを取得する_(車両台帳, 行番号);
+ 
++    if (名変割当) {
++      const text = value => String(value ?? '').trim();
++      if (text(車両データ.VehicleID) !== 名変割当.vehicleId ||
++          text(車両データ.DriverID) !== 名変割当.driverId ||
++          text(車両データ['区分/ステータス']) !== 名変割当.status ||
++          Boolean(text(車両データ['現在使用者'])) !== Boolean(名変割当.driverId)) {
++        throw new Error('名変割当の台帳状態が同期前に変更されました');
++      }
++    }
+     if (!車両データ['車番']) {
+ 
+       throw new Error(
+@@ -250,7 +259,7 @@
+ 
+     const 使用者名 = String(車両データ['現在使用者'] || '').trim();
+ // 現在使用者が登録されたら貸出中へ変更
+-if (使用者名 && 現在使用者変更) {
++if (使用者名 && 現在使用者変更 && !名変割当) {
+   const 現在ステータス =
+     String(車両データ['区分/ステータス'] || '').trim();
+ 
+@@ -499,6 +508,7 @@
+ 
+         // -------------------------------------------------
+ 
++        if (名変割当 && !DriverIDで確定) throw new Error('GF138で確定したDriverIDを再確認してください');
+         if (!DriverIDで確定) {
+ 
+           const 氏名列 =
+--- a/gas/154_名変待ち同期_車両管理側.gs
++++ b/gas/154_名変待ち同期_車両管理側.gs
+@@ -101,10 +101,16 @@
+       if(action==='割当'){
+         if(!item[4]||state.driverId!==String(item[4]).trim()||!state.name)throw Error('割当後の台帳とDriverID/使用者が一致しません');
+       }else if(state.driverId||state.name)throw Error('取消後の台帳にDriverIDまたは使用者が残っています');
++      const statusBeforeSync = state.status;
+       // この関数は自分でScriptLockを取得する。ここではロックを保持していない。
+-      車両台帳の1台を同期する(state.row,true);
++      車両台帳の1台を同期する(state.row, true, {
++        vehicleId,
++        driverId: action === '割当' ? String(item[4]).trim() : '',
++        status: state.status,
++      });
+       // 同期中にスタッフが再割当した場合は完了扱いにしない。
+       state=GF154_車両状態_(v,vehicleId);
++      if (state.status !== statusBeforeSync) throw Error('車両ステータスが同期中に変更されました');
+       if(action==='割当'&&state.driverId!==String(item[4]).trim())throw Error('同期後に割当先が変更されました');
+       if(action==='取消'&&(state.driverId||state.name))throw Error('同期後に車両が再割当されました');
+       q.getRange(sheetRow,6).setValue('完了');
