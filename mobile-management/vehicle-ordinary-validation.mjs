@@ -3,11 +3,12 @@ import {FIELD_POLICY} from './vehicle-field-policy.mjs';
 // Unsupported validation types deliberately fail closed.
 export function validateOrdinaryValue(field,value,meta){
  if(FIELD_POLICY[field]!=='ordinary')throw Error('wrong_write_path');
- if(!meta||meta.formula||meta.protected||meta.merged)throw Error('unsafe_cell');
+ if(!meta||meta.formula!==false||meta.protected!==false||meta.merged!==false)throw Error('unsafe_cell');
  if(meta.kind==='checkbox'){
   if(typeof value!=='boolean'||meta.customValues)throw Error('invalid_checkbox');
   return value;
  }
+ if(!['list','number','text'].includes(meta.kind))throw Error('unsupported_validation');
  if(value===''){if(meta.allowBlank!==true)throw Error('blank_not_allowed');return '';}
  if(meta.kind==='list'){
   if(typeof value!=='string'||!Array.isArray(meta.options)||!meta.options.includes(value))throw Error('invalid_option');
