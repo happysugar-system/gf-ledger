@@ -14,7 +14,7 @@ export async function mountAssignment(root, payload, onVerified) {
     const {data:{session}}=await client.auth.getSession();
     if(!session)throw Error('ログインしてください');
     const r=await fetch(url+'/functions/v1/gf-assignment-demo-save',{method:'POST',headers:{authorization:'Bearer '+session.access_token,apikey:key,'content-type':'application/json'},body:JSON.stringify({...payload,request_id:id,action}),signal:AbortSignal.timeout(20000)});
-    if(!r.ok)throw Error(r.status===409?'すでに割当が予約されています。':r.status===403?'編集権限がありません。':'受付結果を確認できません。再ログインして同じ操作をお試しください。');
+    if(!r.ok){const error=Error(r.status===409?'すでに割当が予約されています。':r.status===403?'編集権限がありません。':'受付結果を確認できません。再ログインして同じ操作をお試しください。');error.status=r.status;throw error;}
     return r.json();
   }
   async function check(id){
@@ -24,6 +24,6 @@ export async function mountAssignment(root, payload, onVerified) {
     return ['rejected','reconciliation_required'].includes(r.state);
   }
   async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){msg.textContent=e.message}finally{busy=false}}
-  form.onsubmit=e=>{e.preventDefault();run(async()=>{const r=await client.auth.signInWithPassword({email:email.value.trim(),password:password.value});password.value='';if(r.error)throw Error('ログインできません');user=r.data.user;let id=localStorage.getItem(storageKey());if(!id){id=crypto.randomUUID();localStorage.setItem(storageKey(),id)}await api('save',id);for(let i=0;i<25;i++){if(await check(id))return;await new Promise(resolve=>setTimeout(resolve,5000));}msg.textContent='自動確認の時間を超えました。保存状況を確認を押してください。'})};
-  form.querySelector('[data-check]').onclick=()=>run(async()=>{if(!user)throw Error('ログインしてください');const id=localStorage.getItem(storageKey());if(!id)throw Error('受付がありません');await check(id)});
+  form.onsubmit=e=>{e.preventDefault();run(async()=>{const r=await client.auth.signInWithPassword({email:email.value.trim(),password:password.value});password.value='';if(r.error)throw Error('ログインできません');user=r.data.user;let id=localStorage.getItem(storageKey());if(id){try{const previous=await api('status',id);if(previous.state==='rejected')id=null;else if(previous.state==='replica_verified'){await check(id);return;}}catch(e){if(e.status!==404)throw e;}}if(!id){id=crypto.randomUUID();localStorage.setItem(storageKey(),id)}await api('save',id);for(let i=0;i<25;i++){if(await check(id))return;await new Promise(resolve=>setTimeout(resolve,5000));}msg.textContent='自動確認の時間を超えました。保存状況を確認を押してください。'})};
+  form.querySelector('[data-check]').onclick=()=>run(async()=>{if(!user){const r=await client.auth.signInWithPassword({email:email.value.trim(),password:password.value});password.value='';if(r.error)throw Error('ログインできません');user=r.data.user;}const id=localStorage.getItem(storageKey());if(!id)throw Error('受付がありません');await check(id)});
 }
