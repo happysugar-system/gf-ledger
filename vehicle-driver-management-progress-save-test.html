@@ -96,7 +96,19 @@ async function pollPending(){
  const pending=JSON.parse(localStorage.getItem(storage())||"null");
  if(!pending)return;
  for(let i=0;i<48;i++){
-  const result=await api("status",{request_id:pending.id});
+  let result;
+  try {result=await api("status",{request_id:pending.id});}
+  catch(e){
+    if(e.status!==404||!pending.expected||!pending.fields)throw e;
+    try {
+      await api("save",{request_id:pending.id,expected:pending.expected,fields:pending.fields});
+    } catch(retryError){
+      if(retryError.status!==409)throw retryError;
+      const found=await api("status",{request_id:pending.id}).catch(x=>x.status===404?null:Promise.reject(x));
+      if(!found){localStorage.removeItem(storage());await refresh();throw Error("未受付の保存内容は無効になりました。画面を再確認してください。");}
+    }
+    result=await api("status",{request_id:pending.id});
+  }
   if(result.state==="verified"&&result.verified_at){
     localStorage.removeItem(storage());await refresh();announce("保存完了！車両台帳・Supabase・マイページ用進捗の照合済みです。");
     return;
@@ -140,8 +152,9 @@ el("save").addEventListener("click",()=>task(async()=>{
  if(!stages.includes(target[0]))throw Error("現在のテストで使える進捗名を入力してください。");
  if(available&&confirmed&&confirmed<available)throw Error("納車確定日が納車可能日より前です。");
  if(!confirm("検証用の車両台帳に進捗・日付の変更を保存しますか？"))return;
- const id=crypto.randomUUID();localStorage.setItem(storage(),JSON.stringify({id}));
+ const id=crypto.randomUUID();
  const fields=Object.fromEntries(names.map((k,i)=>[k,target[i]]));
+ localStorage.setItem(storage(),JSON.stringify({id,expected:snapshot,fields}));
  try{await api("save",{request_id:id,expected:snapshot,fields});}
  catch(e){
   if(e.status===409){
