@@ -1,0 +1,19 @@
+name: Vehicle save unit tests
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile-management/**'
+      - 'tests/**'
+      - '.github/workflows/vehicle-save-tests.yml'
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/vehicle-save-controller.test.mjs tests/vehicle-ordinary-validation.test.mjs tests/vehicle-basic-patch.test.mjs
