@@ -1,7 +1,8 @@
 \set ON_ERROR_STOP on
 create role anon;
 create role authenticated;
-create role service_role;
+-- Supabase service_role bypasses RLS; reproduce that property in disposable PostgreSQL.
+create role service_role bypassrls;
 create schema auth;
 create table auth.users(id uuid primary key);
 create table public.gf_vehicles(vehicle_id text primary key,vehicle_data jsonb not null,updated_at timestamptz);
