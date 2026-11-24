@@ -166,7 +166,14 @@ export function mountDemoSave(root, onClose, onRead) {
         continue;
       }
       if (state === 'not_received' && count < 3) { await new Promise(resolve => setTimeout(resolve, 3000)); continue; }
-      if (Object.hasOwn(messages, state)) { display(); message(messages[state]); return; }
+      if (Object.hasOwn(messages, state)) {
+        message(messages[state]);
+        try { display(); } catch (error) {
+          console.error('Vehicle detail refresh failed', error);
+          message(messages[state] + ' 詳細画面の更新に失敗しました。再読込してください。');
+        }
+        return;
+      }
       message('保存処理中です。反映を確認しています…');
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
