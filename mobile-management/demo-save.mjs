@@ -166,7 +166,7 @@ export function mountDemoSave(root, onClose, onRead) {
         continue;
       }
       if (state === 'not_received' && count < 3) { await new Promise(resolve => setTimeout(resolve, 3000)); continue; }
-      if (messages[state]) { message(messages[state]); display(); return; }
+      if (Object.hasOwn(messages, state)) { display(); message(messages[state]); return; }
       message('保存処理中です。反映を確認しています…');
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
