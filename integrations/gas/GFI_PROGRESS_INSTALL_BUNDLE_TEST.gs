@@ -67,7 +67,7 @@ function GF_LedgerProgressCancelGuard_(record) {
 
 function GFI_進捗台帳読取_(vehicle) {
   const record = {...vehicle.r};
-  const timezone = vehicle.s.getParent().getSpreadsheetTimeZone();
+  const timezone = 'Asia/Tokyo';
   for (const key of GF_LEDGER_PROGRESS_COLUMNS.slice(1)) {
     const index = vehicle.h.indexOf(key);
     if (index < 0) throw new Error('台帳に列がありません ' + key);
