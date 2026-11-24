@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOLD FIRST｜車両進捗 保存接続テスト</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#172b45;background:#f5f7fb}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:680px;margin:0 auto;padding:24px 16px 64px}
+header{background:#102c50;color:white;padding:23px 20px}header .inner{max-width:680px;margin:auto}
+h1{font-size:1.28rem;margin:0 0 6px}h2{font-size:1.1rem;margin:0 0 16px}small,.muted{color:#718096}
+header small{color:#d2e2f4}.panel{background:white;border:1px solid #dbe4f0;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 2px 12px rgba(17,36,65,.04)}
+.field{margin:14px 0}.field label{font-weight:650;font-size:.91rem;display:block;margin-bottom:8px}
+input{width:100%;min-height:47px;border:1px solid #c8d3df;border-radius:10px;font-size:1rem;padding:11px;background:white;color:#152a42}
+input:focus{outline:2px solid #64a5ff;outline-offset:1px}.columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+button{border:0;border-radius:10px;padding:13px 17px;font-size:1rem;font-weight:700;background:#1565c0;color:white;cursor:pointer}
+button.secondary{color:#255478;background:#e8eff8}button:disabled{background:#b6c2d1;color:#eef2f7;cursor:not-allowed}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1}.tag{display:inline-block;padding:5px 10px;font-size:.78rem;border-radius:99px;background:#ecf4ff;color:#2162a0}
+.meta{font-size:.87rem;margin:10px 0;color:#53647a}.hint{font-size:.86rem;color:#627188;line-height:1.7}
+#message{white-space:pre-wrap;line-height:1.7;font-size:.93rem;border-left:3px solid #9bb9dc;padding:9px 12px;margin-top:16px;background:#f6f9fd}
+a{color:#155aa5}footer{font-size:.82rem;color:#6e7b90;margin-top:24px}.notice{font-size:.85rem;color:#875c15;background:#fff8e8;padding:12px;border-radius:8px}
+@media(max-width:480px){.columns{grid-template-columns:1fr}.panel{padding:16px}}
+</style>
+</head>
+<body>
+<header><div class="inner"><h1>GOLD FIRST｜車両進捗の保存テスト</h1><small>検証専用：TEST-001 / D999901　・　本番データは使用しません</small></div></header>
+<main class="wrap">
+<section id="loginPanel" class="panel">
+<h2>スタッフ検証アカウントでログイン</h2>
+<form id="loginForm">
+<div class="field"><label for="email">メールアドレス</label><input id="email" type="email" autocomplete="username" required></div>
+<div class="field"><label for="password">パスワード</label><input id="password" type="password" autocomplete="current-password" required></div>
+<button type="submit" id="loginButton">ログインして進捗を確認</button>
+</form><p class="hint">従来の検証用Supabaseスタッフアカウントを使用します。LINEマイページの認証設定は変更しません。</p>
+</section>
+<section id="progressPanel" class="panel" hidden>
+<div class="actions"><h2 style="margin:3px 0;flex:1">TEST-001 の進捗</h2><span class="tag">検証環境</span></div>
+<p class="meta" id="vehicleInfo"></p>
+<div class="field"><label for="stage">管理区分（マイページ表示用）</label>
+<input id="stage" list="stageList" maxlength="100" autocomplete="off">
+<datalist id="stageList"><option value="車両準備中"></option><option value="車両手配済み"></option><option value="名義変更前"></option><option value="名義変更中"></option><option value="名義変更済み"></option></datalist>
+</div>
+<div class="columns">
+<div class="field"><label for="available">納車可能日</label><input id="available" type="date"></div>
+<div class="field"><label for="confirmed">納車確定日</label><input id="confirmed" type="date"></div>
+</div>
+<p class="hint">管理区分は手入力できますが、現在の検証APIで保存できるのは上記5つの進捗名のみです。区分／ステータスやカレンダー予定は編集しません。</p>
+<div class="actions"><button id="save" disabled>進捗を台帳に保存</button><button id="refresh" class="secondary">最新状態を取得</button></div>
+<div id="message" role="status" aria-live="polite">ログインすると台帳の現在値を取得します。</div>
+</section>
+<p class="notice">この画面はGASの進捗受付処理が設置されて初めて実保存が完了します。GAS更新前は保存を押さないでください。処理が未完了の場合、同じ受付IDを再送せず「最新状態を取得」で確認してください。</p>
+<footer>関連：<a href="vehicle-driver-management-integration-live-test.html">車両割当・取消の検証</a> ／ <a href="mypage-assignment-progress-test.html">マイページ表示の検証</a></footer>
+</main>
+<script type="module">
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2.57.0";
+const URL="https://zwprphmfgobkektzsuti.supabase.co";
+const KEY="sb_publishable__wtlccECQwOVd3-LvRVFYQ_2dCUlPVR";
+const client=createClient(URL,KEY,{auth:{persistSession:false}});
+const names=["管理区分","納車可能日","納車確定日"],stages=["車両準備中","車両手配済み","名義変更前","名義変更中","名義変更済み"];
+const el=(id)=>document.getElementById(id);
+let user=null,busy=false,snapshot=null,blocked=false;
+const storage=()=>"gfi-progress-test:"+user.id;
+function announce(s){el("message").textContent=s;}
+function values(){return [el("stage").value.trim(),el("available").value,el("confirmed").value];}
+function updateButtons(){
+ const v=values();
+ const valid=stages.includes(v[0])&&(!v[1]||!v[2]||v[2]>=v[1]);
+ el("save").disabled=!user||busy||blocked||!snapshot||snapshot.driverId!=="D999901"||!valid||!!localStorage.getItem(user?storage():"__notset__");
+ el("refresh").disabled=!user||busy;
+}
+for(const id of ["stage","available","confirmed"])el(id).addEventListener("input",updateButtons);
+async function api(action,payload={}){
+ const {data:{session}}=await client.auth.getSession();
+ if(!session)throw Error("セッションがありません。再ログインしてください。");
+ const res=await fetch(URL+"/functions/v1/gf-assignment-progress-ui-test",{
+  method:"POST",headers:{"apikey":KEY,"authorization":"Bearer "+session.access_token,"content-type":"application/json"},
+  body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(20000)
+ });
+ const body=await res.json().catch(()=>({}));
+ if(!res.ok){const e=Error("受付確認エラー HTTP "+res.status+" ("+(body.error||"unknown")+")");e.status=res.status;throw e;}
+ return body;
+}
+async function refresh(){
+ const x=await api("read");
+ snapshot={vehicleId:x.vehicle_id,driverId:x.driver_id,values:x.values};
+ blocked=!!x.blocked;
+ el("stage").value=x.values[0]||"";
+ el("available").value=x.values[1]||"";
+ el("confirmed").value=x.values[2]||"";
+ el("vehicleInfo").textContent="VehicleID: "+x.vehicle_id+" ／ DriverID: "+(x.driver_id||"未割当")+" ／ 同期記録: "+(x.updated_at||"未取得");
+ updateButtons();
+ if(x.driver_id!=="D999901")announce("まだ車両が割り当てられていません。先に車両割当テストを行ってください。");
+ else if(x.blocked)announce("別の保存受付を確認中です。二重送信を防ぐため新規保存を停止しています。");
+ else announce("最新状態を読み込みました。変更後に保存できます。");
+}
+async function pollPending(){
+ const pending=JSON.parse(localStorage.getItem(storage())||"null");
+ if(!pending)return;
+ for(let i=0;i<48;i++){
+  const result=await api("status",{request_id:pending.id});
+  if(result.state==="verified"&&result.verified_at){
+    localStorage.removeItem(storage());await refresh();announce("保存完了！車両台帳・Supabase・マイページ用進捗の照合済みです。");
+    return;
+  }
+  if(["reconciliation_required","rejected"].includes(result.state)){
+    announce("管理者確認が必要な受付です。再保存せず、GASログと受付IDを確認してください。受付ID: "+pending.id);
+    return;
+  }
+  announce("受付済み："+result.state+"。台帳とSupabaseの保存確認中です。\n受付ID: "+pending.id);
+  await new Promise(resolve=>setTimeout(resolve,5000));
+ }
+ announce("保存状況の確認待ちです。再送せず「最新状態を取得」で確認してください。");
+}
+async function task(fn){
+ if(busy)return;busy=true;updateButtons();
+ try{await fn()}catch(e){announce(e.message)}finally{busy=false;updateButtons()}
+}
+el("loginForm").addEventListener("submit",event=>{
+ event.preventDefault();task(async()=>{
+  const {data,error}=await client.auth.signInWithPassword({email:el("email").value.trim(),password:el("password").value});
+  el("password").value="";
+  if(error||!data.user)throw Error("ログインできませんでした。");
+  user=data.user;el("loginPanel").hidden=true;el("progressPanel").hidden=false;
+  await refresh();
+  if(localStorage.getItem(storage()))await pollPending();
+ });
+});
+el("refresh").addEventListener("click",()=>task(async()=>{
+ const pending=user&&localStorage.getItem(storage());
+ if(pending){await pollPending();return;}
+ await refresh();
+}));
+el("save").addEventListener("click",()=>task(async()=>{
+ if(localStorage.getItem(storage()))throw Error("すでに確認中の受付があります。");
+ await refresh();
+ if(blocked||snapshot.driverId!=="D999901")throw Error("現在の車両は編集できません。");
+ const target=values(),available=target[1],confirmed=target[2];
+ if(!stages.includes(target[0]))throw Error("現在のテストで使える進捗名を入力してください。");
+ if(available&&confirmed&&confirmed<available)throw Error("納車確定日が納車可能日より前です。");
+ if(!confirm("検証用の車両台帳に進捗・日付の変更を保存しますか？"))return;
+ const id=crypto.randomUUID();localStorage.setItem(storage(),JSON.stringify({id}));
+ const fields=Object.fromEntries(names.map((k,i)=>[k,target[i]]));
+ try{await api("save",{request_id:id,expected:snapshot,fields});}
+ catch(e){
+  if(e.status===409){
+   const status=await api("status",{request_id:id}).catch(error=>error.status===404?null:Promise.reject(error));
+   if(!status){localStorage.removeItem(storage());await refresh();throw Error("台帳が更新されたため保存受付できませんでした。画面を再確認してください。");}
+  }else throw e;
+ }
+ await pollPending();
+}));
+</script>
+</body></html>
