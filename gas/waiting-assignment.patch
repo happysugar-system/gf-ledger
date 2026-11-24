@@ -37,12 +37,12 @@
 - const id=found?found.id:'D'+String(max+1).padStart(6,'0');
 - return {sh,h,row:found?found.row:sh.getLastRow()+1,id,isNew:!found};
 + const waiting=GFW_newSheet_(),h=GFW_headerMap_(waiting);
-+ if(h['LINE受付ID']===undefined||h.DriverID===undefined)throw Error('LINE受付ID・DriverID列が必要です');
++ if(h['LINE受付ID']===undefined||h['受付識別子']===undefined||h.DriverID===undefined)throw Error('LINE受付ID・受付識別子・DriverID列が必要です');
 + const get=key=>waiting.getRange(person.sheetRow,h[key]+1).getDisplayValue().trim();
 + const bookId=PropertiesService.getScriptProperties().getProperty('GFW_GF138_LINE_BOOK_ID');
 + if(!bookId)throw Error('GF138のLINE受付ブック設定がありません');
 + const identity=GFA_割当DriverIDを照合_(get('LINE受付ID'),get('DriverID'),{
-+  line:SpreadsheetApp.openById(bookId),vehicle:GFW_newBook_()
++  line:SpreadsheetApp.openById(bookId),vehicle:GFW_newBook_(),waitingKey:get('受付識別子')
 + });
 + if(identity.state!=='resolved')throw Error(identity.state==='registration_review_required'?'GF138の受付照合が要確認です':'GF138の登録完了を待っています');
 + const sh=GFW_driverSheet_(),dh=GFW_headerMap_(sh);
