@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { planAssignmentSave } from './production-assignment-plan.mjs';
+const vehicle = { VehicleID:'V1', 車番:'11-11', '区分/ステータス':'空車' };
+const waiting = { 受付ID:'R1', ステータス:'名変待ち', 氏名:'テスト' };
+const input = { request:{waiting_id:'R1',vehicle_id:'V1'}, identity:{state:'resolved',driver_id:'D1'}, waiting, vehicle, vehicles:[vehicle] };
+const plan = planAssignmentSave(input);
+assert.equal(plan.state,'ready');
+assert.equal(Object.hasOwn(plan.vehicleEdit,'区分/ステータス'),false);
+assert.equal(plan.vehicleEdit.管理区分,'車両準備中');
+assert.equal(plan.waitingEdit.DriverID,'D1');
+const assigned = {...vehicle,...plan.vehicleEdit};
+assert.equal(planAssignmentSave({...input,vehicle:assigned,waiting:{...waiting,...plan.waitingEdit}}).state,'sheet_saved');
+assert.throws(()=>planAssignmentSave({...input,vehicle:assigned}),/VEHICLE_NOT_AVAILABLE/);
+assert.throws(()=>planAssignmentSave({...input,vehicles:[vehicle,{VehicleID:'V2',DriverID:'D1'}]}),/DRIVER_ALREADY_ASSIGNED/);
+assert.throws(()=>planAssignmentSave({...input,waiting:{...waiting,DriverID:'D2'}}),/DRIVER_ID_MISMATCH/);
+assert.equal(planAssignmentSave({...input,identity:{state:'registration_review_required'}}).state,'registration_review_required');
