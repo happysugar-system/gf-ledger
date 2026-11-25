@@ -13,3 +13,14 @@ function GF_ReceiptAssignmentWorkerHealth_(token) {
   if(b.ok!==true||b.write_enabled!==false)throw Error('unexpected_worker_health');
   return {connected:true,write_enabled:false};
 }
+
+function GF_動的割当検証_読取診断() {
+  GF_ReceiptAssignmentValidationBook_();
+  const result=GF_ReceiptAssignmentWorkerHealth_(PropertiesService.getScriptProperties().getProperty('GF_VEHICLE_DEMO_SYNC_TOKEN'));
+  const preview=GF_ReceiptAssignmentValidationVersion_({
+    receiptId:'TEST-R04',driverId:'D999904',vehicleId:'V900004',action:'assign'
+  });
+  const diagnostic={...result,assignment_planned:preview.state==='planned'};
+  console.log(JSON.stringify(diagnostic));
+  return diagnostic;
+}

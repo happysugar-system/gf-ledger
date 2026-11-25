@@ -1,4 +1,4 @@
-/** Review bundle only. Not ready for live installation. Dynamic queue claims disabled; validation replica adapter still required. Do not install alongside individual source files. */
+/** 既存の検証GAS用。個別ファイルと重複登録しない。診断は読み取り専用。 */
 
 // ---- Plan ----
 /** 本番割当候補: 認証済みサーバー受付と台帳の新鮮な読取値だけを使用する純粋な計画関数。
@@ -58,7 +58,6 @@ function GF_ReceiptAssignmentPlan_(data, request) {
   ]};
 }
 
-
 // ---- Version ----
 /** Read-only snapshot version for the dynamic assignment candidate.
  * Call with fresh server-read tables; never accept tables from the browser.
@@ -84,7 +83,6 @@ function GF_ReceiptAssignmentAssertVersion_(data,request,expected) {
   return true;
 }
 
-
 // ---- SourceCheck ----
 /** Read the original LINE receipt again before a dynamic assignment.
  * The caller must supply server-read sheet values, never browser data.
@@ -107,29 +105,21 @@ function GF_ReceiptAssignmentSourceCheck_(lineValues,detailValues,request,expect
   return true;
 }
 
-
 // ---- Save ----
-/** 既存の認可済み受付ワーカーからのみ呼ぶ。公開 doPost ではない。
- * syncExisting: 現行同期を実行するサーバー側関数。nullなら定期同期に委ねる。
- * verifyExisting: 現行DBを読み、対象3シートの反映を確認するサーバー側関数。
- * 本番設定・既存トリガーは変更しない。
- */
-function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting, expectedVersion, verifySource) {
-  if ((syncExisting !== null && typeof syncExisting !== 'function') || typeof verifyExisting !== 'function')
-    throw Error('existing_sync_not_connected');
-  if (typeof GF_SB_対象ID_ !== 'function' || GF_SB_対象ID_() !== bookId)
-    throw Error('ledger_target_mismatch');
+function GF_ReceiptAssignmentSheetNames_() {return ['GF_LINEドライバー同期履歴','名変待ち管理','ドライバーマスター','車両台帳'];}
+
+function GF_ReceiptAssignmentReadTables_(bookId) {
   const api = Sheets.Spreadsheets;
-  const names = ['GF_LINEドライバー同期履歴','名変待ち管理','ドライバーマスター','車両台帳'];
+  const names = GF_ReceiptAssignmentSheetNames_();
   const keys = [
     ['LINE受付ID','受付識別子','DriverID','処理状態'],
     ['LINE受付ID','受付識別子','DriverID','ステータス','割当VehicleID','割当車番'],
     ['DriverID','氏名','ステータス','所属会社名','稼働エリア','割当VehicleID','割当車番'],
     ['VehicleID','DriverID','車番','区分/ステータス','管理区分','現在使用者','所属会社名','稼働エリア','納車可能日','納車確定日']
   ];
-  const read = () => {
+
     const result = api.Values.batchGet(bookId,{ranges:names.map(n=>"'"+n+"'"),valueRenderOption:'UNFORMATTED_VALUE'}).valueRanges;
-    if (!result || result.length !== names.length) throw Error('ledger_read_failed');
+  if (!result || result.length !== names.length) throw Error('ledger_read_failed');
     return result.map((item,i)=>{
       const [header,...rows] = item.values || [];
       if (!header) throw Error('missing_header');
@@ -140,7 +130,22 @@ function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting
       }));
       return {columns,rows:rows.map(row=>Object.fromEntries(keys[i].map(k=>[k,row[columns[k]]??''])))};
     });
-  };
+}
+
+/** 既存の認可済み受付ワーカーからのみ呼ぶ。公開 doPost ではない。
+ * syncExisting: 現行同期を実行するサーバー側関数。nullなら定期同期に委ねる。
+ * verifyExisting: 現行DBを読み、対象3シートの反映を確認するサーバー側関数。
+ * 本番設定・既存トリガーは変更しない。
+ */
+function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting, expectedVersion, verifySource, validationOnly) {
+  if ((syncExisting !== null && typeof syncExisting !== 'function') || typeof verifyExisting !== 'function')
+    throw Error('existing_sync_not_connected');
+  if (validationOnly===true ? GF_ReceiptAssignmentValidationBook_()!==bookId :
+      (typeof GF_SB_対象ID_ !== 'function' || GF_SB_対象ID_() !== bookId))
+    throw Error('ledger_target_mismatch');
+  const api = Sheets.Spreadsheets;
+  const names = GF_ReceiptAssignmentSheetNames_();
+  const read = () => GF_ReceiptAssignmentReadTables_(bookId);
   const snapshot = tables => ({history:tables[0].rows,waiting:tables[1].rows,drivers:tables[2].rows,vehicles:tables[3].rows});
   const plan = tables => GF_ReceiptAssignmentPlan_(snapshot(tables),request);
   const lock=LockService.getScriptLock();
@@ -195,7 +200,6 @@ function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting
   } catch(e) {return {status:'reconciliation_required'};}
 }
 
-
 // ---- Replica ----
 /** 既存の車両差分同期を待ち、現在の車両台帳と複製を照合する内部入口。 */
 function GF_ReceiptAssignmentSaveAndCheck_(bookId, request, expectedVersion, verifySource) {
@@ -226,7 +230,6 @@ function GF_ReceiptAssignmentReplicaMatches_(preview, request) {
   return source.DriverID===(assigned?request.driverId:'') &&
     source['区分/ステータス']==='空車' && source['管理区分']===(assigned?'車両準備中':'通常管理');
 }
-
 
 // ---- QueueAdapter ----
 /** Queue adapter for the authenticated staff worker. Not a public GAS endpoint.
@@ -262,7 +265,6 @@ function GF_ReceiptAssignmentRunClaimed_(bookId,row,assertCurrentOperation,verif
   return {request_id:row.request_id,status:result.status};
 }
 
-
 // ---- ValidationRunner ----
 /** Validation-only source reader. No writes. */
 function GF_ReceiptAssignmentValidationSource_(request,expectedKey) {
@@ -284,6 +286,72 @@ function GF_ReceiptAssignmentValidationRun_(row,assertCurrentOperation) {
   return GF_ReceiptAssignmentRunClaimed_(book,row,assertCurrentOperation,GF_ReceiptAssignmentValidationSource_);
 }
 
+function GF_ReceiptAssignmentValidationBook_() {
+  const props=PropertiesService.getScriptProperties();
+  const book='1NE2DNQK2vV0UBNg_-6B9xiyfE4y4i2JTKrUBuL902tU';
+  if(ScriptApp.getScriptId()!=='1rRpYdmZsCocUtldRJrpKokpX_Km_NPw0F8h3SOaiykHiR3y4kTgBdSt5'||
+     props.getProperty('GFA_APPROVED_BOOK_ID')!==book||
+     props.getProperty('GFA_APPROVED_LINE_BOOK_ID')!=='12iXmFwRX9yI-cbzPYyWJGXFdllZpu8Ujm_r33-7F7M8')
+    throw Error('validation_target_mismatch');
+  return book;
+}
+
+function GF_ReceiptAssignmentValidationVersion_(request) {
+  const book=GF_ReceiptAssignmentValidationBook_();
+  if(!/^V9\d{5}$/.test(request?.vehicleId))throw Error('validation_vehicle_required');
+  const [history,waiting,drivers,vehicles]=GF_ReceiptAssignmentReadTables_(book).map(t=>t.rows);
+  const result=GF_ReceiptAssignmentVersion_({history,waiting,drivers,vehicles},request);
+  const h=history.find(r=>r['LINE受付ID']===request.receiptId);
+  GF_ReceiptAssignmentValidationSource_(request,h['受付識別子']);
+  return result;
+}
+
+/** Operates on one server-claimed job only. No trigger registration. */
+function GF_動的割当検証キューを1件処理() {
+  const book=GF_ReceiptAssignmentValidationBook_();
+  const props=PropertiesService.getScriptProperties();
+  if(props.getProperty('GF_DYNAMIC_ASSIGNMENT_GAS_ENABLED')!=='true')throw Error('validation_worker_disabled');
+  const token=props.getProperty('GF_VEHICLE_DEMO_SYNC_TOKEN');
+  if(!token||token.length<32)throw Error('worker_token_missing');
+  const call=body=>{
+    const r=UrlFetchApp.fetch('https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-assignment-dynamic-queue-worker-test',{
+      method:'post',contentType:'application/json',headers:{'x-gf-sync-token':token},
+      payload:JSON.stringify(body),muteHttpExceptions:true,followRedirects:false,
+    });
+    if(r.getResponseCode()!==200)throw Error('worker_http_'+r.getResponseCode());
+    return JSON.parse(r.getContentText());
+  };
+  const row=call({action:'claim'}).request;
+  if(!row)return {status:'empty'};
+  const lease={request_id:row.request_id,claimed_at:row.claimed_at};
+  let status='reconciliation_required', saveStarted=false;
+  try {
+    const request=GF_ReceiptAssignmentQueueRequest_(row);
+    if(!/^V9\d{5}$/.test(request.vehicleId))throw Error('validation_vehicle_required');
+    const current=call({action:'current',...lease}).request;
+    if(Object.keys(row).some(k=>current?.[k]!==row[k]))throw Error('operation_not_current');
+    const readRecord=()=>{
+      const vehicle=GF_ReceiptAssignmentReadTables_(book)[3].rows.filter(r=>r.VehicleID===request.vehicleId);
+      if(vehicle.length!==1)throw Error('vehicle_not_unique');
+      const keys=['VehicleID','DriverID','車番','区分/ステータス','管理区分','納車可能日','納車確定日'];
+      return Object.fromEntries(keys.map(k=>[k,String(vehicle[0][k]??'')]));
+    };
+    const fresh=GF_ReceiptAssignmentValidationVersion_(request);
+    if(fresh.version!==row.expected_version||fresh.state!=='planned')throw Error('stale_assignment');
+    saveStarted=true;
+    const result=GF_ReceiptAssignmentSave_(book,request,null,()=>{
+      const record=readRecord();
+      return call({action:'replicate',...lease,record}).verified===true&&
+        JSON.stringify(readRecord())===JSON.stringify(record);
+    },row.expected_version,GF_ReceiptAssignmentValidationSource_,true);
+    status=result.status;
+  }catch(e){
+    if(!saveStarted&&['stale_assignment','receipt_source_mismatch','receipt_source_not_verified','validation_vehicle_required',
+        'receipt_driver_mismatch','waiting_mismatch','assignment_not_planned'].includes(e.message))status='rejected';
+  }
+  // A failed completion call leaves the claim locked for an operator to reconcile.
+  return {status:call({action:'finish',...lease,status}).state};
+}
 
 // ---- WorkerHealth ----
 /** Read-only connectivity diagnostic; never claims or saves an assignment.
@@ -300,4 +368,15 @@ function GF_ReceiptAssignmentWorkerHealth_(token) {
   const b=JSON.parse(r.getContentText());
   if(b.ok!==true||b.write_enabled!==false)throw Error('unexpected_worker_health');
   return {connected:true,write_enabled:false};
+}
+
+function GF_動的割当検証_読取診断() {
+  GF_ReceiptAssignmentValidationBook_();
+  const result=GF_ReceiptAssignmentWorkerHealth_(PropertiesService.getScriptProperties().getProperty('GF_VEHICLE_DEMO_SYNC_TOKEN'));
+  const preview=GF_ReceiptAssignmentValidationVersion_({
+    receiptId:'TEST-R04',driverId:'D999904',vehicleId:'V900004',action:'assign'
+  });
+  const diagnostic={...result,assignment_planned:preview.state==='planned'};
+  console.log(JSON.stringify(diagnostic));
+  return diagnostic;
 }

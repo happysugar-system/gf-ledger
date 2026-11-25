@@ -1,24 +1,17 @@
-/** 既存の認可済み受付ワーカーからのみ呼ぶ。公開 doPost ではない。
- * syncExisting: 現行同期を実行するサーバー側関数。nullなら定期同期に委ねる。
- * verifyExisting: 現行DBを読み、対象3シートの反映を確認するサーバー側関数。
- * 本番設定・既存トリガーは変更しない。
- */
-function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting, expectedVersion, verifySource) {
-  if ((syncExisting !== null && typeof syncExisting !== 'function') || typeof verifyExisting !== 'function')
-    throw Error('existing_sync_not_connected');
-  if (typeof GF_SB_対象ID_ !== 'function' || GF_SB_対象ID_() !== bookId)
-    throw Error('ledger_target_mismatch');
+function GF_ReceiptAssignmentSheetNames_() {return ['GF_LINEドライバー同期履歴','名変待ち管理','ドライバーマスター','車両台帳'];}
+
+function GF_ReceiptAssignmentReadTables_(bookId) {
   const api = Sheets.Spreadsheets;
-  const names = ['GF_LINEドライバー同期履歴','名変待ち管理','ドライバーマスター','車両台帳'];
+  const names = GF_ReceiptAssignmentSheetNames_();
   const keys = [
     ['LINE受付ID','受付識別子','DriverID','処理状態'],
     ['LINE受付ID','受付識別子','DriverID','ステータス','割当VehicleID','割当車番'],
     ['DriverID','氏名','ステータス','所属会社名','稼働エリア','割当VehicleID','割当車番'],
     ['VehicleID','DriverID','車番','区分/ステータス','管理区分','現在使用者','所属会社名','稼働エリア','納車可能日','納車確定日']
   ];
-  const read = () => {
+
     const result = api.Values.batchGet(bookId,{ranges:names.map(n=>"'"+n+"'"),valueRenderOption:'UNFORMATTED_VALUE'}).valueRanges;
-    if (!result || result.length !== names.length) throw Error('ledger_read_failed');
+  if (!result || result.length !== names.length) throw Error('ledger_read_failed');
     return result.map((item,i)=>{
       const [header,...rows] = item.values || [];
       if (!header) throw Error('missing_header');
@@ -29,7 +22,22 @@ function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting
       }));
       return {columns,rows:rows.map(row=>Object.fromEntries(keys[i].map(k=>[k,row[columns[k]]??''])))};
     });
-  };
+}
+
+/** 既存の認可済み受付ワーカーからのみ呼ぶ。公開 doPost ではない。
+ * syncExisting: 現行同期を実行するサーバー側関数。nullなら定期同期に委ねる。
+ * verifyExisting: 現行DBを読み、対象3シートの反映を確認するサーバー側関数。
+ * 本番設定・既存トリガーは変更しない。
+ */
+function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting, expectedVersion, verifySource, validationOnly) {
+  if ((syncExisting !== null && typeof syncExisting !== 'function') || typeof verifyExisting !== 'function')
+    throw Error('existing_sync_not_connected');
+  if (validationOnly===true ? GF_ReceiptAssignmentValidationBook_()!==bookId :
+      (typeof GF_SB_対象ID_ !== 'function' || GF_SB_対象ID_() !== bookId))
+    throw Error('ledger_target_mismatch');
+  const api = Sheets.Spreadsheets;
+  const names = GF_ReceiptAssignmentSheetNames_();
+  const read = () => GF_ReceiptAssignmentReadTables_(bookId);
   const snapshot = tables => ({history:tables[0].rows,waiting:tables[1].rows,drivers:tables[2].rows,vehicles:tables[3].rows});
   const plan = tables => GF_ReceiptAssignmentPlan_(snapshot(tables),request);
   const lock=LockService.getScriptLock();
