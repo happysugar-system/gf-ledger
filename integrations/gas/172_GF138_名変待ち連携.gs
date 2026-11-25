@@ -121,7 +121,7 @@ function GFA_名変待ちDriverID同期_(write){
 }
 
 /** 名変待ちへの明示的な受付登録。スタッフ認証済みのサーバー処理からのみ呼ぶ内部関数。 */
-function GFA_名変待ち受付登録_(receiptId,key){
+function GFA_名変待ち受付登録_(receiptId,key,expectedDriverId){
  const p=PropertiesService.getScriptProperties();
  if(p.getProperty('GFA_WAITING_LINK_ENABLED')!=='true')throw Error('書込未承認');
  const vid=p.getProperty('GFA_APPROVED_BOOK_ID'),lid=p.getProperty('GFA_APPROVED_LINE_BOOK_ID');
@@ -133,6 +133,10 @@ function GFA_名変待ち受付登録_(receiptId,key){
  const vehicle=SpreadsheetApp.openById(vid),line=SpreadsheetApp.openById(lid);
  const result=GFA_割当DriverIDを照合_(receiptId,'',{vehicle,line,waitingKey:key});
  if(result.state!=='resolved')return result;
+ if(expectedDriverId!==undefined){
+  const checked=GFA_割当照合行_(line.getSheetByName('車両依頼受付'),'LINE受付ID',receiptId,['確認DriverID']);
+  if(result.driver_id!==expectedDriverId||checked['確認DriverID']!==expectedDriverId)throw Error('確認DriverID不一致');
+ }
  const driver=GFA_割当照合行_(vehicle.getSheetByName('ドライバーマスター'),'DriverID',result.driver_id,['氏名','所属会社名','稼働エリア','割当VehicleID']);
  const s=vehicle.getSheetByName('名変待ち管理'),rows=s.getDataRange().getDisplayValues();
  const headers=['受付ID','氏名','所属会社名','稼働エリア','希望日','ステータス','割当VehicleID','割当車番','受付日時','割当日時','備考','進捗','旧シート行','LINE受付ID','受付識別子','DriverID'];

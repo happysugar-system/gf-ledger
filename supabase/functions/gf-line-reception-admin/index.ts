@@ -66,8 +66,8 @@ Deno.serve(async req=>{
  if(accessErr)return respond(503,{error:"authorization_unavailable"});
  if(!access?.enabled){console.warn("gf_reception_access_denied","not_authorized");return respond(403,{error:"not_authorized"});}
  let input;try{input=await req.json()}catch{return respond(400,{error:"invalid_json"})}
- if(!["loan_options","list","detail","waiting_registration_check","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
- if(input.action==="waiting_registration_check" && !["owner","staff"].includes(access.role)){
+ if(!["loan_options","list","detail","waiting_registration_check","waiting_register","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
+ if(["waiting_registration_check","waiting_register"].includes(input.action) && !["owner","staff"].includes(access.role)){
   return respond(403,{error:"not_authorized"});
  }
  if(input.action==="loan_options"){
@@ -177,7 +177,7 @@ Deno.serve(async req=>{
   const sheet=await sheetRequest(token,"'LINE受付管理'!A1:Z");
   const rows=table(sheet.values||[]).filter(x=>x.value["受付種別"]==="車両依頼");
   if(input.action==="list")return respond(200,{一覧:rows.map(x=>x.value)});
-  if(input.action==="waiting_registration_check"){
+  if(["waiting_registration_check","waiting_register"].includes(input.action)){
    const id=clean(input.receipt_id);
    if(!id||id.length>150)return respond(400,{error:"invalid_reception_id"});
    const lineHeaders=(sheet.values?.[0]||[]).map(clean);
@@ -204,7 +204,27 @@ Deno.serve(async req=>{
       !/^D\d{6}$/.test(driverId)||receipt["確認DriverID"]!==driverId){
     return respond(409,{error:"waiting_receipt_not_confirmed"});
    }
-   return respond(200,{受付照合:true});
+   if(input.action==="waiting_registration_check")return respond(200,{受付照合:true});
+   if(Deno.env.get("GF_WAITING_REGISTER_ENABLED")!=="true")return respond(503,{error:"waiting_registration_disabled"});
+   const endpoint=Deno.env.get("GF_WAITING_GAS_URL")||"";
+   const secret=Deno.env.get("GF_WAITING_GAS_SECRET")||"";
+   if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(endpoint)||secret.length<32){
+    return respond(503,{error:"waiting_registration_not_configured"});
+   }
+   const action="gfa_waiting_register_v1",issuedAt=Date.now(),encoder=new TextEncoder();
+   const key=await crypto.subtle.importKey("raw",encoder.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+   const signature=bytes(new Uint8Array(await crypto.subtle.sign("HMAC",key,encoder.encode(
+    JSON.stringify([action,id,receiptKey,driverId,issuedAt])
+   ))));
+   const gas=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action,receiptId:id,receiptKey,driverId,issuedAt,signature}),signal:AbortSignal.timeout(20000)});
+   if(!gas.ok)return respond(503,{error:"waiting_registration_unavailable"});
+   const answer=await gas.json();
+   if(answer?.status===200&&["registered","already_registered"].includes(answer.state)){
+    return respond(200,{登録状態:answer.state});
+   }
+   if(answer?.status===409)return respond(409,{error:"waiting_registration_review_required"});
+   return respond(503,{error:"waiting_registration_unavailable"});
   }
   if(input.action==="detail"){
    const id=clean(input.receipt_id);
