@@ -234,7 +234,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkForUpdate()});
 })();
 </script>
-</head>
+<style>#tileGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#tileGrid .menu{margin:0!important;min-width:0;width:100%;min-height:116px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:12px;gap:8px}#tileGrid .menu.hidden{display:none!important}#tileGrid .menuText{flex:none;width:100%}#tileGrid .menuTitle{font-size:14px;white-space:normal}#tileGrid .menuSub,#tileGrid .arrow{display:none}#tileGrid .menuIcon{position:relative}#tileGrid.editing .menu{touch-action:none;cursor:grab}#tileGrid .moving{opacity:.45;outline:2px dashed #166b56}.tileTools{display:flex;justify-content:flex-end;gap:8px;margin:12px 0}.tileTools button{padding:8px 12px;border:1px solid #ccc;border-radius:8px;background:white;color:#166b56}@media(min-width:800px){#tileGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}</style></head>
 
 <body>
 <main>
@@ -249,7 +249,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
     アクセスできます。
   </p>
 
-  <button class="menu" type="button"
+<div class="tileTools"><button type="button" id="tileEdit">並べ替え</button><button type="button" id="tileReset" hidden>初期配置に戻す</button></div><div id="tileGrid">  <button data-tile="ledger" class="menu" type="button"
     onclick="openLedger()">
     <span class="menuIcon">🚗</span>
     <span class="menuText">
@@ -261,7 +261,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <span class="arrow">›</span>
   </button>
 
-  <button class="menu" type="button" onclick="window.location.href='./vehicle-progress-admin.html'" style="margin-top:10px;border-color:#d8e9df">
+  <button data-tile="progress" class="menu" type="button" onclick="window.location.href='./vehicle-progress-admin.html'" style="margin-top:10px;border-color:#d8e9df">
     <span class="menuIcon" style="background:#e9f5ec">📍</span>
     <span class="menuText">
       <span class="menuTitle">車両進捗・納車日管理</span>
@@ -270,9 +270,9 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <span class="arrow">›</span>
   </button>
 
-  <button class="menu" type="button" onclick="window.location.href='./driver-notice-admin-review.html'" style="margin-top:16px"><span class="menuIcon">📢</span><span class="menuText"><span class="menuTitle">お知らせ管理</span><span class="menuSub">ドライバーマイページへの掲載・編集（検証）</span></span><span class="arrow">›</span></button>
+  <button data-tile="notice" class="menu" type="button" onclick="window.location.href='./driver-notice-admin-review.html'" style="margin-top:16px"><span class="menuIcon">📢</span><span class="menuText"><span class="menuTitle">お知らせ管理</span><span class="menuSub">ドライバーマイページへの掲載・編集（検証）</span></span><span class="arrow">›</span></button>
 
-  <button class="menu" type="button"
+  <button data-tile="shift" class="menu" type="button"
     onclick="openShift()"
     style="margin-top:16px">
     <span class="menuIcon">📅</span>
@@ -287,7 +287,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <span class="arrow">›</span>
   </button>
 
-  <button class="menu" type="button"
+  <button data-tile="reception" class="menu" type="button"
     onclick="openReception()"
     style="margin-top:16px">
     <span class="menuIcon">📩<span id="lineBadge" class="notificationBadge hidden" aria-label="LINE受付の未完了件数"></span></span>
@@ -302,7 +302,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
     <span class="arrow">›</span>
   </button>
 
-  <button class="menu" type="button" onclick="window.location.href='./company-admin/?tab=requests&fresh='+Date.now()" style="margin-top:16px">
+  <button data-tile="company" class="menu" type="button" onclick="window.location.href='./company-admin/?tab=requests&fresh='+Date.now()" style="margin-top:16px">
     <span class="menuIcon">🏢<span id="registrationBadge" class="notificationBadge hidden" aria-label="ドライバー承認待ち0件"></span></span>
     <span class="menuText">
       <span class="menuTitle">法人管理・担当者管理</span>
@@ -310,11 +310,12 @@ window.addEventListener('DOMContentLoaded',async()=>{
     </span>
     <span class="arrow">›</span>
   </button>
-  <button id="ownerAccessMenu" class="menu hidden" type="button" onclick="window.location.href='./reception-access-admin.html'" style="margin-top:16px">
+  <button data-tile="owner" id="ownerAccessMenu" class="menu hidden" type="button" onclick="window.location.href='./reception-access-admin.html'" style="margin-top:16px">
     <span class="menuIcon">🔐</span><span class="menuText"><span class="menuTitle">スタッフ・権限管理</span><span class="menuSub">最高管理者専用｜スタッフ名・メール・権限</span></span><span class="arrow">›</span>
   </button>
 
 
+</div>
   <button class="staffLogout" type="button" onclick="logoutStaff()">ログアウト</button>
   <!-- GF155｜管理者通知（共通ログイン連動） -->
   <section id="authBox" class="authBox hidden">
@@ -792,5 +793,18 @@ async function logoutStaff(){
 }
 initGF155();
 </script>
-</body>
+<script>(()=>{const grid=document.getElementById("tileGrid"),edit=document.getElementById("tileEdit"),reset=document.getElementById("tileReset");const defaults=[...grid.children].map(n=>n.dataset.tile);let key=null,editing=false,drag=null,timer=null,blockClickUntil=0;
+function normalized(order){return [...new Set([...order.filter(x=>defaults.includes(x)),...defaults])];}
+function apply(order){for(const id of normalized(order)){const n=[...grid.children].find(x=>x.dataset.tile===id);if(n)grid.append(n);}}
+function save(){if(key)try{localStorage.setItem(key,JSON.stringify([...grid.children].map(n=>n.dataset.tile)));}catch{}}
+function setEdit(v){editing=v;grid.classList.toggle("editing",v);edit.textContent=v?"完了":"並べ替え";reset.hidden=!v;}
+function finish(){clearTimeout(timer);timer=null;if(drag){drag.node.classList.remove("moving");if(drag.active){save();blockClickUntil=Date.now()+500;}drag=null;}}
+edit.onclick=()=>setEdit(!editing);reset.onclick=()=>{apply(defaults);save();};
+grid.addEventListener("click",e=>{if(editing||Date.now()<blockClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+grid.addEventListener("pointerdown",e=>{const node=e.target.closest("[data-tile]");if(!node||e.button!==0)return;finish();drag={node,id:e.pointerId,x:e.clientX,y:e.clientY,active:false};const activate=()=>{if(!drag)return;setEdit(true);drag.active=true;node.classList.add("moving");try{node.setPointerCapture(e.pointerId);}catch{}};if(editing)activate();else timer=setTimeout(activate,450);});
+grid.addEventListener("pointermove",e=>{if(!drag||drag.id!==e.pointerId)return;if(!drag.active){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>10)finish();return;}e.preventDefault();const target=document.elementFromPoint(e.clientX,e.clientY)?.closest("[data-tile]");if(target&&target!==drag.node&&target.parentNode===grid){const nodes=[...grid.children];grid.insertBefore(drag.node,nodes.indexOf(target)>nodes.indexOf(drag.node)?target.nextSibling:target);}});
+window.addEventListener("pointerup",finish);window.addEventListener("pointercancel",finish);grid.addEventListener("contextmenu",e=>{if(editing||drag)e.preventDefault();});
+async function load(){let next=null;try{const {data}=await gfClient.auth.getUser();if(data.user)next="gf-menu-v1:"+data.user.id;}catch{}if(next===key)return;finish();setEdit(false);key=next;let order=[];if(key)try{const parsed=JSON.parse(localStorage.getItem(key)||"[]");if(Array.isArray(parsed))order=parsed;}catch{}apply(order);}
+const wait=setInterval(()=>{if(!gfClient)return;clearInterval(wait);void load();gfClient.auth.onAuthStateChange(()=>setTimeout(load,0));},100);
+})();</script></body>
 </html>
