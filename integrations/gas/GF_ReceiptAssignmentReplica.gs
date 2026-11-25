@@ -1,5 +1,5 @@
 /** 既存の車両差分同期を待ち、現在の車両台帳と複製を照合する内部入口。 */
-function GF_ReceiptAssignmentSaveAndCheck_(bookId, request) {
+function GF_ReceiptAssignmentSaveAndCheck_(bookId, request, expectedVersion) {
   if (typeof GF_SB_1台同期事前確認_読取専用 !== 'function' ||
       typeof GF_SB_ENV === 'undefined' || GF_SB_ENV.VEHICLE_SHEET !== '車両台帳' ||
       GF_SB_ENV.SUPABASE_TABLE !== 'gf_vehicles') throw Error('existing_replica_not_connected');
@@ -7,7 +7,8 @@ function GF_ReceiptAssignmentSaveAndCheck_(bookId, request) {
   // 既存定期同期が処理する。受付操作から他車両・ドライバー・受付の一括同期を起動しない。
   return GF_ReceiptAssignmentSave_(bookId, request,
     null,
-    current => GF_ReceiptAssignmentReplicaMatches_(GF_SB_1台同期事前確認_読取専用(current.vehicleId), current)
+    current => GF_ReceiptAssignmentReplicaMatches_(GF_SB_1台同期事前確認_読取専用(current.vehicleId), current),
+    expectedVersion
   );
 }
 
