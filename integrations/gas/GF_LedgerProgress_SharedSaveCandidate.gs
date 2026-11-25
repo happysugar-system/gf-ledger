@@ -93,9 +93,6 @@ function GF_LedgerProdProgressSave_(bookId, expected, fields, resolveAssignment)
     if (JSON.stringify(snapshot.values) === JSON.stringify(values)) {
       return {status: 'unchanged', snapshot};
     }
-    if (JSON.stringify(snapshot.values) !== JSON.stringify(expected.values)) {
-      throw Error('台帳が変更されました。再読み込みしてください');
-    }
 
     const api = Sheets.Spreadsheets;
     const rowNumber = rowIndex + 1;
