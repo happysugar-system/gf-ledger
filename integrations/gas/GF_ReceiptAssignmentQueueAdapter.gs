@@ -20,12 +20,12 @@ function GF_ReceiptAssignmentQueueRequest_(row) {
 /** Candidate adapter only. Caller must enforce authorization, operation version
  * and replay protection before invoking. Do not attach to legacy fixed-ID queue.
  */
-function GF_ReceiptAssignmentRunClaimed_(bookId,row,assertCurrentOperation) {
+function GF_ReceiptAssignmentRunClaimed_(bookId,row,assertCurrentOperation,verifySource) {
   const request=GF_ReceiptAssignmentQueueRequest_(row);
   if(typeof assertCurrentOperation!=='function' ||
      assertCurrentOperation(row)!==true) throw Error('operation_not_current');
   if(typeof GF_ReceiptAssignmentSaveAndCheck_!=='function') throw Error('assignment_save_missing');
-  const result=GF_ReceiptAssignmentSaveAndCheck_(bookId,request,row.expected_version);
+  const result=GF_ReceiptAssignmentSaveAndCheck_(bookId,request,row.expected_version,verifySource);
   if(!result || !['verified','reconciliation_required'].includes(result.status))
     throw Error('unexpected_assignment_result');
   return {request_id:row.request_id,status:result.status};
