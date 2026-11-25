@@ -136,7 +136,7 @@ function GFA_名変待ち受付登録_(receiptId,key){
  const driver=GFA_割当照合行_(vehicle.getSheetByName('ドライバーマスター'),'DriverID',result.driver_id,['氏名','所属会社名','稼働エリア','割当VehicleID']);
  const s=vehicle.getSheetByName('名変待ち管理'),rows=s.getDataRange().getDisplayValues();
  const headers=['受付ID','氏名','所属会社名','稼働エリア','希望日','ステータス','割当VehicleID','割当車番','受付日時','割当日時','備考','進捗','旧シート行','LINE受付ID','受付識別子','DriverID'];
- if(headers.some((v,i)=>rows[0][i]!==v||rows[0].filter(x=>x===v).length!==1))throw Error('列構成不一致');
+ if(headers.some((v,i)=>!GFA_名変待ち見出し一致_(rows[0],i,v)))throw Error('列構成不一致');
  const matches=rows.slice(1).filter(r=>r[13]===receiptId||r[14]===key);
  if(matches.length){if(matches.length===1&&matches[0][13]===receiptId&&matches[0][14]===key&&matches[0][15]===result.driver_id)return {state:'already_registered',id:matches[0][0]};throw Error('受付重複・不一致');}
  if(driver['割当VehicleID'])throw Error('既存割当あり');
@@ -172,7 +172,7 @@ function GFA_名変待ち列準備_(write){
  const extra=['LINE受付ID','受付識別子','DriverID'];
  if(s.getMaxColumns()<16)throw Error('列数不足');
  const h=s.getRange(1,1,1,Math.max(16,s.getLastColumn())).getDisplayValues()[0];
- if(base.some((v,i)=>h[i]!==v))throw Error('既存列構成不一致');
+ if(base.some((v,i)=>!GFA_名変待ち見出し一致_(h,i,v)))throw Error('既存列構成不一致');
  const done=extra.every((v,i)=>h[13+i]===v)&&extra.every(v=>h.filter(x=>x===v).length===1);
  if(done)return {state:'already_ready'};
  if(extra.some(v=>h.includes(v)))throw Error('既存追加列の位置を確認');
@@ -182,4 +182,9 @@ function GFA_名変待ち列準備_(write){
  if(write){s.getRange(1,14,1,3).setValues([extra]);SpreadsheetApp.flush();if(extra.some((v,i)=>s.getRange(1,14,1,3).getDisplayValues()[0][i]!==v))throw Error('書込確認失敗');}
  return {state:write?'ready':'diagnostic_ok',columns:extra};
  }finally{lock.releaseLock();}
+}
+
+function GFA_名変待ち見出し一致_(header,index,expected){
+ const allowed=expected==='旧シート行' ? [expected,'旧社長シート行'] : [expected];
+ return allowed.includes(header[index])&&header.filter(value=>allowed.includes(value)).length===1;
 }

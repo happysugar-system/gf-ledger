@@ -112,6 +112,7 @@ test('書込無効では無変更、列不足は判別でき、診断と列準�
 test('明示受付登録は3項目を記録し、同じ受付で新しい行を作らない', () => {
   const {register,state}=setup();
   state.waiting.pop();
+  state.waiting[0][12]='旧社長シート行';
   const result=register('L-1',key);
   assert.equal(result.state,'registered');
   assert.deepEqual(Array.from(state.waiting[2].slice(13)),['L-1',key,'D000001']);
