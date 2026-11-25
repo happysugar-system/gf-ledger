@@ -38,20 +38,47 @@ input,select,textarea{border:1px solid #d8d3ca;background:#fff;color:#333;font-s
 <section id="contract-print" class="section"><div class="card"><div class="row no-print"><button id="back">← 編集に戻る</button><button class="primary" onclick="window.print()">印刷・PDF保存</button></div><div class="contract"><h3>代車利用契約書（ひな形・内容未確定）</h3><p id="contract-fields"></p><hr><p><b>【契約条項】</b></p><p>※代車利用料、事故・損傷時の負担、保険、返却条件等の正式な条項はGOLD FIRSTから提供された契約書を確認後に差し込みます。このひな形は正式契約に使用しないでください。</p><p>正式な電子契約はマネーフォワード クラウド契約から送信し、締結します。</p></div></div></section>
 </main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script>
 
+const waitingValidationMode=new URLSearchParams(location.search).get('waiting-validation')==='1';
+const receptionProjectUrl=waitingValidationMode?'https://zwprphmfgobkektzsuti.supabase.co':'https://tgxrnrqxafytyqfwwsag.supabase.co';
+const receptionPublishableKey=waitingValidationMode?'sb_publishable__wtlccECQwOVd3-LvRVFYQ_2dCUlPVR':'sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
 let receptionAuthorized=false;let receptionAuthClient=null;let authCheckSeq=0;
 const receptionAuthGate=document.querySelector('#gfAuthGate');
+if(waitingValidationMode){
+ const login=document.createElement('form');
+ const email=document.createElement('input');
+ email.type='email';email.required=true;email.autocomplete='email';email.placeholder='検証スタッフのメールアドレス';
+ email.setAttribute('aria-label','検証スタッフのメールアドレス');
+ const send=document.createElement('button');
+ send.type='submit';send.textContent='検証用ログインリンクを送る';
+ login.append(email,send);
+ receptionAuthGate.querySelector('.authPanel').append(login);
+ login.onsubmit=async event=>{
+  event.preventDefault();
+  if(!receptionAuthClient||send.disabled)return;
+  send.disabled=true;
+  try{
+   const {error}=await receptionAuthClient.auth.signInWithOtp({
+    email:email.value.trim(),options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname+'?waiting-validation=1'}
+   });
+   if(error)throw error;
+   receptionAuthMessage('検証スタッフのメールにログインリンクを送りました。');
+  }catch(_){receptionAuthMessage('検証用ログインを開始できません。検証スタッフ登録を確認してください。');}
+  finally{send.disabled=false;}
+ };
+}
+
 function receptionAuthMessage(t){document.querySelector('#gfAuthMessage').textContent=t}
 let gfAuthWatchdog=null;
 function gfStartAuthWatchdog(seq){clearTimeout(gfAuthWatchdog);gfAuthWatchdog=setTimeout(()=>{if(seq===authCheckSeq&&!receptionAuthorized){receptionAuthMessage('認証確認がタイムアウトしました。通信または認証セッションを確認してください。');}},12000)}
 function gfStopAuthWatchdog(){clearTimeout(gfAuthWatchdog);gfAuthWatchdog=null}
-async function verifyReceptionSession(){const seq=++authCheckSeq;gfStartAuthWatchdog(seq);receptionAuthGate.hidden=false;receptionAuthorized=false;receptionAuthMessage('スタッフ認証を確認しています…');if(!receptionAuthClient){receptionAuthMessage('認証サービスを利用できません。トップ画面から再度開いてください。');return}try{const {data,error}=await receptionAuthClient.auth.getUser();if(seq!==authCheckSeq)return;if(error||!data?.user){receptionAuthMessage('共通ログインが必要です。トップ画面でメール認証を行ってください。');return}const {data:{session},error:sessionError}=await receptionAuthClient.auth.getSession();if(seq!==authCheckSeq)return;if(sessionError||!session?.access_token){receptionAuthMessage('ログインの有効期限が切れました。共通ログインから入り直してください。');return}const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-line-reception-admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':'sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW'},body:JSON.stringify({action:'list'})});if(seq!==authCheckSeq)return;if(!response.ok){const detail=await response.json().catch(()=>({}));const reasons={origin_not_allowed:'受付管理の通信元を確認できませんでした。トップ画面から開き直してください。',not_authorized:'受付管理の利用権限を確認できませんでした。スタッフ管理者にご確認ください。',invalid_session:'ログインの有効期限が切れました。共通ログインから入り直してください。',authentication_required:'共通ログインを確認できませんでした。トップ画面から再度ログインしてください。',authorization_unavailable:'スタッフ権限の照合で一時的なエラーが発生しました。再試行してください。',sheets_adapter_not_configured:'受付管理の接続設定を確認できませんでした。管理者に連絡してください。'};const hint=reasons[detail.error]||(response.status===403?'受付管理の認証を確認できませんでした。':response.status===401?'ログインの有効期限が切れました。':'受付管理への接続を確認できませんでした。');receptionAuthMessage(hint+'（HTTP '+response.status+' / '+String(detail.error||'unknown')+'）');gfStopAuthWatchdog();return}gfStopAuthWatchdog();receptionAuthorized=true;receptionAuthGate.hidden=true;activateAuthorizedBridge();loadLive({silent:true});loadLoanOptions()}catch(e){if(seq===authCheckSeq)receptionAuthMessage('認証確認に失敗しました。トップ画面から開き直してください。')}}
+async function verifyReceptionSession(){const seq=++authCheckSeq;gfStartAuthWatchdog(seq);receptionAuthGate.hidden=false;receptionAuthorized=false;receptionAuthMessage('スタッフ認証を確認しています…');if(!receptionAuthClient){receptionAuthMessage('認証サービスを利用できません。トップ画面から再度開いてください。');return}try{const {data,error}=await receptionAuthClient.auth.getUser();if(seq!==authCheckSeq)return;if(error||!data?.user){receptionAuthMessage('共通ログインが必要です。トップ画面でメール認証を行ってください。');return}const {data:{session},error:sessionError}=await receptionAuthClient.auth.getSession();if(seq!==authCheckSeq)return;if(sessionError||!session?.access_token){receptionAuthMessage('ログインの有効期限が切れました。共通ログインから入り直してください。');return}const response=await fetch(receptionProjectUrl+'/functions/v1/gf-line-reception-admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':receptionPublishableKey},body:JSON.stringify({action:'list'})});if(seq!==authCheckSeq)return;if(!response.ok){const detail=await response.json().catch(()=>({}));const reasons={origin_not_allowed:'受付管理の通信元を確認できませんでした。トップ画面から開き直してください。',not_authorized:'受付管理の利用権限を確認できませんでした。スタッフ管理者にご確認ください。',invalid_session:'ログインの有効期限が切れました。共通ログインから入り直してください。',authentication_required:'共通ログインを確認できませんでした。トップ画面から再度ログインしてください。',authorization_unavailable:'スタッフ権限の照合で一時的なエラーが発生しました。再試行してください。',sheets_adapter_not_configured:'受付管理の接続設定を確認できませんでした。管理者に連絡してください。'};const hint=reasons[detail.error]||(response.status===403?'受付管理の認証を確認できませんでした。':response.status===401?'ログインの有効期限が切れました。':'受付管理への接続を確認できませんでした。');receptionAuthMessage(hint+'（HTTP '+response.status+' / '+String(detail.error||'unknown')+'）');gfStopAuthWatchdog();return}gfStopAuthWatchdog();receptionAuthorized=true;receptionAuthGate.hidden=true;activateAuthorizedBridge();loadLive({silent:true});loadLoanOptions()}catch(e){if(seq===authCheckSeq)receptionAuthMessage('認証確認に失敗しました。トップ画面から開き直してください。')}}
 // 認証エラー後に再試行できるようにする。データやスタッフ権限は変更しない。
 function gfRetryReceptionAuth(){
   receptionAuthMessage('認証をもう一度確認しています…');
   if(!receptionAuthClient){initReceptionAuth();return;}
   Promise.resolve().then(verifyReceptionSession).catch(e=>receptionAuthMessage('認証処理を開始できませんでした：'+String(e?.message||e)));
 }
-function initReceptionAuth(){if(!window.supabase){receptionAuthMessage('認証ライブラリを読み込めませんでした。');return}receptionAuthClient=window.supabase.createClient('https://tgxrnrqxafytyqfwwsag.supabase.co','sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW');receptionAuthClient.auth.onAuthStateChange((event)=>{if(event==='SIGNED_IN'||event==='SIGNED_OUT'){setTimeout(verifyReceptionSession,0)}});verifyReceptionSession()}
+function initReceptionAuth(){if(!window.supabase){receptionAuthMessage('認証ライブラリを読み込めませんでした。');return}receptionAuthClient=window.supabase.createClient(receptionProjectUrl,receptionPublishableKey);receptionAuthClient.auth.onAuthStateChange((event)=>{if(event==='SIGNED_IN'||event==='SIGNED_OUT'){setTimeout(verifyReceptionSession,0)}});verifyReceptionSession()}
 // 初期化は受付データ用のconst定義が完了してから実行する。
 queueMicrotask(initReceptionAuth);
 const features=['車両依頼の受付一覧・検索・ステータス・担当者・対応メモ','車両依頼の申込者・緊急連絡先メールのコピー','提出書類の閲覧（接続後）','代車契約書発行・履歴管理（新規）'];document.querySelector('#features').innerHTML=features.map(x=>'<div class="item">✓ '+x+'</div>').join('');
@@ -65,8 +92,11 @@ const receptionGateway={
   if(!receptionAuthorized||!receptionAuthClient)throw Error('共通ログインが必要です');
   const {data:{session},error}=await receptionAuthClient.auth.getSession();
   if(error||!session?.access_token)throw Error('ログインの有効期限が切れました');
-  const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-line-reception-admin',{
-   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':'sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW'},
+  if(waitingValidationMode&&!['list','detail','waiting_registration_check','waiting_register'].includes(action)){
+   throw Error('この検証画面では受付確認と名変待ち登録だけ行えます');
+  }
+  const response=await fetch(receptionProjectUrl+'/functions/v1/gf-line-reception-admin',{
+   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':receptionPublishableKey},
    body:JSON.stringify({action,...payload})
   });
   const data=await response.json().catch(()=>({}));
@@ -145,13 +175,14 @@ driverSelect.addEventListener('change',()=>{
 });
 vehicleSelect.addEventListener('change',()=>{document.getElementById('vehicleId').value=vehicleSelect.value});
 async function loadLoanOptions(){
+ if(waitingValidationMode)return;
  if(!receptionAuthorized||!receptionAuthClient)return;
  const message=document.getElementById('loanOptionsMessage');
  try{
   const {data:{session}}=await receptionAuthClient.auth.getSession();
   if(!session?.access_token)throw Error('ログインが必要です');
-  const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-line-reception-admin',{
-   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':'sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW'},
+  const response=await fetch(receptionProjectUrl+'/functions/v1/gf-line-reception-admin',{
+   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':receptionPublishableKey},
    body:JSON.stringify({action:'loan_options'}),cache:'no-store'
   });
   if(!response.ok)throw Error('マスター情報を取得できませんでした（'+response.status+'）');
@@ -197,6 +228,30 @@ let selectedReception=null;async function showReception(r,detailLoaded=false){
  const contentText=value('受付内容');if(contentText){const block=document.createElement('div');block.className='item';const title=document.createElement('h4');title.textContent='申込内容';block.append(title);const items=contentText.replace(/<br\s*\/?\s*>/gi,'\n').split(/\n|\s+\/\s+/).map(x=>x.trim()).filter(Boolean).filter(x=>!/^照合キー\s*[：:]/.test(x));const order=['納車希望','納車予定','稼働開始希望','稼働エリア'];items.sort((a,b)=>{const rank=x=>{const n=order.findIndex(k=>x.startsWith(k));return n<0?99:n};return rank(a)-rank(b)});for(const item of items){const row=document.createElement('div');row.style.cssText='padding:8px 0;border-bottom:1px solid #e5e7eb;white-space:pre-wrap';row.textContent=item;block.append(row)}fields.append(block)}
 const contract=document.querySelector('#requestContractPanel');contract.classList.toggle('hidden',!/車両依頼/.test(String(r.受付種別||'').replace(/\s/g,'')));const contractStatus=value('契約状況')||'未送信';const contractSelect=document.querySelector('#gfRequestContractStatus');contractSelect.value=['未送信','送信済み','契約完了'].includes(contractStatus)?contractStatus:'未送信';const contractNote=document.querySelector('#gfContractStatusNote'),contractSave=document.querySelector('#gfContractSave');
  const rawContract=r.raw||{},detailReady=detailLoaded&&Object.prototype.hasOwnProperty.call(rawContract,'受付番号');
+ if(detailReady&&r.waitingRegistrationAvailable===true){
+  const register=document.createElement('button');
+  register.type='button';
+  register.className='btn';
+  register.textContent='名変待ちに登録';
+  const registrationStatus=document.createElement('p');
+  registrationStatus.setAttribute('role','status');
+  fields.append(register,registrationStatus);
+  register.onclick=async()=>{
+   if(selectedReception!==r||register.disabled)return;
+   register.disabled=true;
+   registrationStatus.textContent='登録しています…';
+   try{
+    const result=await receptionGateway.request('waiting_register',{receipt_id:r.受付ID});
+    if(selectedReception!==r)return;
+    if(!['registered','already_registered'].includes(result.登録状態))throw Error('登録結果を確認できません');
+    registrationStatus.textContent=result.登録状態==='registered'?'名変待ちに登録しました。':'この受付は登録済みです。';
+   }catch(e){
+    if(selectedReception!==r)return;
+    registrationStatus.textContent='登録結果を確認できません。受付IDを変えずに再試行できます。';
+    register.disabled=false;
+   }
+  };
+ }
  const gfCheckFields=[['gfLicenseCheck','免許証確認'],['gfResidenceCheck','住民票確認']];
  for(const [element,key] of gfCheckFields){const el=document.getElementById(element);el.value=rawContract[key]||'未確認';el.disabled=!detailReady||contractStatus==='契約完了'}
  const gfChecksSave=document.getElementById('gfChecksSave'),gfChecksNote=document.getElementById('gfChecksNote');
@@ -238,6 +293,7 @@ const contract=document.querySelector('#requestContractPanel');contract.classLis
    if(selectedReception!==r)return;
    const detailData=result.詳細||{};
    r.raw={...r.raw,...detailData};
+   r.waitingRegistrationAvailable=result.名変待ち登録可能===true;
    showReception(r,true);
    return;
   }catch(e){

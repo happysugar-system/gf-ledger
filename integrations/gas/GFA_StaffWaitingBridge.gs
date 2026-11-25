@@ -1,5 +1,5 @@
 /** 既存doPostの先頭から呼ぶ受付専用分岐。別のイベントにはnullを返す。 */
-function GFA_スタッフ受付受信_(e) {
+function GFA_スタッフ受付受信_(e, verifyTarget) {
   const raw = e?.postData?.contents;
   if (typeof raw !== 'string' || raw.length > 2048) return null;
   let data;
@@ -26,6 +26,7 @@ function GFA_スタッフ受付受信_(e) {
   if (difference) return reply(403,'denied');
   if (props.getProperty('GFA_STAFF_BRIDGE_ENABLED') !== 'true') return reply(503,'disabled');
   try {
+    if (typeof verifyTarget !== 'function' || verifyTarget() !== true) return reply(503,'target_mismatch');
     const result = GFA_名変待ち受付登録_(receiptId,receiptKey,driverId);
     if (['registered','already_registered'].includes(result.state)) return reply(200,result.state);
     return reply(409,'reception_review_required');
