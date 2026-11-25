@@ -66,7 +66,10 @@ Deno.serve(async req=>{
  if(accessErr)return respond(503,{error:"authorization_unavailable"});
  if(!access?.enabled){console.warn("gf_reception_access_denied","not_authorized");return respond(403,{error:"not_authorized"});}
  let input;try{input=await req.json()}catch{return respond(400,{error:"invalid_json"})}
- if(!["loan_options","list","detail","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
+ if(!["loan_options","list","detail","waiting_registration_check","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
+ if(input.action==="waiting_registration_check" && !["owner","staff"].includes(access.role)){
+  return respond(403,{error:"not_authorized"});
+ }
  if(input.action==="loan_options"){
   const [drivers,vehicles]=await Promise.all([
    db.from("gf_driver_match_master_prod").select("driver_id,full_name,email").order("full_name"),
@@ -174,6 +177,35 @@ Deno.serve(async req=>{
   const sheet=await sheetRequest(token,"'LINE受付管理'!A1:Z");
   const rows=table(sheet.values||[]).filter(x=>x.value["受付種別"]==="車両依頼");
   if(input.action==="list")return respond(200,{一覧:rows.map(x=>x.value)});
+  if(input.action==="waiting_registration_check"){
+   const id=clean(input.receipt_id);
+   if(!id||id.length>150)return respond(400,{error:"invalid_reception_id"});
+   const lineHeaders=(sheet.values?.[0]||[]).map(clean);
+   if(["受付ID","受付種別","DriverID"].some(k=>lineHeaders.filter(h=>h===k).length!==1)){
+    return respond(503,{error:"waiting_line_columns_missing_or_duplicate"});
+   }
+   const lineRows=table(sheet.values||[]).filter(row=>row.value["受付ID"]===id);
+   if(lineRows.length!==1||lineRows[0].value["受付種別"]!=="車両依頼"){
+    return respond(409,{error:"reception_id_not_unique"});
+   }
+   const detail=await sheetRequest(token,"'車両依頼受付'!A1:AZ");
+   const headers=(detail.values?.[0]||[]).map(clean);
+   if(["LINE受付ID","受付識別子","確認DriverID","書類状態"].some(k=>headers.filter(h=>h===k).length!==1)){
+    return respond(503,{error:"waiting_receipt_columns_missing_or_duplicate"});
+   }
+   const entries=table(detail.values||[]);
+   const found=entries.filter(row=>row.value["LINE受付ID"]===id);
+   if(found.length!==1)return respond(409,{error:"detail_not_unique_or_missing"});
+   const receipt=found[0].value;
+   const receiptKey=receipt["受付識別子"];
+   const driverId=lineRows[0].value.DriverID;
+   if(receipt["書類状態"]!=="保存完了"||!/^[a-f0-9]{64}$/i.test(receiptKey)||
+      entries.filter(row=>row.value["受付識別子"]===receiptKey).length!==1||
+      !/^D\d{6}$/.test(driverId)||receipt["確認DriverID"]!==driverId){
+    return respond(409,{error:"waiting_receipt_not_confirmed"});
+   }
+   return respond(200,{受付照合:true});
+  }
   if(input.action==="detail"){
    const id=clean(input.receipt_id);
    if(!id||id.length>150)return respond(400,{error:"invalid_reception_id"});
