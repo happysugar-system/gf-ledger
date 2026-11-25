@@ -1,0 +1,5 @@
+create table public.gf_staff_menu_layout_review (user_id uuid primary key references auth.users(id) on delete cascade, tile_order text[] not null check(cardinality(tile_order)<=50 and array_position(tile_order,null) is null), updated_at timestamptz not null default now());
+alter table public.gf_staff_menu_layout_review enable row level security;
+revoke all on public.gf_staff_menu_layout_review from public,anon,authenticated;
+grant select,insert,update on public.gf_staff_menu_layout_review to authenticated;
+create policy own_staff_layout on public.gf_staff_menu_layout_review for all to authenticated using (user_id=(select auth.uid()) and exists(select 1 from public.gf_staff_access_self() where access_granted)) with check (user_id=(select auth.uid()) and exists(select 1 from public.gf_staff_access_self() where access_granted));
