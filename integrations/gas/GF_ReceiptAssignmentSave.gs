@@ -3,7 +3,7 @@
  * verifyExisting: 現行DBを読み、対象3シートの反映を確認するサーバー側関数。
  * 本番設定・既存トリガーは変更しない。
  */
-function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting) {
+function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting, expectedVersion) {
   if ((syncExisting !== null && typeof syncExisting !== 'function') || typeof verifyExisting !== 'function')
     throw Error('existing_sync_not_connected');
   if (typeof GF_SB_対象ID_ !== 'function' || GF_SB_対象ID_() !== bookId)
@@ -30,11 +30,13 @@ function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting
       return {columns,rows:rows.map(row=>Object.fromEntries(keys[i].map(k=>[k,row[columns[k]]??''])))};
     });
   };
-  const plan = tables => GF_ReceiptAssignmentPlan_({history:tables[0].rows,waiting:tables[1].rows,drivers:tables[2].rows,vehicles:tables[3].rows},request);
+  const snapshot = tables => ({history:tables[0].rows,waiting:tables[1].rows,drivers:tables[2].rows,vehicles:tables[3].rows});
+  const plan = tables => GF_ReceiptAssignmentPlan_(snapshot(tables),request);
   const lock=LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const tables=read(), p=plan(tables);
+    if(expectedVersion !== undefined) GF_ReceiptAssignmentAssertVersion_(snapshot(tables),request,expectedVersion);
     if(p.patches.length){
       const meta=api.get(bookId,{fields:'sheets(properties(sheetId,title))'}).sheets;
       const requests=[];
