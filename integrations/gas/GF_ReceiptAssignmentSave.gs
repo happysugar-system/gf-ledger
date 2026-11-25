@@ -1,10 +1,10 @@
 /** 既存の認可済み受付ワーカーからのみ呼ぶ。公開 doPost ではない。
- * syncExisting: 現行同期を実行するサーバー側関数。ロック解放後に呼ぶ。
+ * syncExisting: 現行同期を実行するサーバー側関数。nullなら定期同期に委ねる。
  * verifyExisting: 現行DBを読み、対象3シートの反映を確認するサーバー側関数。
  * 本番設定・既存トリガーは変更しない。
  */
 function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting) {
-  if (typeof syncExisting !== 'function' || typeof verifyExisting !== 'function')
+  if ((syncExisting !== null && typeof syncExisting !== 'function') || typeof verifyExisting !== 'function')
     throw Error('existing_sync_not_connected');
   if (typeof GF_SB_対象ID_ !== 'function' || GF_SB_対象ID_() !== bookId)
     throw Error('ledger_target_mismatch');
@@ -46,7 +46,7 @@ function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting
         const sheetId=meta.find(s=>s.properties.title===patch.sheet)?.properties.sheetId;
         if(!Number.isInteger(sheetId)) throw Error('sheet_missing');
         const range="'"+patch.sheet+"'!"+(rowIndex+1)+":"+(rowIndex+1);
-        const cells=api.get(bookId,{ranges:[range],fields:'sheets(data(rowData(values(userEnteredValue,effectiveValue))) )'.replace(' )',')')}).sheets?.[0]?.data?.[0]?.rowData?.[0]?.values;
+        const cells=api.get(bookId,{ranges:[range],fields:'sheets(data(rowData(values(userEnteredValue,effectiveValue))))'}).sheets?.[0]?.data?.[0]?.rowData?.[0]?.values;
         if(!cells) throw Error('row_read_failed');
         for(const [k,c] of Object.entries(t.columns)){
           const val=cells[c]?.effectiveValue;
@@ -59,13 +59,19 @@ function GF_ReceiptAssignmentSave_(bookId, request, syncExisting, verifyExisting
         }
       }
       if(JSON.stringify(read())!==JSON.stringify(tables)) throw Error('ledger_changed');
-      api.batchUpdate({requests},bookId);
+      try {
+        api.batchUpdate({requests},bookId);
+      } catch (_) {
+        // A transport failure can arrive after Sheets has committed the atomic batch.
+        // Verify once and leave a nonmatching or unreadable state for review.
+        if (plan(read()).state !== 'unchanged') throw Error('ledger_write_unconfirmed');
+      }
     }
     if(plan(read()).state!=='unchanged') throw Error('ledger_verification_failed');
   } finally {lock.releaseLock();}
   // Existing synchronization can acquire its own lock. Never call it while holding ours.
   try {
-    syncExisting();
+    if (syncExisting) syncExisting();
     if(verifyExisting(request)!==true || plan(read()).state!=='unchanged')
       return {status:'reconciliation_required'};
     return {status:'verified'};
