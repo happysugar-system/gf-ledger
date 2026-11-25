@@ -102,7 +102,7 @@ const receptionGateway={
   const data=await response.json().catch(()=>({}));
   if(!response.ok){
    const messages={sheets_adapter_not_configured:'認証は確認できましたが、スプレッドシート接続の設定がまだ完了していません。',not_authorized:'このアカウントには受付管理の権限がありません。',authentication_required:'共通ログインが必要です。',invalid_session:'ログインの有効期限が切れました。'};
-   throw Error(messages[data.error]||data.message||'受付APIエラー ('+response.status+')');
+   throw Error((messages[data.error]||data.message||'受付APIエラー ('+response.status+')')+' / '+String(data.error||'unknown'));
   }
   return data;
  },
