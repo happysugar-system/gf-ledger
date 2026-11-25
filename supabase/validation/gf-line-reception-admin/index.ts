@@ -229,14 +229,17 @@ Deno.serve(async req=>{
    try{
    const gas=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({action,receiptId:id,receiptKey,driverId,issuedAt,signature}),signal:AbortSignal.timeout(20000)});
-   if(!gas.ok)return respond(503,{error:"waiting_registration_unavailable"});
-   const answer=await gas.json();
+   if(!gas.ok)return respond(503,{error:"waiting_gas_http_"+gas.status});
+   const answer=await gas.json().catch(()=>null);
+   if(!answer)return respond(503,{error:"waiting_gas_non_json"});
+   if(answer.status===403)return respond(503,{error:"waiting_gas_signature_denied"});
+   if(answer.status===503&&["disabled","target_mismatch"].includes(answer.state))return respond(503,{error:"waiting_gas_"+answer.state});
    if(answer?.status===200&&["registered","already_registered"].includes(answer.state)){
     return respond(200,{登録状態:answer.state});
    }
    if(answer?.status===409)return respond(409,{error:"waiting_registration_review_required"});
    return respond(503,{error:"waiting_registration_unavailable"});
-   }catch(_){return respond(503,{error:"waiting_registration_unavailable"});}
+   }catch(e){return respond(503,{error:e instanceof Error && ["TimeoutError","AbortError"].includes(e.name)?"waiting_gas_timeout":"waiting_gas_transport_error"});}
   }
   if(input.action==="detail"){
    const id=clean(input.receipt_id);
