@@ -13,6 +13,7 @@ function GF_ReceiptAssignmentQueueRequest_(row) {
       /[\r\n]/.test(row.receipt_id) ||
       typeof row.driver_id !== 'string' || !/^D\d{6}$/.test(row.driver_id) ||
       typeof row.vehicle_id !== 'string' || !/^V\d{6}$/.test(row.vehicle_id) ||
+      typeof row.expected_version !== 'string' || !/^[0-9a-f]{64}$/.test(row.expected_version) ||
       !['assign','cancel'].includes(row.action)) throw Error('invalid_claimed_assignment');
   return {receiptId:row.receipt_id,driverId:row.driver_id,vehicleId:row.vehicle_id,action:row.action};
 }
@@ -24,7 +25,7 @@ function GF_ReceiptAssignmentRunClaimed_(bookId,row,assertCurrentOperation) {
   if(typeof assertCurrentOperation!=='function' ||
      assertCurrentOperation(row)!==true) throw Error('operation_not_current');
   if(typeof GF_ReceiptAssignmentSaveAndCheck_!=='function') throw Error('assignment_save_missing');
-  const result=GF_ReceiptAssignmentSaveAndCheck_(bookId,request);
+  const result=GF_ReceiptAssignmentSaveAndCheck_(bookId,request,row.expected_version);
   if(!result || !['verified','reconciliation_required'].includes(result.status))
     throw Error('unexpected_assignment_result');
   return {request_id:row.request_id,status:result.status};
