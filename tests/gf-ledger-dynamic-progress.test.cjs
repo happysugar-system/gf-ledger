@@ -34,3 +34,20 @@ test('旧受付・重複・割当取消は保存前に止める',()=>{
  canceled[1].rows[0]['ステータス']='名変待ち';
  assert.throws(()=>resolve(canceled,job,()=>true),/receipt_assignment_mismatch/);
 });
+
+test('統合先の関数や Sheets API が未設定なら依頼を取得しない',()=>{
+ const deps={
+  GF_ReceiptAssignmentValidationBook_:()=>({}),
+  GF_ReceiptAssignmentReadTables_:()=>fixture(),
+  GF_ReceiptAssignmentValidationSource_:()=>true,
+  GF_LedgerProdProgressSave_:()=>({}),
+  GF_LedgerProdProgressRead_:()=>({}),
+  Sheets:{Spreadsheets:{Values:{get(){}},get(){},batchUpdate(){}}},
+ };
+ for(const name of Object.keys(deps)){
+  const globals={...deps,UrlFetchApp:{fetch(){assert.fail('lease requested');}}};
+  delete globals[name];
+  const run=runInNewContext(source+'\nGF_動的進捗検証キューを1件処理',globals);
+  assert.throws(run,/validation_progress_dependencies_missing/,name);
+ }
+});

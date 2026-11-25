@@ -27,6 +27,15 @@ function GF_LedgerDynamicProgressResolve_(tables, job, sourceCheck) {
 }
 
 function GF_動的進捗検証キューを1件処理() {
+  // Check local prerequisites before acquiring a lease that blocks assignment.
+  if(typeof GF_ReceiptAssignmentValidationBook_!=='function'||
+     typeof GF_ReceiptAssignmentReadTables_!=='function'||
+     typeof GF_ReceiptAssignmentValidationSource_!=='function'||
+     typeof GF_LedgerProdProgressSave_!=='function'||
+     typeof GF_LedgerProdProgressRead_!=='function'||
+     typeof Sheets==='undefined'||typeof Sheets.Spreadsheets?.Values?.get!=='function'||
+     typeof Sheets.Spreadsheets?.get!=='function'||typeof Sheets.Spreadsheets?.batchUpdate!=='function')
+    throw Error('validation_progress_dependencies_missing');
   const book=GF_ReceiptAssignmentValidationBook_();
   const props=PropertiesService.getScriptProperties();
   if(props.getProperty('GF_DYNAMIC_PROGRESS_GAS_ENABLED')!=='true')throw Error('validation_progress_disabled');
