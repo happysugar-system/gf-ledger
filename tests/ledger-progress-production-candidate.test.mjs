@@ -5,6 +5,8 @@ import {runInNewContext} from 'node:vm';
 
 const source = readFileSync(new URL('../integrations/gas/GF_LedgerProgress_ProductionCandidate.gs', import.meta.url), 'utf8');
 
+const receiptSource = readFileSync(new URL('../integrations/gas/GF_LedgerProgress_ReceiptAssignment.gs', import.meta.url), 'utf8');
+
 function setup() {
   const grid = [
     ['VehicleID','区分/ステータス','管理区分','DriverID','GPS有無','納車確定日','納車可能日'],
@@ -12,10 +14,20 @@ function setup() {
     ['V000002','空車','車両準備中','D000002',false,'',''],
   ];
   const state = {grid, writes: 0, locks: 0, formula: false};
+  state.receiptTables = [
+    [['受付番号','受付識別子','LINE受付ID','DriverID','処理状態'], ['R002','request-2','line-2','D000001','登録済']],
+    [['受付識別子','LINE受付ID','ステータス','割当VehicleID'], ['request-2','line-2','割当済','V000002']],
+    [['DriverID','割当VehicleID'], ['D000001','V000002']],
+  ];
   const asValue = value => ({[typeof value === 'number' ? 'numberValue' :
     typeof value === 'boolean' ? 'boolValue' : 'stringValue']: value});
   const api = {
-    Values: {get() {return {values: structuredClone(grid)};}},
+    Values: {
+      get() {return {values: structuredClone(grid)};},
+      batchGet() {
+        return {valueRanges: state.receiptTables.map(values => ({values: structuredClone(values)}))};
+      },
+    },
     get(_book, {ranges}) {
       state.beforeRead?.();
       const row = grid[Number(ranges[0].match(/!(\d+):/)[1]) - 1];
@@ -47,7 +59,7 @@ function setup() {
       return state.replica || [];
     },
   };
-  const f = runInNewContext(source + '\n({read: GF_LedgerProdProgressRead_, save: GF_LedgerProdProgressSave_, guard: GF_LedgerProdProgressAssertCancelable_, verify: GF_LedgerProdProgressVerifyReplica_})', context);
+  const f = runInNewContext(source + '\n' + receiptSource + '\n({read: GF_LedgerProdProgressRead_, save: GF_LedgerProdProgressSave_, guard: GF_LedgerProdProgressAssertCancelable_, verify: GF_LedgerProdProgressVerifyReplica_, resolve: GF_LedgerProdProgressResolveReceipt_, saveForReceipt: GF_LedgerProdProgressSaveForReceipt_})', context);
   return {...f, state};
 }
 
@@ -112,4 +124,56 @@ test('取消条件と、同期中に台帳が変わった場合の照合を確�
   assert.equal(verify('book', 'V000001').status, 'synced');
   state.onReplicaRead = () => {state.grid[1][5] = '2026-12-08';};
   assert.equal(verify('book', 'V000001').status, 'pending');
+});
+
+
+const app = {receipt_id: 'R002', driver_id: 'D000001', contract_status: '契約完了'};
+
+test('同じDriverIDの複数台から受付に結び付く車両だけを保存する', () => {
+  const {state, read, resolve, saveForReceipt} = setup();
+  state.grid[2][3] = app.driver_id;
+  assert.equal(resolve('book', app).vehicleId, 'V000002');
+  assert.throws(() => saveForReceipt('book', app, read('book', 'V000001').snapshot, patch), /対象車両/);
+  const expected = read('book', 'V000002').snapshot;
+  assert.equal(saveForReceipt('book', app, expected, patch).status, 'saved');
+  assert.equal(state.grid[1][2], '車両準備中');
+  assert.equal(saveForReceipt('book', app, expected, patch).status, 'unchanged');
+  assert.equal(state.writes, 1);
+});
+
+test('受付未契約、履歴重複、照合列欠落、受付キーや割当の不一致は書込前に停止する', () => {
+  for (const edit of [
+    state => state.receiptTables[0].push([...state.receiptTables[0][1]]),
+    state => state.receiptTables[0].push(['R003','request-2','line-3','D000001','登録済']),
+    state => {state.receiptTables[1][0] = ['受付ID','旧シート行','ステータス','割当VehicleID'];},
+    state => {state.receiptTables[1][1][1] = 'different-line';},
+    state => {state.receiptTables[1][1][2] = '名変待ち';},
+    state => {state.receiptTables[2][1][1] = 'V000001';},
+    state => {state.receiptTables[0][1][3] = 'D000002';},
+  ]) {
+    const {state, read, saveForReceipt} = setup();
+    state.grid[2][3] = app.driver_id;
+    const expected = read('book', 'V000002').snapshot;
+    assert.throws(() => saveForReceipt('book', {...app, contract_status: '送信済み'}, expected, patch), /契約済み/);
+    edit(state);
+    assert.throws(() => saveForReceipt('book', app, expected, patch), /照合|割当/);
+    assert.equal(state.writes, 0);
+    assert.equal(state.locks, 0);
+  }
+});
+
+
+test('保存応答の消失と同期停止から、台帳の再書込なしで復旧する', () => {
+  const {state, read, save, verify} = setup();
+  const expected = read('book', 'V000001').snapshot;
+  state.afterWrite = () => {throw Error('response lost');};
+  assert.throws(() => save('book', expected, patch), /response lost/);
+  state.afterWrite = undefined;
+  assert.equal(save('book', expected, patch).status, 'unchanged');
+  state.onReplicaRead = () => {throw Error('sync offline');};
+  assert.throws(() => verify('book', 'V000001'), /sync offline/);
+  state.onReplicaRead = undefined;
+  state.replica = [{vehicle_id:'V000001', vehicle_data:{DriverID:'D000001',...patch}}];
+  assert.equal(verify('book', 'V000001').status, 'synced');
+  assert.equal(state.writes, 1);
 });

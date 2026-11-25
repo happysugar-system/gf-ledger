@@ -60,10 +60,17 @@ function GF_LedgerProdProgressAssertCancelable_(bookId, vehicleId, driverId) {
 }
 
 /** 同一GASプロジェクト内の割当・取消処理も ScriptLock を共有する。 */
-function GF_LedgerProdProgressSave_(bookId, expected, fields) {
+function GF_LedgerProdProgressSave_(bookId, expected, fields, resolveAssignment) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
+    // 本番の認証済み呼び出し元は受付に基づく割当確認をこのロック内で行う。
+    if (resolveAssignment) {
+      const assignment = resolveAssignment();
+      if (assignment.vehicleId !== expected?.vehicleId || assignment.driverId !== expected?.driverId) {
+        throw Error('受付の対象車両が変わりました。再読み込みしてください');
+      }
+    }
     const {snapshot, columns, rowIndex} = GF_LedgerProdProgressRead_(bookId, expected?.vehicleId);
     if (!/^D\d{6}$/.test(snapshot.driverId) || snapshot.driverId !== expected.driverId) {
       throw Error('車両とドライバーの割当が変わりました。再読み込みしてください');
