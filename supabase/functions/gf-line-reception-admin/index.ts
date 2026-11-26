@@ -248,7 +248,7 @@ Deno.serve(async req=>{
     if(!claim)return respond(409,{error:"review_changed"});
     // Preserve the claim whenever GAS might have written. A timeout cannot prove that it did not.
     try{
-     const response=await fetch(bridgeUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payload,signature}),signal:AbortSignal.timeout(45000)});
+     const response=await fetch(bridgeUrl+"?gf_document_bridge=approval_v1",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payload,signature}),signal:AbortSignal.timeout(45000)});
      if(!response.ok)return respond(503,{error:"approval_reconciliation_required"});
      const saved=await response.json();
      if(saved.verified!==true||saved.fileId!==attempt.drive_file_id)return respond(409,{error:"approval_reconciliation_required"});
