@@ -41,3 +41,33 @@ test('does not overwrite another driver, unresolved history or unverified links'
   assert.throws(() => plan({...current, 前DriverID: ''}, {...op, kind: 'return'}), /history_identity_unresolved/);
   assert.throws(() => plan({...current, '📄 最新車両書類': '書類を見る'}, {...op, kind: 'return'}), /unverified_document/);
 });
+
+test('the return adapter keeps BJ and checks the full history on worker restart', () => {
+  const adapter = new Function('PropertiesService', 'GF_実績履歴の対象_26',
+    source('GF_CombinedHistoryPlan') + source('GF_OperationalHistoryPlan') + source('GF_MainReturnHistory') +
+    '\nreturn {prepare:GF_MainReturnHistoryPrepare_,resume:GF_MainReturnHistoryResume_};');
+  const properties = {getScriptProperties: () => ({getProperty: () => 'true'})};
+  let saved;
+  const {prepare, resume} = adapter(properties, () => saved);
+  const current = {...snapshot, DriverID:base.driverId, 現在使用者:base.name,
+    '📄 最新車両書類':'https://drive.google.com/file/d/current/view'};
+  let values = current;
+  const keys = Object.keys(current);
+  const sheet = {
+    getLastColumn: () => keys.length,
+    getRange: (row, col) => row === 1 ? {getDisplayValues: () => [keys]} : {
+      getFormula: () => '', getRichTextValue: () => null, getDisplayValue: () => values[keys[col-1]],
+    },
+  };
+  const book = {getId: () => '1NE2DNQK2vV0UBNg_-6B9xiyfE4y4i2JTKrUBuL902tU'};
+  const receipt = ['r', '', base.vehicleId, '返却完了', '', base.driverId];
+  const vehicle = {sheet, row:2};
+  const record = prepare(book, receipt, vehicle);
+  assert.equal(record.after['📄 最新車両書類'], current['📄 最新車両書類']);
+  assert.equal(record.after['前使用者 車両書類'], current['📄 最新車両書類']);
+  saved = {data:['r','',base.vehicleId,'','','',JSON.stringify({gfReturnHistory:record.before}),JSON.stringify({gfReturnHistory:record.after})]};
+  assert.equal(resume(book, receipt, vehicle), false);
+  values = record.after;
+  assert.equal(resume(book, receipt, vehicle), true);
+  assert.throws(() => prepare({getId: () => 'wrong'}, receipt, vehicle), /return_history_validation_book_required/);
+});
