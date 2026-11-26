@@ -1,13 +1,13 @@
-# 11/26 統合反映手順
-本番変更は別途承認。検証済み納車履歴 DELIVERY:TEST-R01 は消さない。
-## 車両台帳検証GAS
-既存 GF_DeliveryAllInOne を integrations/monthly-delivery/gfi-fixture/GF_DeliveryAllInOne.gs で置換。追加で重複定義しない。既存 doPost がある場合のみその先頭に GF_DeliveryCompletionRoute_(e) の非null応答を返す分岐を入れる。存在しない場合は単独ルーターを作成。Sheets advanced service を維持。
-GF_DELIVERY_VALIDATION_BOOK_ID は既存検証台帳ID、GF_DELIVERY_BRIDGE_SECRET は32文字以上の独立した秘密、GF_DELIVERY_WRITE_ENABLED=NO。既存検証デプロイを更新し exec URL を取得。
-Supabase tokyo-test の GF_DELIVERY_BRIDGE_URL と同じ秘密、GF_DELIVERY_FIXTURE_MODE=YES、GF_DELIVERY_VALIDATION_READ_ENABLED=YES、GF_DELIVERY_WRITE_ENABLED=NO。API v4 は外部書き込み停止版として配備されたため、有効化前にソースと配備差分を確認。
+# 11/26 統合反映手順（更新版）
+本番変更は別途承認。過去のテストデータの照合・一括同期は行わない。
+## 検証済み納車
+既存検証台帳の DELIVERY:TEST-R01 / DELIVERY:TEST-R02 の履歴は保持。検証GASの再追加・再デプロイは不要。実際の本番納車処理は未承認、未検証。fixture allowlist を解除しない。
 ## LINE受付GAS
-既存 GF_DocumentRouterStopOnly を置換する候補は gf-mypage-demo の review/driver-mypage-nov25 ブランチ integrations/gas-bundle/GF_DocumentLiveRouterDisabled.gs。追加併存禁止。既存 doPost は変更しない。Drive v3 / Sheets advanced service が必要。
-現候補のターゲット検査は DEMO プロパティ前提であり、実際のLINE受付GASの対象シート・ルートフォルダを確認してから修正すること。現状は書き込み不可。実データを検証APIから書き換えない。許可メール・保存先・署名秘密は公開しない。
-## 公開
-スタッフ画面とマイページの指定ブランチを利用し、既存公開ページを無断で更新しない。実際の公開先とブランチ設定を確認する。
+実際のLINE受付プロジェクトの 100_LINE受付.gs は既に GF_DocumentCombinedRoute_(e) を呼び出す。変更不要。GF_DocumentRouterStopOnly.gs に最新停止版を保存済み。診断 writesDisabled=true, driveService=true, sheetsService=true, target=true, headers=true, privateRoot=false。診断を繰り返さない。別のDEMO受付GASを前提にしない。
+Driveの非公開化・個別許可メール設定は延期。書類書き込みを有効化しない。実際の保存・承認・通知解除の通し確認は未完了。
+## 申込詳細
+gf-mypage-demo の docs/application-detail-sync.md の New receipts only を参照。稼働中の GF_SB_v4受付計画_ の実ソースと同期先を確認し、既存の required と records.push に2項目を追加する。既存トリガー・ガードを維持。過去データは更新しない。GAS反映は未実施。
+## 公開状態と承認
+スタッフ公開HTMLは main f7a9e39、受付API v27、ドライバーstage API v17 が既に更新された。これらは明示的な本番承認前の変更であり、回帰確認と公開継続の承認が必要。v17の外部書き込み停止ガードは旧版と異なるため、公開継続前に確認する。LINE受付GASの停止ガードは維持。公開版マイページのモジュール配備は未確認。これ以上の公開変更は承認まで行わない。
 ## 最終確認
-個別の小テストは利用者に依頼しない。認証済みスタッフ画面で集計、ドライバーマイページで申込詳細と通知、承認済み通知の消去を一括確認。書類書き込みと納車完了のUI確認は対象分離と承認後のみ。未確認項目を完了扱いしない。
+新規申込1件で本人認証・詳細2項目・車両番号・納車日を確認。既存検証納車履歴は再作成不要。Drive権限設定後のみダミー書類で再提出・承認・通知解除を確認。本番納車書き込みは別途承認と接続確認。未確認項目を完了扱いしない。
