@@ -211,6 +211,12 @@ Deno.serve(async req=>{
    const type=clean(input.document_type),reason=clean(input.reason);
    if(!["driver_license","residence_certificate"].includes(type)||!reason||reason.length>1000)return respond(400,{error:"invalid_document_request"});
    const check=type==="driver_license"?"免許証確認":"住民票確認";
+   if(type==="residence_certificate"){
+    if(["住民票PDF","書類状態"].some(k=>headers.filter(h=>h===k).length!==1))return respond(409,{error:"residence_columns_invalid"});
+    const v=found[0].value,doc=clean(v["住民票PDF"]),state=clean(v["書類状態"]);
+    if(/郵送/.test(doc)||/郵送/.test(state))return respond(409,{error:"postal_residence_no_upload_required"});
+    if(!doc)return respond(409,{error:"residence_upload_not_confirmed"});
+   }
    if(clean(found[0].value[check])==="確認OK")return respond(409,{error:"reset_existing_check_first"});
    const {data,error}=await db.from("gf_driver_document_review_requests").insert({receipt_id:receipt,driver_id:driver,document_type:type,reason,status:"requested"}).select("id,status").single();
    return error?respond(409,{error:"document_request_conflict_or_unavailable"}):respond(200,{request:data});
