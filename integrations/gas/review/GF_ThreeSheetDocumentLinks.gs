@@ -22,3 +22,31 @@ function GF_ThreeSheetDocumentRead_(sheet,row){
  h.forEach((k,i)=>{if(!k)return;if(Object.prototype.hasOwnProperty.call(out,k))throw Error('duplicate_header:'+k);out[k]=rich[i]&&rich[i].getLinkUrl()||f[i]||v[i];});
  return out;
 }
+
+/** Validation-only application of a reviewed plan. Never creates columns or folders. */
+function GF_ThreeSheetDocumentApply_(book,id,sources){
+ GF_IsolatedValidationBook_(book);
+ if(!/^V9\d{5}$/.test(id))throw Error('validation_vehicle_required');
+ const lock=LockService.getScriptLock();
+ if(!lock.tryLock(1000))throw Error('document_busy');
+ try{
+ const v=GF_DB同期車両情報_(book,id);
+ const target=GF_ThreeSheetDocumentRead_(v.sheet,v.row);
+ const plan=GF_ThreeSheetDocumentPlan_(target,sources);
+ if(plan.conflicts.length)return {ok:false,conflicts:plan.conflicts};
+ const keys=Object.keys(plan.patch);
+ const h=v.sheet.getRange(1,1,1,v.sheet.getLastColumn()).getDisplayValues()[0].map(x=>x.trim());
+ const writes=keys.map(k=>{
+ const matches=h.map((x,i)=>x===k?i+1:0).filter(Boolean);
+ if(matches.length!==1)throw Error('destination_column_missing_or_duplicate:'+k);
+ const cell=v.sheet.getRange(v.row,matches[0]);
+ if(cell.getFormula()||cell.getDisplayValue())throw Error('destination_not_empty:'+k);
+ return {k,cell};
+ });
+ for(const w of writes)w.cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(w.k+'を見る').setLinkUrl(plan.patch[w.k]).build());
+ SpreadsheetApp.flush();
+ const after=GF_ThreeSheetDocumentRead_(v.sheet,v.row);
+ if(keys.some(k=>after[k]!==plan.patch[k]))throw Error('document_readback_failed');
+ return {ok:true,updated:keys};
+ }finally{lock.releaseLock();}
+}
