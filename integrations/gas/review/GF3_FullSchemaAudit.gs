@@ -30,3 +30,21 @@ function GF3_検証全列照合(){
  const result=GF3_FullSchemaAudit_(read(source),read(target));
  console.log(JSON.stringify(result));return result;
 }
+
+/** Pure fixture tests; no spreadsheet access. */
+function GF3_全列照合自己テスト(){
+ const source={'車両台帳':['VehicleID','車番'],'名変待ち管理':['受付ID'],'ドライバーマスター':['DriverID']};
+ const clone=()=>JSON.parse(JSON.stringify(source));
+ const cases=[
+ ['same',()=>clone(),true],
+ ['append approved candidate',()=>{const t=clone();t['車両台帳'].push('車両フォルダ');return t;},true],
+ ['missing',()=>{const t=clone();t['車両台帳'].pop();return t;},false],
+ ['reorder',()=>{const t=clone();t['車両台帳'].reverse();return t;},false],
+ ['duplicate',()=>{const t=clone();t['車両台帳'].push('VehicleID');return t;},false],
+ ['blank',()=>{const t=clone();t['車両台帳'].push('');return t;},false],
+ ['extra sheet',()=>Object.assign(clone(),{'旧台帳':['ID']}),false],
+ ['missing sheet',()=>{const t=clone();delete t['名変待ち管理'];return t;},false]
+ ];
+ for(const [name,fixture,expected] of cases)if(GF3_FullSchemaAudit_(source,fixture()).ready!==expected)throw Error('gf3_fixture_failed:'+name);
+ const result={passed:cases.length};console.log(JSON.stringify(result));return result;
+}
