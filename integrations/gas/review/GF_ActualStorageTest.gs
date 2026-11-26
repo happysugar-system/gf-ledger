@@ -5,7 +5,7 @@ function GF_ActualStorageTest_(book, action, args) {
   const props=PropertiesService.getScriptProperties();
   const token=props.getProperty('GF_ACTUAL_TEST_TOKEN');
   if (!token || token.length<32) throw Error('actual_storage_token_missing');
-  if (!['health','queue','history','transition'].includes(action)) throw Error('actual_storage_action_denied');
+  if (!['health','queue','history','transition','prepare'].includes(action)) throw Error('actual_storage_action_denied');
   const receipt=props.getProperty('GF_VALIDATION_RETURN_RECEIPT_ID');
   GF_IsolatedValidationReceipt_(receipt);
   if(receipt!=='TEST-RETURN-R005')throw Error('actual_storage_receipt_denied');
