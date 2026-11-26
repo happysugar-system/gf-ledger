@@ -84,11 +84,11 @@ function GF_DB同期ワーカー本体_(book,sync){
   const claimed=GF_SyncStorageTest_(book,'transition','queue',id,{expected:'待機',next:'処理中'});
   if(claimed!==true){result.deferred++;continue;}
   try{
-   const before=GF_実績車両情報_(book,q.vehicle_id);
+   const before=GF_DB同期車両情報_(book,q.vehicle_id);
    if(!matches(before,q))throw Error('ledger_mismatch');
    sync(book,before.row,q);
    SpreadsheetApp.flush();
-   const after=GF_実績車両情報_(book,q.vehicle_id);
+   const after=GF_DB同期車両情報_(book,q.vehicle_id);
    if(!matches(after,q))throw Error('ledger_changed');
    const done=GF_SyncStorageTest_(book,'transition','queue',id,{expected:'処理中',next:'完了',result:'同期後台帳照合済み'});
    if(done!==true)throw Error('completion_conflict');
@@ -99,4 +99,15 @@ function GF_DB同期ワーカー本体_(book,sync){
   }
  }
  return result;
+}
+
+function GF_DB同期車両情報_(book,id){
+ GF_IsolatedValidationBook_(book);
+ if(!/^V9\d{5}$/.test(id))throw Error('validation_vehicle_denied');
+ const sheet=GF_IsolatedValidationSheet_(book.getSheetByName('車両台帳'));
+ const [headers,...rows]=sheet.getDataRange().getDisplayValues();
+ const cols=GF_MainReturnHistoryColumns_(sheet,['VehicleID','DriverID','現在使用者']);
+ const matches=rows.map((row,i)=>({row,i})).filter(e=>String(e.row[cols.VehicleID]).trim()===id);
+ if(matches.length!==1)throw Error('validation_vehicle_not_unique');
+ return {sheet,row:matches[0].i+2,data:Object.fromEntries(headers.map((h,i)=>[h.trim(),matches[0].row[i]]))};
 }
