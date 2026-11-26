@@ -51,7 +51,7 @@ function GFA_割当同期履歴を照合_(vehicle, requestKey) {
         props.getProperty('GF3_VALIDATION_ENABLED') !== 'true') {
       throw Error('3シート検証GASの接続先が一致しません');
     }
-    return GFA_DB同期履歴照合_(vehicle, requestKey);
+    return GFA3_DB同期履歴照合_(vehicle, requestKey);
   }
   const history = vehicle.getSheetByName('GF_LINEドライバー同期履歴');
   return history && GFA_割当照合行_(
