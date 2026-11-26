@@ -32,8 +32,9 @@ Deno.serve(async req=>{
  }else if(b.action==="insert"){
  const row=b.row||{};
  const fields=b.kind==="history"?["receipt_key","receipt_number","line_receipt_id","state","driver_id","processed_at","notes"]:["request_id","requested_at","vehicle_id","operation","driver_id","state","attempts","last_run_at","result"];
- if(Object.keys(row).some(k=>!fields.includes(k))||row[key]!==id||!/^D999[0-9]{3}$/.test(row.driver_id||""))return reply({error:"row"},400);
+ if(Object.keys(row).some(k=>!fields.includes(k))||row[key]!==id||!(b.kind==="queue"&&row.operation==="取消"&&(row.driver_id==null||row.driver_id==="")||/^D999[0-9]{3}$/.test(row.driver_id||"")))return reply({error:"row"},400);
  if(b.kind==="history"&&!/^TEST-/.test(row.line_receipt_id||""))return reply({error:"receipt"},400);
+ if(b.kind==="queue"&&(!["割当","取消"].includes(row.operation)||row.state!=="待機"||row.attempts!==0))return reply({error:"queue_state"},400);
  if(b.kind==="queue"&&!/^V9[0-9]{5}$/.test(row.vehicle_id||""))return reply({error:"vehicle"},400);
  method="POST";body=row;filter="";
  }else if(b.action!=="read")return reply({error:"action"},400);
