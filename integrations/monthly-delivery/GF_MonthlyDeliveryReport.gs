@@ -18,7 +18,7 @@ function GF_DELIVERY_generateReport(){
  if(out.getSheetByName('車両台帳')||out.getSheetByName('ドライバーマスター'))throw Error('管理台帳への出力は禁止');
  const ledger=src.getSheetByName('車両台帳'),history=src.getSheetByName('実績履歴');
  if(!ledger||!history)throw Error('集計元不足');
- const rows=GF_DELIVERY_reportRows_(GF_DELIVERY_historyPreview_(ledger.getDataRange().getDisplayValues(),history.getDataRange().getDisplayValues()));
+ const rows=GF_DELIVERY_reportRows_(GF_DELIVERY_historyPreview_(ledger.getDataRange().getDisplayValues(),history.getDataRange().getDisplayValues(),true));
  const jobs=[['月別納車集計',rows.summary],['納車明細',rows.details]];
  // Only explicitly owned generated tabs may be refreshed.
  for(const [name] of jobs){const sh=out.getSheetByName(name);if(sh&&sh.getRange('A1').getNote()!=='GF_DELIVERY_GENERATED_V1')throw Error('既存シート保護: '+name);}
