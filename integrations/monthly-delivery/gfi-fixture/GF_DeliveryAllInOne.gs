@@ -84,7 +84,7 @@ function GF_DELIVERY_historyPreview_(ledger,history,confirmedOnly){
  return {planned,actual,details,plannedInfo,actualInfo,definition:confirmedOnly===true?'納車完了・完了・取消なし':'貸出開始・完了・取消なし（参考実績）'};
 }
 function GF_DELIVERY_preview(){
- const id=PropertiesService.getScriptProperties().getProperty('GF_DELIVERY_SOURCE_BOOK_ID');
+ const id=GF_ReceiptAssignmentValidationBook_();
  if(!id)throw Error('集計元未設定');
  const book=SpreadsheetApp.openById(id),ledger=book.getSheetByName('車両台帳'),history=book.getSheetByName('実績履歴');
  if(!ledger||!history)throw Error('集計元シート不足');
@@ -173,7 +173,7 @@ function GF_DeliveryCompletionRoute_(e){
  const lock=LockService.getScriptLock();lock.waitLock(10000);
  try{const cache=JSON.parse(props.getProperty('GF_DELIVERY_NONCES')||'{}');for(const n of Object.keys(cache))if(cache[n]<Date.now())delete cache[n];if(cache[p.nonce]||Object.keys(cache).length>=100)throw Error('replay');cache[p.nonce]=Date.now()+120000;props.setProperty('GF_DELIVERY_NONCES',JSON.stringify(cache));}finally{lock.releaseLock();}
  if(p.action==='read')return reply(GF_DeliveryValidationReport_(bookId));
- if(true||props.getProperty('GF_DELIVERY_WRITE_ENABLED')!=='YES'||p.vehicleId!=='TEST-V01'||!/^D\d{6,7}$/.test(p.driverId)||typeof p.receiptId!=='string'||!p.receiptId.trim()||p.receiptId.length>150)throw Error('invalid');
+ if(props.getProperty('GF_DELIVERY_WRITE_ENABLED')!=='YES'||p.receiptId!=='TEST-R01'||p.driverId!=='D999901'||p.vehicleId!=='TEST-V01'||!/^D\d{6,7}$/.test(p.driverId)||typeof p.receiptId!=='string'||!p.receiptId.trim()||p.receiptId.length>150)throw Error('invalid');
  const resolve=id=>{
  const [h,w,d,v]=GF_ReceiptAssignmentReadTables_(bookId).map(t=>t.rows);
  const one=(rows,fn)=>{const a=rows.filter(fn);if(a.length!==1)throw Error('assignment_not_unique');return a[0];};
@@ -186,6 +186,7 @@ function GF_DeliveryCompletionRoute_(e){
 }
 
 function GF_DeliveryValidationReport_(bookId){
+ if(bookId!==GF_ReceiptAssignmentValidationBook_())throw Error('fixture_mismatch');
  const lock=LockService.getScriptLock();lock.waitLock(10000);
  try{
   const book=SpreadsheetApp.openById(bookId);
@@ -223,4 +224,5 @@ function GF_DeliveryValidationReport_(bookId){
  }finally{lock.releaseLock();}
 }
 
-function doPost(e){return GF_DeliveryCompletionRoute_(e)||ContentService.createTextOutput(JSON.stringify({status:'rejected'})).setMimeType(ContentService.MimeType.JSON);}
+// Existing doPost must dispatch GF_DeliveryCompletionRoute_(e) before legacy handlers.
+// Do not define a second doPost in a shared GAS project.
