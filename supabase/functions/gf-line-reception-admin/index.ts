@@ -66,7 +66,7 @@ Deno.serve(async req=>{
  if(accessErr)return respond(503,{error:"authorization_unavailable"});
  if(!access?.enabled){console.warn("gf_reception_access_denied","not_authorized");return respond(403,{error:"not_authorized"});}
  let input;try{input=await req.json()}catch{return respond(400,{error:"invalid_json"})}
- if(!["document_review_list","document_review_request","loan_options","list","detail","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
+ if(!["document_review_list","document_review_request","document_review_approve","document_review_again","loan_options","list","detail","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
  if(input.action==="loan_options"){
   const [drivers,vehicles]=await Promise.all([
    db.from("gf_driver_match_master_prod").select("driver_id,full_name,email").order("full_name"),
@@ -299,6 +299,16 @@ Deno.serve(async req=>{
    const sheetId=Deno.env.get("GF_LINE_RECEPTION_SHEET_ID")!;
    const changes=allowed.filter(k=>clean(v[k])!==clean(checks[k])).map(k=>({range:"'車両依頼受付'!"+col(headers.indexOf(k))+found[0].index,values:[[clean(checks[k])]]}));
    if(!changes.length)return respond(200,{成功:true,変更なし:true,確認項目:Object.fromEntries(allowed.map(k=>[k,clean(v[k])]))});
+   // Guard normal staff check writes against an active document review in the
+   // review-enabled environment. Do not add dependencies to legacy installations.
+   if(Deno.env.get("GF_DOCUMENT_REVIEW_WRITE_ENABLED")==="YES"){
+    const affected=allowed.filter(k=>clean(v[k])!==clean(checks[k])).map(k=>k==="免許証確認"?"driver_license":"residence_certificate");
+    const {data:openReviews,error:openReviewsError}=await db.from("gf_driver_document_review_requests")
+     .select("id,document_type,status").eq("receipt_id",receipt)
+     .in("document_type",affected).in("status",["requested","submitted","approving"]).limit(1);
+    if(openReviewsError)return respond(503,{error:"document_review_guard_unavailable"});
+    if(openReviews?.length)return respond(409,{error:"document_review_active"});
+   }
    const write=await fetch("https://sheets.googleapis.com/v4/spreadsheets/"+encodeURIComponent(sheetId)+"/values:batchUpdate",{method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({valueInputOption:"RAW",data:changes})});
    if(!write.ok)return respond(503,{error:"checks_sheet_write_failed"});
    return respond(200,{成功:true,確認項目:Object.fromEntries(allowed.map(k=>[k,clean(checks[k])]))});
