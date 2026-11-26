@@ -221,13 +221,22 @@ const contract=document.querySelector('#requestContractPanel');contract.classLis
     for(const [type,label,check] of [['driver_license','免許証','免許証確認'],['residence_certificate','住民票','住民票確認']]){
      const block=document.createElement('div');block.className='item';
      const heading=document.createElement('strong');heading.textContent=label;block.append(heading);
-     const active=(result.requests||[]).find(x=>x.document_type===type&&['requested','submitted'].includes(x.status));
-     const status=document.createElement('p');status.textContent=active?(active.status==='requested'?'再提出依頼中':'再提出済み・確認待ち')+'：'+active.reason:'再提出依頼なし';block.append(status);
+     const active=(result.requests||[]).find(x=>x.document_type===type&&['requested','submitted','approving'].includes(x.status));
+     const status=document.createElement('p');status.textContent=active?(active.status==='requested'?'再提出依頼中':active.status==='approving'?'承認処理中・保存結果の確認待ち':'再提出済み・確認待ち')+'：'+active.reason:'再提出依頼なし';block.append(status);
      if(active?.status==='submitted'&&/^https:\/\/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{10,200}\/view$/.test(active.review_file_url||'')){
       const link=document.createElement('a');link.href=active.review_file_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='再提出された'+label+'を確認';block.append(link);
-      const approve=document.createElement('button');approve.type='button';approve.textContent='確認OK・承認する';approve.disabled=true;approve.title='安全な台帳保存処理の接続待ち';
+      const approve=document.createElement('button');approve.type='button';approve.textContent='確認OK・承認する';approve.disabled=result.approval_enabled!==true||contractStatus==='契約完了';
       const again=document.createElement('button');again.type='button';again.textContent='もう一度再提出を依頼する';
       again.onclick=async()=>{if(selectedReception!==r)return;const reason=prompt('再提出理由を入力してください');if(!reason?.trim()||reason.length>1000)return;again.disabled=true;try{await receptionGateway.request('document_review_again',{receipt_id:r.受付ID,request_id:active.id,reason:reason.trim()});if(selectedReception===r)await refreshReview();}catch(e){if(selectedReception===r){reviewNote.textContent='再提出依頼を保存できませんでした：'+e.message;again.disabled=false;}}};
+      approve.onclick=async()=>{
+       if(selectedReception!==r||approve.disabled||!confirm(label+'を承認しますか？'))return;
+       approve.disabled=true;again.disabled=true;
+       let message=label+'を承認しました。';
+       try{
+        await receptionGateway.request('document_review_approve',{receipt_id:r.受付ID,request_id:active.id});
+       }catch(e){message='承認の結果を確認してください。'+e.message;}
+       if(selectedReception===r){await refreshReview();if(selectedReception===r)reviewNote.textContent=message;}
+      };
       block.append(approve,again);
      }
      const postal=type==='residence_certificate'&&/郵送/.test(String(rawContract['住民票PDF']||'')+' '+String(rawContract['書類状態']||''));
