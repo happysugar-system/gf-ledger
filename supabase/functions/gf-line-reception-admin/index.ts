@@ -237,7 +237,7 @@ Deno.serve(async req=>{
     const enc=new TextEncoder();
     const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
     const mac=new Uint8Array(await crypto.subtle.sign("HMAC",key,enc.encode(payload)));
-    const signature=btoa(String.fromCharCode(...mac)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+    const signature=btoa(String.fromCharCode(...mac)).split("+").join("-").split("/").join("_").replace(/=+$/,"");
     // Keep disabled until the GAS dispatcher and durable concurrency guard are verified.
     if(Deno.env.get("GF_DOCUMENT_APPROVAL_BRIDGE_ENABLED")!=="YES")return respond(503,{error:"approval_bridge_disabled"});
     const response=await fetch(bridgeUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payload,signature}),signal:AbortSignal.timeout(45000)});
