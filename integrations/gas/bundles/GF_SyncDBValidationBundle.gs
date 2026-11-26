@@ -78,7 +78,7 @@ function GF_DB同期ワーカー本体_(book,sync){
  GF_IsolatedValidationBook_(book);
  if(typeof sync!=='function')throw Error('isolated_sync_callback_missing');
  const result={completed:0,review:0,deferred:0};
- const matches=(v,q)=>q.operation==='割当'?v.data.DriverID===q.driver_id&&!!v.data['現在使用者']:q.operation==='取消'&&!v.data.DriverID&&!v.data['現在使用者'];
+ const matches=(v,q)=>{const d=String(v.data.DriverID||'').trim(),n=String(v.data['現在使用者']||'').trim();return q.operation==='割当'?d===q.driver_id&&!!n:q.operation==='取消'&&!d&&!n;};
  for(const q of GF_DB同期候補取得_(book)){
   const id=q.request_id;
   const claimed=GF_SyncStorageTest_(book,'transition','queue',id,{expected:'待機',next:'処理中'});
