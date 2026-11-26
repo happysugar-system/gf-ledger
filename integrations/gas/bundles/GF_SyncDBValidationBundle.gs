@@ -221,3 +221,66 @@ function GF_ThreeSheetDocumentApply_(book,id,sources){
  return {ok:true,updated:keys};
  }finally{lock.releaseLock();}
 }
+
+/** Pure validation import mapper. Does not write to Calendar. */
+function GF_ScheduleImportPlan_(headers,rows){
+ const h=headers.map(x=>String(x).trim());
+ if(new Set(h.filter(Boolean)).size!==h.filter(Boolean).length)throw Error('duplicate_header');
+ for(const k of ['予定種別','予定日','GoogleカレンダーEventID','カレンダー','VehicleID'])if(!h.includes(k))throw Error('missing_header:'+k);
+ const seen=new Set();
+ return rows.flatMap((r,i)=>{
+ if(r.every(x=>x===''||x==null))return [];
+ const d=Object.fromEntries(h.map((k,j)=>[k,r[j]]).filter(x=>x[0]));
+ const type=String(d['予定種別']||'').trim(),date=String(d['予定日']||'').trim().replace(/\//g,'-').replace(/-(\d)(?=-|$)/g,'-0$1');
+ if(!type||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)throw Error('invalid_schedule_row:'+(i+2));
+ const vehicle=String(d.VehicleID||'').trim(),event=String(d['GoogleカレンダーEventID']||'').trim(),calendar=String(d['カレンダー']||'').trim();
+ if(vehicle&&!/^V9\d{5}$/.test(vehicle))throw Error('validation_vehicle_required');
+ if(!vehicle&&type!=='シフト')throw Error('vehicle_required');
+ if(event&&!calendar)throw Error('calendar_required');
+ const key=JSON.stringify([calendar,event]);
+ if(event&&seen.has(key))throw Error('duplicate_event');
+ if(event)seen.add(key);
+ return [{schedule_id:'TEST-SCHEDULE-'+(i+2),vehicle_id:vehicle||null,schedule_type:type,schedule_date:date,state:String(d['状態']||'')||null,calendar_name:calendar||null,calendar_event_id:event||null,source_data:d}];
+ });
+}
+
+
+function GF_ScheduleStorageTest_(book,action,rows){
+ GF_IsolatedValidationBook_(book);
+ if(!GF_MainReturnHistoryEnabled_(book))throw Error('validation_disabled');
+ if(!['health','read','import'].includes(action))throw Error('invalid_action');
+ const token=PropertiesService.getScriptProperties().getProperty('GF_ACTUAL_TEST_TOKEN')||'';
+ if(token.length<32)throw Error('token_missing');
+ const body={action};
+ if(action==='import'){
+ if(!Array.isArray(rows)||rows.length<1||rows.length>100)throw Error('invalid_batch');
+ body.rows=rows;
+ }
+ const res=UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-schedule-storage-test',{method:'post',contentType:'application/json',headers:{'x-gf-actual-token':token},payload:JSON.stringify(body),muteHttpExceptions:true,followRedirects:false});
+ if(res.getResponseCode()!==200)throw Error('schedule_http_'+res.getResponseCode());
+ const result=JSON.parse(res.getContentText());
+ if(result.ok!==true)throw Error('schedule_request_failed');
+ return result;
+}
+function GF_ScheduleImportValidation_(book,headers,rows){
+ const plan=GF_ScheduleImportPlan_(headers,rows);
+ if(plan.length>100)throw Error('validation_batch_limit');
+ const before=GF_ScheduleStorageTest_(book,'read').data;
+ if(!Array.isArray(before)||before.length>=1000)throw Error('read_limit');
+ const canonical=x=>JSON.stringify(x,Object.keys(x).sort());
+ const pending=[];
+ for(const p of plan){
+ const old=before.find(x=>x.schedule_id===p.schedule_id);
+ if(!old){pending.push(p);continue;}
+ for(const k of Object.keys(p)){
+ if(k==='source_data'?canonical(old[k])!==canonical(p[k]):old[k]!==p[k])throw Error('schedule_conflict:'+p.schedule_id);
+ }
+ }
+ if(pending.length)GF_ScheduleStorageTest_(book,'import',pending);
+ const after=GF_ScheduleStorageTest_(book,'read').data;
+ for(const p of plan){
+ const saved=after.find(x=>x.schedule_id===p.schedule_id);
+ if(!saved||Object.keys(p).some(k=>k==='source_data'?canonical(saved[k])!==canonical(p[k]):saved[k]!==p[k]))throw Error('schedule_readback_failed');
+ }
+ return {ok:true,total:plan.length,inserted:pending.length};
+}
