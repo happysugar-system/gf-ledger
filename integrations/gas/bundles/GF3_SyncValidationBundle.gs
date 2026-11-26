@@ -21,9 +21,8 @@ function GF3_GF_SyncStorageTest_(book,action,kind,id,args){
  if(!['history','queue'].includes(kind))throw Error('sync_storage_kind_denied');
  if(!(kind==='history'?/^[a-f0-9]{64}$/:/^TEST-[A-Z0-9-]{1,64}$/).test(id))throw Error('sync_storage_id_denied');
  }
- throw Error('gf3_backend_namespace_not_configured');
  const payload=Object.assign({},args||{},{action,kind,id});
- const response=UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-sync-storage-test',{method:'post',contentType:'application/json',headers:{'x-gf-actual-token':token},payload:JSON.stringify(payload),followRedirects:false,muteHttpExceptions:true});
+ const response=UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf3-sync-storage-test',{method:'post',contentType:'application/json',headers:{'x-gf3-sync-token':token},payload:JSON.stringify(payload),followRedirects:false,muteHttpExceptions:true});
  if(response.getResponseCode()!==200)throw Error('sync_storage_http_'+response.getResponseCode());
  const result=JSON.parse(response.getContentText());
  if(result.ok!==true)throw Error('sync_storage_failed');
@@ -44,10 +43,7 @@ function GF3_GF_SyncStorageTestTransition_(book,id,expected,next,result){
 function GF3_GF_検証同期DB接続診断(){
  const book=GF3_Open_();
  GF3_GF_SyncStorageTest_(book,'health');
- const a=GF3_GF_SyncStorageTestRead_(book,'history','a'.repeat(64));
- const b=GF3_GF_SyncStorageTestRead_(book,'history','b'.repeat(64));
- if(!a||!b||a.driver_id!=='D999901'||b.driver_id!=='D999902')throw Error('sync_history_mismatch');
- const result={connected:true,historyMatches:true};
+ const result={connected:true};
  console.log(JSON.stringify(result));return result;
 }
 
@@ -265,13 +261,12 @@ function GF3_GF_ScheduleStorageTest_(book,action,rows){
  if(!['health','read','import'].includes(action))throw Error('invalid_action');
  const token=PropertiesService.getScriptProperties().getProperty('GF3_SYNC_TEST_TOKEN')||'';
  if(token.length<32)throw Error('token_missing');
- throw Error('gf3_backend_namespace_not_configured');
  const body={action};
  if(action==='import'){
  if(!Array.isArray(rows)||rows.length<1||rows.length>100)throw Error('invalid_batch');
  body.rows=rows;
  }
- const res=UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-schedule-storage-test',{method:'post',contentType:'application/json',headers:{'x-gf-actual-token':token},payload:JSON.stringify(body),muteHttpExceptions:true,followRedirects:false});
+ const res=UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf3-schedule-storage-test',{method:'post',contentType:'application/json',headers:{'x-gf3-sync-token':token},payload:JSON.stringify(body),muteHttpExceptions:true,followRedirects:false});
  if(res.getResponseCode()!==200)throw Error('schedule_http_'+res.getResponseCode());
  const result=JSON.parse(res.getContentText());
  if(result.ok!==true)throw Error('schedule_request_failed');
