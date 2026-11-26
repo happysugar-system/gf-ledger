@@ -228,7 +228,24 @@ Deno.serve(async req=>{
      return error||!data?respond(409,{error:"review_changed"}):respond(200,{request:data});
     }
     // Approval must use the serialized, identity-verified GAS writer; fail closed until connected.
-    return respond(503,{error:"approval_sheet_adapter_not_connected"});
+    const bridgeUrl=Deno.env.get("GF_DOCUMENT_APPROVAL_BRIDGE_URL")||"";
+    const secret=Deno.env.get("GF_DOCUMENT_BRIDGE_SECRET")||"";
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(bridgeUrl)||secret.length<32)return respond(503,{error:"approval_bridge_not_configured"});
+    const {data:attempt,error:attemptError}=await db.from("gf_driver_document_attempts").select("id,drive_file_id").eq("request_id",requestId).order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle();
+    if(attemptError||!attempt||!/^[A-Za-z0-9_-]{10,200}$/.test(attempt.drive_file_id))return respond(409,{error:"attempt_not_verified"});
+    const payload=JSON.stringify({action:"document_review_approve",issuedAt:Date.now(),nonce:crypto.randomUUID(),review:{receiptId:receipt,driverId:driver,fileId:attempt.drive_file_id,documentType:review.document_type,status:"submitted",verified:true,requestId,attemptId:attempt.id}});
+    const enc=new TextEncoder();
+    const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+    const mac=new Uint8Array(await crypto.subtle.sign("HMAC",key,enc.encode(payload)));
+    const signature=btoa(String.fromCharCode(...mac)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+    // Keep disabled until the GAS dispatcher and durable concurrency guard are verified.
+    if(Deno.env.get("GF_DOCUMENT_APPROVAL_BRIDGE_ENABLED")!=="YES")return respond(503,{error:"approval_bridge_disabled"});
+    const response=await fetch(bridgeUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payload,signature}),signal:AbortSignal.timeout(45000)});
+    if(!response.ok)return respond(503,{error:"approval_bridge_failed"});
+    const saved=await response.json();
+    if(saved.verified!==true||saved.fileId!==attempt.drive_file_id)return respond(409,{error:"approval_sheet_not_verified"});
+    // Do not finalize until cross-system concurrency protection is installed.
+    return respond(409,{error:"approval_reconciliation_required"});
    }
    const type=clean(input.document_type),reason=clean(input.reason);
    if(!["driver_license","residence_certificate"].includes(type)||!reason||reason.length>1000)return respond(400,{error:"invalid_document_request"});
