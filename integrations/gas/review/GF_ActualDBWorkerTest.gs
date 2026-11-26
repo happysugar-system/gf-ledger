@@ -16,7 +16,7 @@ function GF_ActualDBApply_(book,v,from,to){
     if(!Object.prototype.hasOwnProperty.call(from,k))throw Error('actual_snapshot_key_mismatch');
     if(from[k]!==to[k]){
       let value=to[k];
-      if(k.includes('日')&&typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value))value=Utilities.parseDate(value,book.getSpreadsheetTimeZone(),'yyyy-MM-dd');
+      if((k.includes('日')||k==='返却/12点検')&&typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value))value=Utilities.parseDate(value,book.getSpreadsheetTimeZone(),'yyyy-MM-dd');
       changes[k]=value;
     }
   });
