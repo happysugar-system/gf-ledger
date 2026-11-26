@@ -223,7 +223,8 @@ const contract=document.querySelector('#requestContractPanel');contract.classLis
      const heading=document.createElement('strong');heading.textContent=label;block.append(heading);
      const active=(result.requests||[]).find(x=>x.document_type===type&&['requested','submitted','approving'].includes(x.status));
      const status=document.createElement('p');status.textContent=active?(active.status==='requested'?'再提出依頼中':active.status==='approving'?'承認処理中・保存結果の確認待ち':'再提出済み・確認待ち')+'：'+active.reason:'再提出依頼なし';block.append(status);
-     if(active?.status==='submitted'&&/^https:\/\/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{10,200}\/view$/.test(active.review_file_url||'')){
+     const postal=type==='residence_certificate'&&/郵送/.test(String(rawContract['住民票PDF']||'')+' '+String(rawContract['書類状態']||''));
+     if(!postal&&active?.status==='submitted'&&/^https:\/\/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{10,200}\/view$/.test(active.review_file_url||'')){
       const link=document.createElement('a');link.href=active.review_file_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='再提出された'+label+'を確認';block.append(link);
       const approve=document.createElement('button');approve.type='button';approve.textContent='確認OK・承認する';approve.disabled=result.approval_enabled!==true||contractStatus==='契約完了';
       const again=document.createElement('button');again.type='button';again.textContent='もう一度再提出を依頼する';
@@ -239,8 +240,7 @@ const contract=document.querySelector('#requestContractPanel');contract.classLis
       };
       block.append(approve,again);
      }
-     const postal=type==='residence_certificate'&&/郵送/.test(String(rawContract['住民票PDF']||'')+' '+String(rawContract['書類状態']||''));
-     if(!active&&postal){status.textContent='郵送提出：アップロード不要（既存の書類確認をご利用ください）';}
+     if(postal){status.textContent='郵送提出：アップロード不要（既存の書類確認をご利用ください）';}
      if(!active&&!postal){
       const reason=document.createElement('textarea');reason.placeholder='再提出理由（本人に表示）';reason.maxLength=1000;reason.setAttribute('aria-label',label+'の再提出理由');
       const button=document.createElement('button');button.type='button';button.textContent=label+'の再提出を依頼';button.disabled=rawContract[check]==='確認OK'||contractStatus==='契約完了';
