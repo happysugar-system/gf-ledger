@@ -27,7 +27,7 @@ async function deliveryBridge(body:Record<string,unknown>,actor:string){
  const {receiptId,vehicleId,driverId,date}=body;
  const write=body.action==="delivery_complete";
  if(write&&(Deno.env.get("GF_DELIVERY_VALIDATION_READ_ENABLED")!=="YES"||Deno.env.get("GF_DELIVERY_WRITE_ENABLED")!=="YES"))return respond(503,{error:"delivery_write_not_configured"});
- if(write&&(typeof receiptId!=="string"||!receiptId.trim()||receiptId.length>150||typeof vehicleId!=="string"||!(Deno.env.get("GF_DELIVERY_FIXTURE_MODE")==="YES"?vehicleId==="TEST-V01"&&receiptId==="TEST-R01"&&driverId==="D999901":/^V\d{6}$/.test(vehicleId))||typeof driverId!=="string"||!/^D\d{6,7}$/.test(driverId)||typeof date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(date)))return respond(400,{error:"invalid_delivery_request"});
+ if(write&&(typeof receiptId!=="string"||!receiptId.trim()||receiptId.length>150||typeof vehicleId!=="string"||!(Deno.env.get("GF_DELIVERY_FIXTURE_MODE")==="YES"?((vehicleId==="TEST-V01"&&receiptId==="TEST-R01"&&driverId==="D999901")||(vehicleId==="TEST-V02"&&receiptId==="TEST-R02"&&driverId==="D999902")):/^V\d{6}$/.test(vehicleId))||typeof driverId!=="string"||!/^D\d{6,7}$/.test(driverId)||typeof date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(date)))return respond(400,{error:"invalid_delivery_request"});
  const payload=JSON.stringify({action:write?"delivery_complete":"read",receiptId,vehicleId,driverId,date,actor,issuedAt:Date.now(),nonce:crypto.randomUUID()});
  const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
  const signature=bytes(new Uint8Array(await crypto.subtle.sign("HMAC",k,new TextEncoder().encode(payload))));
