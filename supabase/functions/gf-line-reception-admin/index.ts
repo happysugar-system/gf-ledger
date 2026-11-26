@@ -221,6 +221,11 @@ Deno.serve(async req=>{
     if(!/^[0-9a-f-]{36}$/i.test(requestId))return respond(400,{error:"invalid_request_id"});
     const {data:review,error:reviewError}=await db.from("gf_driver_document_review_requests").select("id,document_type,status,updated_at").eq("id",requestId).eq("receipt_id",receipt).eq("driver_id",driver).eq("status","submitted").maybeSingle();
     if(reviewError||!review)return respond(409,{error:"submission_not_available"});
+    if(review.document_type==="residence_certificate"){
+     if(["住民票PDF","書類状態"].some(k=>headers.filter(h=>h===k).length!==1))return respond(409,{error:"residence_columns_invalid"});
+     const v=found[0].value;
+     if(/郵送/.test(clean(v["住民票PDF"])+" "+clean(v["書類状態"])))return respond(409,{error:"postal_residence_no_upload_required"});
+    }
     if(input.action==="document_review_again"){
      const reason=clean(input.reason);
      if(!reason||reason.length>1000)return respond(400,{error:"invalid_reason"});
