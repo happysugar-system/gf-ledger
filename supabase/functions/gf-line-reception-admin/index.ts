@@ -189,7 +189,7 @@ Deno.serve(async req=>{
    return respond(200,{詳細:output});
   }
 
-  if(input.action==="document_review_list"||input.action==="document_review_request"){
+  if(["document_review_list","document_review_request","document_review_approve","document_review_again"].includes(input.action)){
    if(!["owner","staff"].includes(access.role))return respond(403,{error:"not_authorized"});
    const id=clean(input.receipt_id);
    if(!id||rows.filter(x=>x.value["受付ID"]===id).length!==1)return respond(409,{error:"reception_id_not_unique"});
@@ -216,6 +216,20 @@ Deno.serve(async req=>{
    }
    // Explicit server-side rollout guard; no production writes by default.
    if(Deno.env.get("GF_DOCUMENT_REVIEW_WRITE_ENABLED")!=="YES")return respond(503,{error:"document_review_write_disabled"});
+   if(["document_review_approve","document_review_again"].includes(input.action)){
+    const requestId=clean(input.request_id);
+    if(!/^[0-9a-f-]{36}$/i.test(requestId))return respond(400,{error:"invalid_request_id"});
+    const {data:review,error:reviewError}=await db.from("gf_driver_document_review_requests").select("id,document_type,status").eq("id",requestId).eq("receipt_id",receipt).eq("driver_id",driver).eq("status","submitted").maybeSingle();
+    if(reviewError||!review)return respond(409,{error:"submission_not_available"});
+    if(input.action==="document_review_again"){
+     const reason=clean(input.reason);
+     if(!reason||reason.length>1000)return respond(400,{error:"invalid_reason"});
+     const {data,error}=await db.from("gf_driver_document_review_requests").update({status:"requested",reason,updated_at:new Date().toISOString()}).eq("id",requestId).eq("status","submitted").select("id,status").maybeSingle();
+     return error||!data?respond(409,{error:"review_changed"}):respond(200,{request:data});
+    }
+    // Approval must use the serialized, identity-verified GAS writer; fail closed until connected.
+    return respond(503,{error:"approval_sheet_adapter_not_connected"});
+   }
    const type=clean(input.document_type),reason=clean(input.reason);
    if(!["driver_license","residence_certificate"].includes(type)||!reason||reason.length>1000)return respond(400,{error:"invalid_document_request"});
    const check=type==="driver_license"?"免許証確認":"住民票確認";
