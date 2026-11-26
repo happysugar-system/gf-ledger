@@ -18,3 +18,22 @@ Retain 車両台帳 as vehicle source of truth, 名変待ち管理, ドライバ
 - Read-only, fail-closed GAS audit: `integrations/gas/review/GF3_ThreeSheetReadinessAudit.gs`. Its approved script ID and workbook ID must be explicitly configured in a **separate new validation GAS**; it refuses the known old validation script IDs. It does not replace the existing doPost, staff authentication or sync/return worker.
 - Before adding any columns, map each needed field to its current primary source and preserve values, rich Drive links, date types, validation and calendar bindings. Avoid creating blank columns and claiming migration succeeded; reconcile the old user/vehicle status sheets and driver master source separately.
 - Local-only GAS target configuration and the unsigned old staff routing are outstanding. Do not enable staff writes merely because the read-only schema gate passes. The old `GF_IsolatedValidationBook_`, `GF_MainReturnHistoryEnabled_`, and `GFA_検証接続先を診断` still pin the original validation workbook and must be handled explicitly, with no fallback to production.
+
+
+## Source-of-truth reconciliation for missing columns (2026-11-26)
+
+Read-only audit of the current production workbook's header row (no live data modified):
+
+| Destination field group | Existing source | Migration rule |
+| --- | --- | --- |
+| Vehicle folder, latest PDF, vehicle document folder | 車両台帳 | Preserve original rich hyperlink and target value |
+| Vehicle-condition and maintenance folders | 車両状況 | Match by unique VehicleID; never copy a display label without its URL |
+| Previous driver ID and previous driver's vehicle document | 車両台帳 / 利用者管理 | Compare both sources, flag differences for review |
+| Current driver contact projection | 車両台帳 / ドライバーマスター | Join by DriverID; reject differing nonempty source values |
+| Driver master contacts, status and notes | ドライバーマスター | Match unique DriverID; do not blank or overwrite occupied targets |
+
+The test 3-sheet workbook contains only 26 columns in 車両台帳 and 7 populated header columns in ドライバーマスター, while the currently active production header rows have 63 and 17 columns respectively. **Three tabs does not mean the schema is ready.** Preserve the full operational schema and field values; the 19 previously identified missing fields are minimum gaps, not a complete data-loss audit.
+
+`integrations/gas/review/GF3_ThreeSheetMigrationPlan.gs` generates candidate cell patches and collision/review reasons only; it does not write, retrieve production data, or expose private values to logs. It must be run only against reviewed snapshots, with Drive rich-link metadata included. Its mock tests cover conflicting values, occupied targets, invalid links and duplicate VehicleID.
+
+`GF3_検証3シート書込前確認` now additionally requires `GF3_MIGRATION_VERIFIED=true` in the *new isolated validation GAS*. Do not set that flag merely after adding headers; it is an explicit acceptance acknowledgement following value/formula/validation/link reconciliation and full end-to-end checks. No existing staff routes or old GAS test workbook guards have been switched.
