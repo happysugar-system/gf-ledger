@@ -117,13 +117,18 @@ function GF_DELIVERY_reportRows_(result){
 // ===== GF_DeliveryAdapter.gs =====
 /** Isolated GFI fixture only. No production access. */
 function GF_ReceiptAssignmentValidationBook_(){
- if(typeof GFI_BOOK==='undefined'||GFI_BOOK!=='1NE2DNQK2vV0UBNg_-6B9xiyfE4y4i2JTKrUBuL902tU')throw Error('fixture_mismatch');
- return GFI_BOOK;
+ if(ScriptApp.getScriptId()!=='1avsrC0dTZOr84olefKKGrwyqGUUC-MhME5vsqqIO4TZOlsK8BoCLFmJm')throw Error('fixture_mismatch');
+ return '1NE2DNQK2vV0UBNg_-6B9xiyfE4y4i2JTKrUBuL902tU';
 }
 function GF_ReceiptAssignmentReadTables_(id){
  if(id!==GF_ReceiptAssignmentValidationBook_())throw Error('fixture_mismatch');
  const book=SpreadsheetApp.openById(id);
- return ['GF_LINEドライバー同期履歴','名変待ち管理','ドライバーマスター','車両台帳'].map(name=>({rows:[GFI_読取_(book,name).r]}));
+ return ['GF_LINEドライバー同期履歴','名変待ち管理','ドライバーマスター','車両台帳'].map(name=>{
+ const sh=book.getSheetByName(name);if(!sh)throw Error('missing_sheet:'+name);
+ const [h,...rows]=sh.getDataRange().getDisplayValues();
+ if(new Set(h.filter(Boolean)).size!==h.filter(Boolean).length)throw Error('duplicate_header:'+name);
+ return {rows:rows.filter(row=>row.some(Boolean)).map(row=>Object.fromEntries(h.map((k,i)=>[k,row[i]||''])))};
+ });
 }
 function GF_DeliveryFixturePreflight(){
  const id=GF_ReceiptAssignmentValidationBook_(),book=SpreadsheetApp.openById(id);
@@ -135,7 +140,7 @@ function GF_DeliveryFixturePreflight(){
  for(const k of keys)if(h.filter(x=>x===k).length!==1)missing.push(name+':'+k);
  }
  const tables=GF_ReceiptAssignmentReadTables_(id);
- const result={fixture:tables[3].rows[0].VehicleID==='TEST-V01',sheets:typeof Sheets!=='undefined',missing,ready:false};
+ const result={fixture:tables[3].rows.some(r=>r.VehicleID==='TEST-V01'),sheets:typeof Sheets!=='undefined',missing,ready:false};
  result.ready=result.fixture&&result.sheets&&!missing.length;
  console.log(JSON.stringify(result));return result;
 }
