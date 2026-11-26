@@ -71,3 +71,32 @@ function GF_DB同期候補取得_(book){
  if(!Array.isArray(rows)||rows.length>5||rows.some(r=>r.state!=='待機'||!/^TEST-[A-Z0-9-]{1,64}$/.test(r.request_id)||!/^V9[0-9]{5}$/.test(r.vehicle_id)))throw Error('invalid_candidates');
  return rows;
 }
+
+
+/** Isolated worker: caller must provide a verified test-only synchronization callback. */
+function GF_DB同期ワーカー本体_(book,sync){
+ GF_IsolatedValidationBook_(book);
+ if(typeof sync!=='function')throw Error('isolated_sync_callback_missing');
+ const result={completed:0,review:0,deferred:0};
+ const matches=(v,q)=>q.operation==='割当'?v.data.DriverID===q.driver_id&&!!v.data['現在使用者']:q.operation==='取消'&&!v.data.DriverID&&!v.data['現在使用者'];
+ for(const q of GF_DB同期候補取得_(book)){
+  const id=q.request_id;
+  const claimed=GF_SyncStorageTest_(book,'transition','queue',id,{expected:'待機',next:'処理中'});
+  if(claimed!==true){result.deferred++;continue;}
+  try{
+   const before=GF_実績車両情報_(book,q.vehicle_id);
+   if(!matches(before,q))throw Error('ledger_mismatch');
+   sync(book,before.row,q);
+   SpreadsheetApp.flush();
+   const after=GF_実績車両情報_(book,q.vehicle_id);
+   if(!matches(after,q))throw Error('ledger_changed');
+   const done=GF_SyncStorageTest_(book,'transition','queue',id,{expected:'処理中',next:'完了',result:'同期後台帳照合済み'});
+   if(done!==true)throw Error('completion_conflict');
+   result.completed++;
+  }catch(e){
+   GF_SyncStorageTestTransition_(book,id,'処理中','要確認',String(e.message||e).slice(0,500));
+   result.review++;
+  }
+ }
+ return result;
+}
