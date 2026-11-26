@@ -15,3 +15,18 @@ function GF_IsolatedValidationSheet_(sheet) {
   GF_IsolatedValidationBook_(sheet.getParent());
   return sheet;
 }
+
+/** Only the existing demo worker is allowed; no arbitrary URLs or redirects. */
+function GF_IsolatedValidationSupabase_(book, action, body) {
+  GF_IsolatedValidationBook_(book);
+  if (!['health','observe'].includes(action)) throw Error('validation_action_denied');
+  const token=PropertiesService.getScriptProperties().getProperty('GF_VEHICLE_DEMO_SYNC_TOKEN');
+  if (!token || token.length<32) throw Error('validation_token_missing');
+  if (!body || body.vehicle_id !== 'V999999') throw Error('validation_vehicle_denied');
+  const response=UrlFetchApp.fetch('https://zwprphmfgobkektzsuti.supabase.co/functions/v1/gf-vehicle-save-worker-v2-test',{
+    method:'post',contentType:'application/json',headers:{'x-gf-sync-token':token},
+    payload:JSON.stringify({...body,action}),followRedirects:false,muteHttpExceptions:true
+  });
+  if(response.getResponseCode()!==200) throw Error('validation_api_failed');
+  return JSON.parse(response.getContentText());
+}
