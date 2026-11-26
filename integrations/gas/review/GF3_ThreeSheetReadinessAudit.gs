@@ -55,7 +55,8 @@ function GF3_検証3シート接続診断(){
   headers[s.getName()]=s.getRange(1,1,1,s.getLastColumn()).getDisplayValues()[0];
  }
  const audit=GF3_ThreeSheetSchemaAudit_(headers);
- return Object.assign({scriptApproved,bookApproved,enabled},audit);
+ const migrationVerified=p.getProperty('GF3_MIGRATION_VERIFIED')==='true';
+ return Object.assign({scriptApproved,bookApproved,enabled,schemaReady:audit.ready,migrationVerified},audit,{ready:audit.ready&&migrationVerified});
 }
 /** Call this before wiring any staff write to the three-sheet test workbook. */
 function GF3_検証3シート書込前確認(){
