@@ -9,7 +9,7 @@ function GF_ActualStorageTest_(book, action, args) {
   if (!['health','queue','history','transition','prepare'].includes(action)) throw Error('actual_storage_action_denied');
   const receipt=props.getProperty('GF_VALIDATION_RETURN_RECEIPT_ID');
   GF_IsolatedValidationReceipt_(receipt);
-  if(receipt!=='TEST-RETURN-R005')throw Error('actual_storage_receipt_denied');
+  if(!['TEST-RETURN-R005','TEST-RETURN-R006'].includes(receipt))throw Error('actual_storage_receipt_denied');
   const payload=Object.assign({},args||{},{action,receipt_id:receipt});
   const response=UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-actual-storage-test',{
     method:'post',contentType:'application/json',headers:{'x-gf-actual-token':token},
@@ -110,7 +110,7 @@ function GF_検証DB返却受付(){
  const v=GF_実績車両情報_(book,'V900005');
  if(v.data['区分/ステータス']!=='貸出中'||v.data.DriverID!=='D999905')throw Error('actual_intake_vehicle_conflict');
  const date=Utilities.formatDate(new Date(),book.getSpreadsheetTimeZone(),'yyyy-MM-dd');
- const receipt=['TEST-RETURN-R005',date,'V900005','返却完了',date,'D999905',v.data['現在使用者']];
+ const receipt=['TEST-RETURN-R006',date,'V900005','返却完了',date,'D999905',v.data['現在使用者']];
  const plan=GF_MainReturnHistoryPrepare_(book,receipt,v);
  if(!plan)throw Error('actual_intake_plan_missing');
  const keys=['備考','DriverID','代車貸出先','現在使用者','返却/12点検','代車貸出備考','代車貸出エリア','区分/ステータス'];
@@ -129,7 +129,7 @@ function GF_検証DB返却受付(){
 function GF_検証実績DB一括確認(){
  const book=GF_IsolatedValidationOpen_();
  const p=PropertiesService.getScriptProperties();
- const expected={GF_TEST_RETURN_HISTORY_ENABLED:'true',GF_VALIDATION_RETURN_RECEIPT_ID:'TEST-RETURN-R005',GF_VALIDATION_RETURN_VEHICLE_ID:'V900005'};
+ const expected={GF_TEST_RETURN_HISTORY_ENABLED:'true',GF_VALIDATION_RETURN_RECEIPT_ID:'TEST-RETURN-R006',GF_VALIDATION_RETURN_VEHICLE_ID:'V900005'};
  Object.keys(expected).forEach(k=>{if(p.getProperty(k)!==expected[k])throw Error('invalid_property:'+k);});
  if(typeof Sheets==='undefined')throw Error('advanced_sheets_service_required');
  const result=GF_検証実績DB接続診断();
@@ -137,4 +137,17 @@ function GF_検証実績DB一括確認(){
  const v=GF_実績車両情報_(book,q.vehicle_id);
  const report={...result,beforeMatches:GF_ActualDBSnapshotMatches_(v,h.before_data,book),afterMatches:GF_ActualDBSnapshotMatches_(v,h.after_data,book)};
  console.log(JSON.stringify(report));return report;
+}
+/** One-shot isolated fresh receipt and return; preserves previous receipt. */
+function GF_検証DB新規返却一括(){
+ const book=GF_IsolatedValidationOpen_();
+ const p=PropertiesService.getScriptProperties();
+ if(p.getProperty('GF_VALIDATION_RETURN_VEHICLE_ID')!=='V900005'||!GF_MainReturnHistoryEnabled_(book))throw Error('validation_boundary');
+ p.setProperty('GF_VALIDATION_RETURN_RECEIPT_ID','TEST-RETURN-R006');
+ const rows=GF_ActualStorageTest_(book,'queue');
+ if(!Array.isArray(rows)||rows.length>1)throw Error('actual_queue_invalid');
+ if(rows.length===0)GF_検証DB返却受付();
+ const result=GF_検証DB返却ワーカー();
+ console.log(JSON.stringify(result));
+ return GF_検証実績DB一括確認();
 }
