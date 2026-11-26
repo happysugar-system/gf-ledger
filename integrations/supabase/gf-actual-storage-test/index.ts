@@ -9,12 +9,12 @@ Deno.serve(async (req) => {
  try{
  const b=await req.json();
  if(b.action==="health")return reply({ok:true});
- if(b.receipt_id!=="TEST-RETURN-R005")return reply({error:"receipt_denied"},403);
+ if(!["TEST-RETURN-R005","TEST-RETURN-R006"].includes(b.receipt_id))return reply({error:"receipt_denied"},403);
  const base=Deno.env.get("SUPABASE_URL")+"/rest/v1/";
  const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
  if(!key)return reply({error:"configuration"},503);
  const headers={apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"};
- const filter="?receipt_id=eq.TEST-RETURN-R005";
+ const filter="?receipt_id=eq."+b.receipt_id;
  let path="",method="GET",body:unknown;
  if(b.action==="queue")path="gf_actual_queue_test"+filter;
  else if(b.action==="history")path="gf_actual_history_test"+filter;
