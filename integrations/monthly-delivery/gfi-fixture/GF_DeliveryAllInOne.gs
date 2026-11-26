@@ -24,8 +24,15 @@ function GF_DeliveryCompletionSave_(bookId,request,resolveAssignment){
  const row={...plan.history,'登録日時':Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy/MM/dd HH:mm:ss')};
  // RAW prevents spreadsheet formula interpretation of identifiers or snapshot text.
  try{Sheets.Spreadsheets.Values.append({values:[h.headers.map(k=>row[k]??'')]},bookId,"'実績履歴'!A1",{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'});}catch(e){/* Verify even if the transport response was lost. */}
- const after=read(history);
- const verified=GF_DeliveryCompletionPlan_(vehicles[0],assignment,after.rows,request);
+ let verified;
+ for(let attempt=0;attempt<4;attempt++){
+  const grid=Sheets.Spreadsheets.Values.get(bookId,"'実績履歴'!A1:ZZ",{valueRenderOption:'FORMATTED_VALUE'}).values||[];
+  const [headers,...rows]=grid;
+  if(!headers||h.headers.some((k,i)=>k!==String(headers[i]??'')))throw Error('history_header_changed');
+  verified=GF_DeliveryCompletionPlan_(vehicles[0],assignment,rows.map(row=>Object.fromEntries(headers.map((k,i)=>[k,row[i]??'']))),request);
+  if(verified.state==='unchanged')break;
+  if(attempt<3)Utilities.sleep(250*(attempt+1));
+ }
  if(verified.state!=='unchanged')throw Error('completion_write_unconfirmed');
  return {status:'verified',eventId:plan.eventId};
  }finally{lock.releaseLock();}
