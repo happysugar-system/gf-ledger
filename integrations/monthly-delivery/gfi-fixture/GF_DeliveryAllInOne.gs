@@ -177,7 +177,7 @@ function GF_DeliveryCompletionRoute_(e){
  const lock=LockService.getScriptLock();lock.waitLock(10000);
  try{const cache=JSON.parse(props.getProperty('GF_DELIVERY_NONCES')||'{}');for(const n of Object.keys(cache))if(cache[n]<Date.now())delete cache[n];if(cache[p.nonce]||Object.keys(cache).length>=100)throw Error('replay');cache[p.nonce]=Date.now()+120000;props.setProperty('GF_DELIVERY_NONCES',JSON.stringify(cache));}finally{lock.releaseLock();}
  if(p.action==='read')return reply(GF_DeliveryValidationReport_(bookId));
- if(props.getProperty('GF_DELIVERY_WRITE_ENABLED')!=='YES'||p.receiptId!=='TEST-R01'||p.driverId!=='D999901'||p.vehicleId!=='TEST-V01'||!/^D\d{6,7}$/.test(p.driverId)||typeof p.receiptId!=='string'||!p.receiptId.trim()||p.receiptId.length>150)throw Error('invalid');
+ if(props.getProperty('GF_DELIVERY_WRITE_ENABLED')!=='YES'||!GF_DeliveryFixtureTuple_(p.receiptId,p.vehicleId,p.driverId)||!/^D\d{6,7}$/.test(p.driverId)||typeof p.receiptId!=='string'||!p.receiptId.trim()||p.receiptId.length>150)throw Error('invalid');
  const resolve=id=>{
  const [h,w,d,v]=GF_ReceiptAssignmentReadTables_(bookId).map(t=>t.rows);
  const one=(rows,fn)=>{const a=rows.filter(fn);if(a.length!==1)throw Error('assignment_not_unique');return a[0];};
@@ -210,10 +210,10 @@ function GF_DeliveryValidationReport_(bookId){
     const vehicleId=plan.id;
     const vehicle=one(vehicles,'VehicleID',vehicleId);
     const driverId=vehicle?.DriverID;
-    if(vehicleId!=='TEST-V01'||!/^D\d{6,7}$/.test(driverId)||!vehicle?.['現在使用者'])return true;
+    if(!['TEST-V01','TEST-V02'].includes(vehicleId)||!/^D\d{6,7}$/.test(driverId)||!vehicle?.['現在使用者'])return true;
     const wait=one(waiting,'割当VehicleID',vehicleId);
     const receiptId=wait?.['LINE受付ID'];
-    if(!receiptId||receiptId.length>150||wait.DriverID!==driverId||wait['ステータス']!=='割当済'||one(waiting,'LINE受付ID',receiptId)!==wait)return true;
+    if(!GF_DeliveryFixtureTuple_(receiptId,vehicleId,driverId)||receiptId.length>150||wait.DriverID!==driverId||wait['ステータス']!=='割当済'||one(waiting,'LINE受付ID',receiptId)!==wait)return true;
     const driver=one(drivers,'DriverID',driverId);
     const receipt=one(intake,'LINE受付ID',receiptId);
     if(driver?.['割当VehicleID']!==vehicleId||receipt?.DriverID!==driverId||receipt['処理状態']!=='登録済'||!receipt['受付識別子']||receipt['受付識別子']!==wait['受付識別子'])return true;
@@ -230,3 +230,5 @@ function GF_DeliveryValidationReport_(bookId){
 
 // Existing doPost must dispatch GF_DeliveryCompletionRoute_(e) before legacy handlers.
 // Do not define a second doPost in a shared GAS project.
+
+function GF_DeliveryFixtureTuple_(receipt,vehicle,driver){return (receipt==='TEST-R01'&&vehicle==='TEST-V01'&&driver==='D999901')||(receipt==='TEST-R02'&&vehicle==='TEST-V02'&&driver==='D999902');}
