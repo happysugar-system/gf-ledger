@@ -13,7 +13,11 @@ function GF_DeliveryCompletionSave_(bookId,request,resolveAssignment){
  const ledger=book.getSheetByName('車両台帳'),history=book.getSheetByName('実績履歴');
  if(!ledger||!history)throw Error('missing_sheet');
  const read=sh=>{const [headers,...rows]=sh.getDataRange().getDisplayValues();if(new Set(headers.filter(Boolean)).size!==headers.filter(Boolean).length)throw Error('duplicate_header');return {headers,rows:rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]||''])))};};
- const l=read(ledger),h=read(history);
+ const l=read(ledger);
+ const grid=Sheets.Spreadsheets.Values.get(bookId,"'実績履歴'!A1:ZZ",{valueRenderOption:'FORMATTED_VALUE'}).values||[];
+ const [headers,...rows]=grid;
+ if(!headers||new Set(headers.filter(Boolean)).size!==headers.filter(Boolean).length)throw Error('duplicate_header');
+ const h={headers,rows:rows.map(row=>Object.fromEntries(headers.map((k,i)=>[k,row[i]??''])))};
  for(const k of ['VehicleID','DriverID','現在使用者','納車可能日','納車確定日'])if(!l.headers.includes(k))throw Error('ledger_header_missing:'+k);
  for(const k of ['受付ID','登録日時','VehicleID','種類','実施日','状態','変更後JSON','取消日時'])if(!h.headers.includes(k))throw Error('history_header_missing:'+k);
  const vehicles=l.rows.filter(r=>r.VehicleID===request.vehicleId);
