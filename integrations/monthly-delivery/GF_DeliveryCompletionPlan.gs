@@ -17,6 +17,7 @@ function GF_DeliveryCompletionPlan_(vehicle, assignment, history, request) {
  if(str(old['VehicleID'])!==vid||str(snapshot.DriverID)!==did||str(old['種類'])!=='納車完了'||str(old['状態'])!=='完了'||str(old['取消日時'])||str(old['実施日']).replace(/\//g,'-')!==date)throw Error('completion_conflict');
  return {state:'unchanged',eventId};
  }
- const snapshot={VehicleID:vid,DriverID:did,'現在使用者':str(vehicle['現在使用者']),'紹介元':str(vehicle['紹介元']),'納車予定日':str(vehicle['納車予定日']),receiptId:id};
+ const snapshot={VehicleID:vid,DriverID:did,receiptId:id};
+ for(const field of ['現在使用者','紹介元','納車予定日','管轄','車番','車種','所属会社名','稼働エリア'])snapshot[field]=str(vehicle[field]);
  return {state:'planned',eventId,history:{'受付ID':eventId,'VehicleID':vid,'種類':'納車完了','実施日':date,'状態':'完了','変更後JSON':JSON.stringify(snapshot),'取消日時':''}};
 }
