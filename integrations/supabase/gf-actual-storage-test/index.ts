@@ -18,7 +18,9 @@ Deno.serve(async (req) => {
  let path="",method="GET",body:unknown;
  if(b.action==="queue")path="gf_actual_queue_test"+filter;
  else if(b.action==="history")path="gf_actual_history_test"+filter;
- else if(b.action==="transition"){
+ else if(b.action==="prepare"){
+ path="rpc/gf_actual_prepare_test";method="POST";body={p_queue:b.queue,p_history:b.history};
+ }else if(b.action==="transition"){
  path="rpc/gf_actual_transition_test";method="POST";
  body={p_receipt:b.receipt_id,p_expected:b.expected,p_next:b.next,p_detail:null};
  }else return reply({error:"action_denied"},400);
