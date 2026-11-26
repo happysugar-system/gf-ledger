@@ -80,28 +80,82 @@ edit(sync, "現在使用者変更 = false) {",
 edit(sync, "if (現在使用者変更) {\n\n      const 利用者管理行",
      "if (現在使用者変更 && !台帳履歴確定済み) {\n\n      const 利用者管理行")
 
-# Optional isolated cancellation candidate: do not install in production.
-if "--isolated-cancel" in sys.argv[3:]:
+# Generate a closed validation subset. Keep the full-source patch as the
+# default for review, but never import the full backup into the shared test GAS.
+if "--isolated" in sys.argv[3:]:
+    def section(name, start, end):
+        source = changed[name]
+        if source.count(start) != 1 or end not in source[source.index(start):]:
+            raise ValueError(f"Unexpected validation boundary in {name}")
+        return source[source.index(start):source.index(end, source.index(start))]
+
+    changed[cancel] = section(cancel,"function GF_実績履歴を準備_26(ss){","function GF_スマホ実績取消_26(id)")
     edit(cancel, "const ss=対象スプレッドシートを開く_(),queue=GF_実績キューシート_(),q=queue.getDataRange().getValues();",
-         """const ss=GF_IsolatedValidationOpen_();
-    const queue=GF_IsolatedValidationSheet_(ss.getSheetByName('実績登録キュー'));
-    const q=queue.getDataRange().getValues();""")
+         """const ss=GF_IsolatedValidationOpen_(),queue=GF_IsolatedValidationQueue_(ss);
+    const q=queue.getDataRange().getValues();
+    const active=Number(PropertiesService.getScriptProperties().getProperty('GF_VALIDATION_RETURN_WORKER_RUNNING')||0);
+    if(active&&Date.now()-active<600000)throw Error('validation_worker_active');
+    GF_IsolatedValidationReceipt_(id);""")
     edit(cancel, "const state=String(q[qi][7]);",
          """if(String(q[qi][3])!=='返却完了')throw Error('validation_cancel_kind_denied');
-      const state=String(q[qi][7]);""")
+      GF_IsolatedValidationVehicle_(String(q[qi][2]));
+      const state=String(q[qi][7]);
+      if(state==='待機')throw Error('validation_cancel_requires_applied_return');""")
     edit(cancel, "const target=GF_実績対象列_26(kind),tz=ss.getSpreadsheetTimeZone();",
          """if(kind!=='返却完了'||!before.gfReturnHistory)throw Error('validation_cancel_kind_denied');
-    GF_IsolatedValidationSheet_(v.sheet);
-    GF_IsolatedValidationSheet_(h.sheet);
+    GF_IsolatedValidationVehicle_(vehicle);
     const target=GF_実績対象列_26(kind),tz=ss.getSpreadsheetTimeZone();""")
-    edit(cancel, "GF_取消後同期を予約_24(ss,vehicle);",
-         """// No legacy sync worker or external calls in this isolated candidate.
-    // Replica synchronization remains pending until the isolated worker is connected.
-    console.log('validation_cancel_saved_sync_pending');""")
+    start = "// 実績開始時に書いた貸出情報のみ取り消す。"
+    stop = "h.sheet.getRange(h.row,6).setValue('取消済');"
+    edit(cancel, section(cancel,start,stop), """    Object.assign(changes,GF_MainReturnHistoryDelta_(after.gfReturnHistory,before.gfReturnHistory));
+    GF_MainReturnHistoryWrite_(ss,ledger,v.row,changes);
+""")
+    edit(cancel,"GF_取消後同期を予約_24(ss,vehicle);","GF_IsolatedValidationReread_(ss,v.row,vehicle,before.gfReturnHistory);")
+    begin = "function GF_実績履歴を準備_26(ss){"
+    end = "function GF_実績対象列_26(kind)"
+    edit(cancel,section(cancel,begin,end),"""function GF_実績履歴を準備_26(ss){
+  GF_IsolatedValidationBook_(ss);
+  return GF_IsolatedValidationSheet_(ss.getSheetByName('実績履歴'));
+}
+""")
+
+
+    worker=section(actual,"function GF_実績キューワーカー(){","// 車両実績の処理が正常終了した後に実行。")
+    changed[actual]=(
+        section(actual,"function GF_実績日付_(value,tz){","function GF_実績車両情報_(ss,id){")+
+        section(actual,"function GF_実績台帳日付キー_25(value,tz){","function GF_実績キューワーカー(){")+
+        worker+"}\n"
+    )
+    edit(actual,"GF_貸出先連携の準備を進める_25();","const validationBook=GF_IsolatedValidationOpen_();")
+    edit(actual,"const key='GF_ACTUAL_WORKER_RUNNING';","const key='GF_VALIDATION_RETURN_WORKER_RUNNING';")
+    edit(actual,"const sheet=GF_実績キューシート_();","const sheet=GF_IsolatedValidationQueue_(validationBook);")
+    edit(actual,"const r=rows[i],state=String(r[7]);",
+         """const r=rows[i],state=String(r[7]);
+      if(String(r[0])!==props.getProperty('GF_VALIDATION_RETURN_RECEIPT_ID')||String(r[3])!=='返却完了')continue;
+      GF_IsolatedValidationReceipt_(String(r[0]));
+      GF_IsolatedValidationVehicle_(String(r[2]));""")
+    edit(actual,"const checkSS=対象スプレッドシートを開く_();","const checkSS=validationBook;")
+    edit(actual,"const ss=対象スプレッドシートを開く_();","const ss=validationBook;")
+    edit(actual,section(actual,"const metaKey='GF_PLAN_ACTUAL_META_25_'","let applied="),"")
+    edit(actual,section(actual,"if(auto&&!GF_自動予定実績の入力が一致する_40","const kind=String(r[3]);"),"")
+    edit(actual,"if(auto){auto.phase='要確認';props.setProperty(metaKey,JSON.stringify(auto));}","")
+    old=section(actual,"車両台帳の1台を同期する(v.row,true,Boolean(historyApplied));","GF_実績履歴の変更後を確定_26")
+    edit(actual,old,"GF_IsolatedValidationReread_(ss,v.row,String(r[2]),historyApplied?.after);\n        ")
+    edit(actual,"}else 行を書き込む_(v.sheet,v.row,update);","}else throw Error('validation_history_required');")
+    edit(actual,section(actual,"// 受付との競合を避け","} finally {\n    props.deleteProperty(key);"),"")
+    for name in (cancel,actual):
+        changed[name] = (changed[name].replace("シート名.車両台帳","'車両台帳'")
+                         .replace("列番号を取得する_(", "GF_IsolatedValidationColumn_("))
+    changed[sync] = (Path(__file__).resolve().parents[1] /
+                     "integrations/gas/review/GF_IsolatedValidationReadback.gs").read_text(encoding="utf-8")
 
 output.mkdir()
 for name, source in changed.items():
     (output / (name + ".gs")).write_text(source, encoding="utf-8")
 review = Path(__file__).resolve().parents[1] / "integrations/gas/review"
 for name in ("GF_CombinedHistoryPlan.gs", "GF_OperationalHistoryPlan.gs", "GF_MainReturnHistory.gs"):
+    (output / name).write_bytes((review / name).read_bytes())
+
+if "--isolated" in sys.argv[3:]:
+    name = "GF_IsolatedValidationBoundary.gs"
     (output / name).write_bytes((review / name).read_bytes())
