@@ -80,6 +80,25 @@ edit(sync, "現在使用者変更 = false) {",
 edit(sync, "if (現在使用者変更) {\n\n      const 利用者管理行",
      "if (現在使用者変更 && !台帳履歴確定済み) {\n\n      const 利用者管理行")
 
+# Optional isolated cancellation candidate: do not install in production.
+if "--isolated-cancel" in sys.argv[3:]:
+    edit(cancel, "const ss=対象スプレッドシートを開く_(),queue=GF_実績キューシート_(),q=queue.getDataRange().getValues();",
+         """const ss=GF_IsolatedValidationOpen_();
+    const queue=GF_IsolatedValidationSheet_(ss.getSheetByName('実績登録キュー'));
+    const q=queue.getDataRange().getValues();""")
+    edit(cancel, "const state=String(q[qi][7]);",
+         """if(String(q[qi][3])!=='返却完了')throw Error('validation_cancel_kind_denied');
+      const state=String(q[qi][7]);""")
+    edit(cancel, "const target=GF_実績対象列_26(kind),tz=ss.getSpreadsheetTimeZone();",
+         """if(kind!=='返却完了'||!before.gfReturnHistory)throw Error('validation_cancel_kind_denied');
+    GF_IsolatedValidationSheet_(v.sheet);
+    GF_IsolatedValidationSheet_(h.sheet);
+    const target=GF_実績対象列_26(kind),tz=ss.getSpreadsheetTimeZone();""")
+    edit(cancel, "GF_取消後同期を予約_24(ss,vehicle);",
+         """// No legacy sync worker or external calls in this isolated candidate.
+    // Replica synchronization remains pending until the isolated worker is connected.
+    console.log('validation_cancel_saved_sync_pending');""")
+
 output.mkdir()
 for name, source in changed.items():
     (output / (name + ".gs")).write_text(source, encoding="utf-8")
