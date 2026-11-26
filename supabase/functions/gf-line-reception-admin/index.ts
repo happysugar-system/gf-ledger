@@ -66,7 +66,7 @@ Deno.serve(async req=>{
  if(accessErr)return respond(503,{error:"authorization_unavailable"});
  if(!access?.enabled){console.warn("gf_reception_access_denied","not_authorized");return respond(403,{error:"not_authorized"});}
  let input;try{input=await req.json()}catch{return respond(400,{error:"invalid_json"})}
- if(!["loan_options","list","detail","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
+ if(!["document_review_list","document_review_request","loan_options","list","detail","save_checks","save_contract","save","members","set_member","provision","shift_staff_list","shift_staff_save","sync_members_from_sheet"].includes(input?.action))return respond(400,{error:"invalid_action"});
  if(input.action==="loan_options"){
   const [drivers,vehicles]=await Promise.all([
    db.from("gf_driver_match_master_prod").select("driver_id,full_name,email").order("full_name"),
@@ -189,6 +189,32 @@ Deno.serve(async req=>{
    return respond(200,{詳細:output});
   }
 
+  if(input.action==="document_review_list"||input.action==="document_review_request"){
+   if(!["owner","staff"].includes(access.role))return respond(403,{error:"not_authorized"});
+   const id=clean(input.receipt_id);
+   if(!id||rows.filter(x=>x.value["受付ID"]===id).length!==1)return respond(409,{error:"reception_id_not_unique"});
+   const detail=await sheetRequest(token,"'車両依頼受付'!A1:AZ");
+   const headers=(detail.values?.[0]||[]).map(clean);
+   if(["LINE受付ID","受付番号","確認DriverID"].some(k=>headers.filter(h=>h===k).length!==1))return respond(409,{error:"detail_headers_invalid"});
+   const found=table(detail.values||[]).filter(x=>x.value["LINE受付ID"]===id);
+   if(found.length!==1)return respond(409,{error:"detail_not_unique"});
+   const receipt=clean(found[0].value["受付番号"]),driver=clean(found[0].value["確認DriverID"]);
+   if(!receipt||!driver)return respond(409,{error:"driver_not_linked"});
+   const {data:app,error:appError}=await db.from("gf_mypage_applications_prod").select("receipt_id,driver_id").eq("receipt_id",receipt).eq("driver_id",driver).maybeSingle();
+   if(appError||!app)return respond(409,{error:"application_not_verified"});
+   if(input.action==="document_review_list"){
+    const {data,error}=await db.from("gf_driver_document_review_requests").select("id,document_type,reason,status,created_at").eq("receipt_id",receipt).eq("driver_id",driver).order("created_at",{ascending:false}).limit(50);
+    return error?respond(503,{error:"document_review_unavailable"}):respond(200,{requests:data});
+   }
+   // Explicit server-side rollout guard; no production writes by default.
+   if(Deno.env.get("GF_DOCUMENT_REVIEW_WRITE_ENABLED")!=="YES")return respond(503,{error:"document_review_write_disabled"});
+   const type=clean(input.document_type),reason=clean(input.reason);
+   if(!["driver_license","residence_certificate"].includes(type)||!reason||reason.length>1000)return respond(400,{error:"invalid_document_request"});
+   const check=type==="driver_license"?"免許証確認":"住民票確認";
+   if(clean(found[0].value[check])==="確認OK")return respond(409,{error:"reset_existing_check_first"});
+   const {data,error}=await db.from("gf_driver_document_review_requests").insert({receipt_id:receipt,driver_id:driver,document_type:type,reason,status:"requested"}).select("id,status").single();
+   return error?respond(409,{error:"document_request_conflict_or_unavailable"}):respond(200,{request:data});
+  }
   if(input.action==="save_checks"){
    const id=clean(input.receipt_id),checks=input.checks;
    if(!id||id.length>150||!checks||typeof checks!=="object"||Array.isArray(checks))return respond(400,{error:"invalid_checks_request"});
