@@ -4,8 +4,8 @@ function GF_SyncStorageTest_(book,action,kind,id,args){
  if(!GF_MainReturnHistoryEnabled_(book))throw Error('validation_disabled');
  const token=PropertiesService.getScriptProperties().getProperty('GF_ACTUAL_TEST_TOKEN');
  if(!token||token.length<32)throw Error('sync_storage_token_missing');
- if(!['health','read','insert','transition'].includes(action))throw Error('sync_storage_action_denied');
- if(action!=='health'){
+ if(!['health','read','insert','transition','candidates'].includes(action))throw Error('sync_storage_action_denied');
+ if(!['health','candidates'].includes(action)){
  if(!['history','queue'].includes(kind))throw Error('sync_storage_kind_denied');
  if(!(kind==='history'?/^[a-f0-9]{64}$/:/^TEST-[A-Z0-9-]{1,64}$/).test(id))throw Error('sync_storage_id_denied');
  }
@@ -64,4 +64,10 @@ function GF_検証トリガー棚卸し(){
  }));
  const result={spreadsheetId:book.getId(),triggers,sheets:book.getSheets().map(s=>s.getName()),required:['車両台帳','名変待ち管理','ドライバーマスター']};
  console.log(JSON.stringify(result));return result;
+}
+
+function GF_DB同期候補取得_(book){
+ const rows=GF_SyncStorageTest_(book,'candidates');
+ if(!Array.isArray(rows)||rows.length>5||rows.some(r=>r.state!=='待機'||!/^TEST-[A-Z0-9-]{1,64}$/.test(r.request_id)||!/^V9[0-9]{5}$/.test(r.vehicle_id)))throw Error('invalid_candidates');
+ return rows;
 }
