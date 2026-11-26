@@ -56,7 +56,7 @@ function GF_ActualDBApply_(book,v,from,to){
     if(!Object.prototype.hasOwnProperty.call(from,k))throw Error('actual_snapshot_key_mismatch');
     if(from[k]!==to[k]){
       let value=to[k];
-      if((k.includes('日')||k==='返却/12点検')&&typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value))value=Utilities.parseDate(value,book.getSpreadsheetTimeZone(),'yyyy-MM-dd');
+      if((k.includes('日')||k==='返却/12点検')&&typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value))value=Utilities.parseDate(value,'Asia/Tokyo','yyyy-MM-dd');
       changes[k]=value;
     }
   });
@@ -109,7 +109,7 @@ function GF_検証DB返却受付(){
  const book=GF_IsolatedValidationOpen_();
  const v=GF_実績車両情報_(book,'V900005');
  if(v.data['区分/ステータス']!=='貸出中'||v.data.DriverID!=='D999905')throw Error('actual_intake_vehicle_conflict');
- const date=Utilities.formatDate(new Date(),book.getSpreadsheetTimeZone(),'yyyy-MM-dd');
+ const date=Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd');
  const receipt=['TEST-RETURN-R006',date,'V900005','返却完了',date,'D999905',v.data['現在使用者']];
  const plan=GF_MainReturnHistoryPrepare_(book,receipt,v);
  if(!plan)throw Error('actual_intake_plan_missing');
