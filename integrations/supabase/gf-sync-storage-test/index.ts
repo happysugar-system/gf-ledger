@@ -18,7 +18,11 @@ Deno.serve(async req=>{
  if(!service)return reply({error:"configuration"},503);
  const headers={apikey:service,Authorization:"Bearer "+service,"Content-Type":"application/json",Prefer:"return=representation"};
  let method="GET",body:unknown,filter="?"+key+"=eq."+id;
- if(b.action==="insert"){
+ if(b.action==="transition"&&b.kind==="queue"){
+ const r=await fetch(Deno.env.get("SUPABASE_URL")+"/rest/v1/rpc/gf_assignment_transition_test",{method:"POST",headers,body:JSON.stringify({p_id:id,p_expected:b.expected,p_next:b.next,p_result:b.result??null})});
+ if(!r.ok)return reply({error:"transition"},502);
+ return reply({ok:true,data:await r.json()});
+ }else if(b.action==="insert"){
  const row=b.row||{};
  const fields=b.kind==="history"?["receipt_key","receipt_number","line_receipt_id","state","driver_id","processed_at","notes"]:["request_id","requested_at","vehicle_id","operation","driver_id","state","attempts","last_run_at","result"];
  if(Object.keys(row).some(k=>!fields.includes(k))||row[key]!==id||!/^D999[0-9]{3}$/.test(row.driver_id||""))return reply({error:"row"},400);
