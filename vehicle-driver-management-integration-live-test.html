@@ -9,10 +9,10 @@ const monthlyUrl='https://tgxrnrqxafytyqfwwsag.supabase.co';
 const monthlyKey='sb_publishable_Xu-kPNJqnHFGoGb9rI5SVg_h1B2f-dW';
 const monthlyClient=createStaffClient(monthlyUrl,monthlyKey);
 let disposeMonthly=null;
-async function fetchMonthly(){
+async function fetchMonthly(payload={action:'read'}){
  const {data:{session}}=await monthlyClient.auth.getSession();
  if(!session)throw Error('スタッフ用トップ画面でログインしてください。');
- const response=await fetch(monthlyUrl+'/functions/v1/gf-monthly-delivery-review',{method:'POST',headers:{authorization:'Bearer '+session.access_token,apikey:monthlyKey,'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(20000)});
+ const response=await fetch(monthlyUrl+'/functions/v1/gf-monthly-delivery-review',{method:'POST',headers:{authorization:'Bearer '+session.access_token,apikey:monthlyKey,'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(payload.action==='delivery_complete'?70000:20000)});
  if(!response.ok)throw Error('月別納車情報を取得できません（HTTP '+response.status+'）');
  return response.json();
 }
@@ -81,8 +81,8 @@ if(page==='schedule'){h='<h2>📅 車両予定</h2><div class="box"><h3>登録�
 
 const ip=$('integrationPanel');document.querySelector('main').append(ip);ip.hidden=true;
 const panel=$('savePanel'); if(panel.parentElement!==document.querySelector('main')) document.querySelector('main').append(panel); panel.hidden=true;
-if(page==='monthly'){h='<button class="back" data-page="home">← ホームへ</button><div class="box"><h2>月別納車管理</h2><p>車両台帳と実績履歴から自動集計します。スタッフによる入力は不要です。</p><p class="muted">スプレッドシートの閲覧権限が必要です。アプリ内の取得に失敗した場合は、下のシートから確認できます。</p><a class="action" href="https://docs.google.com/spreadsheets/d/17IzIUJeYQw3nO8GZsUSCgLfHVECNINZNkQdg38GW57o/edit#gid=2026112509" target="_blank" rel="noopener noreferrer">月別納車管理シートを開く</a></div><div class="box" id="monthlyHost"></div>';}
-$('content').innerHTML=h;if(page==='monthly')disposeMonthly=mountMonthlyDelivery($('monthlyHost'),fetchMonthly);const ah=$('assignmentHost');if(ah){ah.append(ip);ip.hidden=false;}
+if(page==='monthly'){h='<button class="back" data-page="home">← ホームへ</button><div class="box"><h2>月別納車管理</h2><p>車両台帳と実績履歴から自動集計します。納車完了は対象車両の明細から登録します。</p><p class="muted">スプレッドシートの閲覧権限が必要です。アプリ内の取得に失敗した場合は、下のシートから確認できます。</p><a class="action" href="https://docs.google.com/spreadsheets/d/17IzIUJeYQw3nO8GZsUSCgLfHVECNINZNkQdg38GW57o/edit#gid=2026112509" target="_blank" rel="noopener noreferrer">月別納車管理シートを開く</a></div><div class="box" id="monthlyHost"></div>';}
+$('content').innerHTML=h;if(page==='monthly')disposeMonthly=mountMonthlyDelivery($('monthlyHost'),()=>fetchMonthly(),payload=>fetchMonthly(payload));const ah=$('assignmentHost');if(ah){ah.append(ip);ip.hidden=false;}
 const host=$('inlineSaveHost');if(host){host.append(panel);panel.hidden=false;}
 }
 function preview(){const x=car(),diff=changed();alert('【仮編集・保存なし】\n'+(diff.length?diff.map(k=>k.trim()+': '+String(x[k]??'')+' → '+String(draft[k]??'')).join('\n'):'変更なし')+'\n\nSupabase・スプレッドシートには保存されません');}
