@@ -212,19 +212,19 @@ Deno.serve(async req=>{
      if(attemptError)return respond(503,{error:"document_attempts_unavailable"});
      for(const a of attempts||[])if(!latest.has(a.request_id)&&/^[A-Za-z0-9_-]{10,200}$/.test(a.drive_file_id))latest.set(a.request_id,a.drive_file_id);
     }
-    return respond(200,{requests:(data||[]).map(x=>({...x,review_file_url:latest.has(x.id)?"https://drive.google.com/file/d/"+latest.get(x.id)+"/view":null}))});
+    return respond(200,{approval_enabled:Deno.env.get("GF_DOCUMENT_REVIEW_WRITE_ENABLED")==="YES"&&Deno.env.get("GF_DOCUMENT_APPROVAL_BRIDGE_ENABLED")==="YES",requests:(data||[]).map(x=>({...x,review_file_url:latest.has(x.id)?"https://drive.google.com/file/d/"+latest.get(x.id)+"/view":null}))});
    }
    // Explicit server-side rollout guard; no production writes by default.
    if(Deno.env.get("GF_DOCUMENT_REVIEW_WRITE_ENABLED")!=="YES")return respond(503,{error:"document_review_write_disabled"});
    if(["document_review_approve","document_review_again"].includes(input.action)){
     const requestId=clean(input.request_id);
     if(!/^[0-9a-f-]{36}$/i.test(requestId))return respond(400,{error:"invalid_request_id"});
-    const {data:review,error:reviewError}=await db.from("gf_driver_document_review_requests").select("id,document_type,status").eq("id",requestId).eq("receipt_id",receipt).eq("driver_id",driver).eq("status","submitted").maybeSingle();
+    const {data:review,error:reviewError}=await db.from("gf_driver_document_review_requests").select("id,document_type,status,updated_at").eq("id",requestId).eq("receipt_id",receipt).eq("driver_id",driver).eq("status","submitted").maybeSingle();
     if(reviewError||!review)return respond(409,{error:"submission_not_available"});
     if(input.action==="document_review_again"){
      const reason=clean(input.reason);
      if(!reason||reason.length>1000)return respond(400,{error:"invalid_reason"});
-     const {data,error}=await db.from("gf_driver_document_review_requests").update({status:"requested",reason,updated_at:new Date().toISOString()}).eq("id",requestId).eq("status","submitted").select("id,status").maybeSingle();
+     const {data,error}=await db.from("gf_driver_document_review_requests").update({status:"requested",reason,updated_at:new Date().toISOString()}).eq("id",requestId).eq("status","submitted").eq("updated_at",review.updated_at).select("id,status").maybeSingle();
      return error||!data?respond(409,{error:"review_changed"}):respond(200,{request:data});
     }
     // Approval must use the serialized, identity-verified GAS writer; fail closed until connected.
@@ -238,14 +238,29 @@ Deno.serve(async req=>{
     const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
     const mac=new Uint8Array(await crypto.subtle.sign("HMAC",key,enc.encode(payload)));
     const signature=btoa(String.fromCharCode(...mac)).split("+").join("-").split("/").join("_").replace(/=+$/,"");
-    // Keep disabled until the GAS dispatcher and durable concurrency guard are verified.
     if(Deno.env.get("GF_DOCUMENT_APPROVAL_BRIDGE_ENABLED")!=="YES")return respond(503,{error:"approval_bridge_disabled"});
-    const response=await fetch(bridgeUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payload,signature}),signal:AbortSignal.timeout(45000)});
-    if(!response.ok)return respond(503,{error:"approval_bridge_failed"});
-    const saved=await response.json();
-    if(saved.verified!==true||saved.fileId!==attempt.drive_file_id)return respond(409,{error:"approval_sheet_not_verified"});
-    // Do not finalize until cross-system concurrency protection is installed.
-    return respond(409,{error:"approval_reconciliation_required"});
+    const {data:claim,error:claimError}=await db.from("gf_driver_document_review_requests")
+     .update({status:"approving",updated_at:new Date().toISOString()})
+     .eq("id",requestId).eq("receipt_id",receipt).eq("driver_id",driver)
+     .eq("status","submitted").eq("updated_at",review.updated_at)
+     .select("id,updated_at").maybeSingle();
+    if(claimError)return respond(503,{error:"approval_claim_unavailable"});
+    if(!claim)return respond(409,{error:"review_changed"});
+    // Preserve the claim whenever GAS might have written. A timeout cannot prove that it did not.
+    try{
+     const response=await fetch(bridgeUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payload,signature}),signal:AbortSignal.timeout(45000)});
+     if(!response.ok)return respond(503,{error:"approval_reconciliation_required"});
+     const saved=await response.json();
+     if(saved.verified!==true||saved.fileId!==attempt.drive_file_id)return respond(409,{error:"approval_reconciliation_required"});
+     const {data:approved,error:approvalError}=await db.from("gf_driver_document_review_requests")
+      .update({status:"approved",updated_at:new Date().toISOString()})
+      .eq("id",claim.id).eq("status","approving").eq("updated_at",claim.updated_at)
+      .select("id,status").maybeSingle();
+     if(approvalError||!approved)return respond(503,{error:"approval_reconciliation_required"});
+     return respond(200,{request:approved});
+    }catch{
+     return respond(503,{error:"approval_reconciliation_required"});
+    }
    }
    const type=clean(input.document_type),reason=clean(input.reason);
    if(!["driver_license","residence_certificate"].includes(type)||!reason||reason.length>1000)return respond(400,{error:"invalid_document_request"});
