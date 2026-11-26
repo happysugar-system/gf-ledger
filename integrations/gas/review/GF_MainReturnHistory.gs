@@ -46,6 +46,7 @@ function GF_MainReturnHistoryMatches_(v, expected) {
 
 /** Writes only the changed cells, with an atomic Sheets batch. */
 function GF_MainReturnHistoryWrite_(book, sheet, row, update) {
+  if (!GF_MainReturnHistoryEnabled_(book) || sheet.getParent().getId() !== book.getId()) throw Error('return_history_validation_book_required');
   const cols = GF_MainReturnHistoryColumns_(sheet, Object.keys(update));
   const requests = Object.entries(update).map(([key,value]) => {
     const range = sheet.getRange(row, cols[key] + 1);
