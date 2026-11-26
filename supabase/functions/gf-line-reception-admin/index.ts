@@ -204,7 +204,15 @@ Deno.serve(async req=>{
    if(appError||!app)return respond(409,{error:"application_not_verified"});
    if(input.action==="document_review_list"){
     const {data,error}=await db.from("gf_driver_document_review_requests").select("id,document_type,reason,status,created_at").eq("receipt_id",receipt).eq("driver_id",driver).order("created_at",{ascending:false}).limit(50);
-    return error?respond(503,{error:"document_review_unavailable"}):respond(200,{requests:data});
+    if(error)return respond(503,{error:"document_review_unavailable"});
+    const submitted=(data||[]).filter(x=>x.status==="submitted").map(x=>x.id);
+    const latest=new Map<string,string>();
+    if(submitted.length){
+     const {data:attempts,error:attemptError}=await db.from("gf_driver_document_attempts").select("request_id,drive_file_id,created_at,id").in("request_id",submitted).order("created_at",{ascending:false}).order("id",{ascending:false});
+     if(attemptError)return respond(503,{error:"document_attempts_unavailable"});
+     for(const a of attempts||[])if(!latest.has(a.request_id)&&/^[A-Za-z0-9_-]{10,200}$/.test(a.drive_file_id))latest.set(a.request_id,a.drive_file_id);
+    }
+    return respond(200,{requests:(data||[]).map(x=>({...x,review_file_url:latest.has(x.id)?"https://drive.google.com/file/d/"+latest.get(x.id)+"/view":null}))});
    }
    // Explicit server-side rollout guard; no production writes by default.
    if(Deno.env.get("GF_DOCUMENT_REVIEW_WRITE_ENABLED")!=="YES")return respond(503,{error:"document_review_write_disabled"});
