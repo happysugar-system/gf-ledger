@@ -14,7 +14,7 @@ function GF_DeliveryCompletionSave_(bookId,request,resolveAssignment){
  if(!ledger||!history)throw Error('missing_sheet');
  const read=sh=>{const [headers,...rows]=sh.getDataRange().getDisplayValues();if(new Set(headers.filter(Boolean)).size!==headers.filter(Boolean).length)throw Error('duplicate_header');return {headers,rows:rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]||''])))};};
  const l=read(ledger),h=read(history);
- for(const k of ['VehicleID','DriverID','現在使用者','納車予定日','紹介元'])if(!l.headers.includes(k))throw Error('ledger_header_missing:'+k);
+ for(const k of ['VehicleID','DriverID','現在使用者','納車可能日','納車確定日'])if(!l.headers.includes(k))throw Error('ledger_header_missing:'+k);
  for(const k of ['受付ID','登録日時','VehicleID','種類','実施日','状態','変更後JSON','取消日時'])if(!h.headers.includes(k))throw Error('history_header_missing:'+k);
  const vehicles=l.rows.filter(r=>r.VehicleID===request.vehicleId);
  if(vehicles.length!==1)throw Error('vehicle_not_unique');
@@ -53,7 +53,8 @@ function GF_DeliveryCompletionPlan_(vehicle, assignment, history, request) {
  return {state:'unchanged',eventId};
  }
  const snapshot={VehicleID:vid,DriverID:did,receiptId:id};
- for(const field of ['現在使用者','紹介元','納車予定日','管轄','車番','車種','所属会社名','稼働エリア'])snapshot[field]=str(vehicle[field]);
+ for(const field of ['現在使用者','紹介元','納車予定日','管轄','車番','車種','所属会社名','稼働エリア'])snapshot[field]=str(vehicle[field==='納車予定日'?'納車可能日':field]);
+ snapshot['納車日']=str(vehicle['納車確定日']);
  return {state:'planned',eventId,history:{'受付ID':eventId,'VehicleID':vid,'種類':'納車完了','実施日':date,'状態':'完了','変更後JSON':JSON.stringify(snapshot),'取消日時':''}};
 }
 
@@ -62,12 +63,12 @@ function GF_DeliveryCompletionPlan_(vehicle, assignment, history, request) {
 // Read-only preview; source workbook is explicit and never modified.
 function GF_DELIVERY_historyPreview_(ledger,history,confirmedOnly){
  const ix=(grid,n)=>{const h=grid[0].map(x=>String(x).trim());if(h.filter(x=>x===n).length!==1)throw Error('見出し不一致: '+n);return h.indexOf(n);};
- const v=ix(ledger,'VehicleID'),p=ix(ledger,'納車予定日');
+ const v=ix(ledger,'VehicleID'),p=ix(ledger,'納車可能日');
  const rid=ix(history,'受付ID'),vid=ix(history,'VehicleID'),kind=ix(history,'種類'),day=ix(history,'実施日'),state=ix(history,'状態'),cancel=ix(history,'取消日時');
  const planned=GF_DELIVERY_monthlyPlan_([['ID','予定','実績'],...ledger.slice(1).map(r=>[r[v],r[p],''])],{id:'ID',planned:'予定',actual:'実績'});
  const plannedInfo=Object.create(null),actualInfo=Object.create(null);
  const fields=['現在使用者','管轄','車番','車種','所属会社名','紹介元','稼働エリア'];
- const indexes=fields.map(n=>ix(ledger,n));
+ const indexes=fields.map(n=>['紹介元','車種'].includes(n)?ledger[0].indexOf(n):ix(ledger,n));
  for(const r of ledger.slice(1)){const id=String(r[v]??'').trim();if(id)plannedInfo[id]=Object.fromEntries(fields.map((n,i)=>[n,String(r[indexes[i]]??'')]));}
  const after=ix(history,'変更後JSON');
  const events=new Set(),rows=[['ID','予定','実績']],details={};
@@ -132,7 +133,7 @@ function GF_ReceiptAssignmentReadTables_(id){
 }
 function GF_DeliveryFixturePreflight(){
  const id=GF_ReceiptAssignmentValidationBook_(),book=SpreadsheetApp.openById(id);
- const required={'車両台帳':['VehicleID','DriverID','現在使用者','納車予定日','紹介元','管轄','車番','車種','所属会社名','稼働エリア'],'実績履歴':['受付ID','登録日時','VehicleID','種類','実施日','状態','変更後JSON','取消日時']};
+ const required={'車両台帳':['VehicleID','DriverID','現在使用者','納車可能日','納車確定日','管轄','車番','所属会社名','稼働エリア'],'実績履歴':['受付ID','登録日時','VehicleID','種類','実施日','状態','変更後JSON','取消日時']};
  const missing=[];
  for(const [name,keys] of Object.entries(required)){
  const sh=book.getSheetByName(name);if(!sh){missing.push(name);continue;}
