@@ -264,7 +264,7 @@ function GF_ScheduleStorageTest_(book,action,rows){
  return result;
 }
 function GF_ScheduleImportValidation_(book,headers,rows){
- const plan=GF_ScheduleImportPlan_(headers,rows);
+ const plan=headers.map(x=>String(x).trim()).includes('予定ID')?GF_ScheduleActualHeaderTestPlan_(headers,rows):GF_ScheduleImportPlan_(headers,rows);
  if(plan.length>100)throw Error('validation_batch_limit');
  const before=GF_ScheduleStorageTest_(book,'read').data;
  if(!Array.isArray(before)||before.length>=1000)throw Error('read_limit');
