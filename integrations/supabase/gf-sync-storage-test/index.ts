@@ -8,6 +8,13 @@ Deno.serve(async req=>{
  try{
  const b=await req.json();
  if(b.action==="health")return reply({ok:true});
+ if(b.action==="candidates"){
+ const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+ if(!service)return reply({error:"configuration"},503);
+ const r=await fetch(Deno.env.get("SUPABASE_URL")+"/rest/v1/rpc/gf_assignment_candidates_test",{method:"POST",headers:{apikey:service,Authorization:"Bearer "+service,"Content-Type":"application/json"},body:"{}"});
+ if(!r.ok)return reply({error:"candidates"},502);
+ return reply({ok:true,data:await r.json()});
+ }
  const tables={history:"gf_line_driver_sync_history_test",queue:"gf_assignment_sync_queue_test"} as const;
  if(b.kind!=="history"&&b.kind!=="queue")return reply({error:"kind"},400);
  const table=tables[b.kind as keyof typeof tables];
