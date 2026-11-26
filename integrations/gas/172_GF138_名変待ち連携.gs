@@ -29,10 +29,7 @@ function GFA_割当DriverIDを照合_(lineReceiptId, waitingDriverId, books) {
   if (savedId && savedId !== linkedId) {
     throw new Error('名変待ちとLINE受付のDriverIDが一致しません');
   }
-  const history = vehicle.getSheetByName('GF_LINEドライバー同期履歴');
-  const result = history && GFA_割当照合行_(
-    history, '受付識別子', requestKey, ['処理状態', 'LINE受付ID', 'DriverID'], true
-  );
+  const result = GFA_割当同期履歴を照合_(vehicle, requestKey);
   if (result && (result['LINE受付ID'] !== receiptId || (result.DriverID && result.DriverID !== linkedId))) {
     throw new Error('GF138の同期履歴がLINE受付と一致しません');
   }
@@ -43,6 +40,23 @@ function GFA_割当DriverIDを照合_(lineReceiptId, waitingDriverId, books) {
   const driver = GFA_割当照合行_(drivers, 'DriverID', linkedId, ['ステータス']);
   if (driver['ステータス'] !== '有効') throw new Error('ドライバーが有効ではありません');
   return { state: 'resolved', driver_id: linkedId };
+}
+
+function GFA_割当同期履歴を照合_(vehicle, requestKey) {
+  const threeSheetValidationBook = '1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0';
+  if (vehicle.getId() === threeSheetValidationBook) {
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('GF3_APPROVED_BOOK_ID') !== threeSheetValidationBook ||
+        props.getProperty('GF3_EXPECTED_SCRIPT_ID') !== ScriptApp.getScriptId() ||
+        props.getProperty('GF3_VALIDATION_ENABLED') !== 'true') {
+      throw Error('3シート検証GASの接続先が一致しません');
+    }
+    return GFA_DB同期履歴照合_(vehicle, requestKey);
+  }
+  const history = vehicle.getSheetByName('GF_LINEドライバー同期履歴');
+  return history && GFA_割当照合行_(
+    history, '受付識別子', requestKey, ['処理状態', 'LINE受付ID', 'DriverID'], true
+  );
 }
 
 function GFA_割当照合行_(sheet, key, id, fields, allowMissing = false) {
