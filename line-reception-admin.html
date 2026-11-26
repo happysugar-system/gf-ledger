@@ -223,7 +223,9 @@ const contract=document.querySelector('#requestContractPanel');contract.classLis
      const heading=document.createElement('strong');heading.textContent=label;block.append(heading);
      const active=(result.requests||[]).find(x=>x.document_type===type&&['requested','submitted'].includes(x.status));
      const status=document.createElement('p');status.textContent=active?(active.status==='requested'?'再提出依頼中':'再提出済み・確認待ち')+'：'+active.reason:'再提出依頼なし';block.append(status);
-     if(!active){
+     const postal=type==='residence_certificate'&&/郵送/.test(String(rawContract['住民票PDF']||'')+' '+String(rawContract['書類状態']||''));
+     if(!active&&postal){status.textContent='郵送提出：アップロード不要（既存の書類確認をご利用ください）';}
+     if(!active&&!postal){
       const reason=document.createElement('textarea');reason.placeholder='再提出理由（本人に表示）';reason.maxLength=1000;reason.setAttribute('aria-label',label+'の再提出理由');
       const button=document.createElement('button');button.type='button';button.textContent=label+'の再提出を依頼';button.disabled=rawContract[check]==='確認OK'||contractStatus==='契約完了';
       button.onclick=async()=>{if(selectedReception!==r||!reason.value.trim())return; if(!confirm(label+'の再提出を本人に通知しますか？'))return;button.disabled=true;try{await receptionGateway.request('document_review_request',{receipt_id:r.受付ID,document_type:type,reason:reason.value.trim()});if(selectedReception===r)await refreshReview();}catch(e){if(selectedReception===r){reviewNote.textContent='依頼を保存できませんでした：'+e.message;button.disabled=false;}}};
