@@ -20,18 +20,24 @@ async function googleToken(){
  if(!res.ok)throw Error("google_auth_failed");
  const data=await res.json();return data.access_token as string;
 }
-async function completeDelivery(body:Record<string,unknown>,actor:string){
+async function deliveryBridge(body:Record<string,unknown>,actor:string){
  const secret=Deno.env.get("GF_DELIVERY_BRIDGE_SECRET")||"";
  const target=Deno.env.get("GF_DELIVERY_BRIDGE_URL")||"";
- if(Deno.env.get("GF_DELIVERY_WRITE_ENABLED")!=="YES"||secret.length<32||!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(target))return respond(503,{error:"delivery_write_not_configured"});
+ if(secret.length<32||!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(target))return respond(503,{error:"delivery_write_not_configured"});
  const {receiptId,vehicleId,driverId,date}=body;
- if(typeof receiptId!=="string"||!receiptId.trim()||receiptId.length>160||typeof vehicleId!=="string"||!/^V\d+$/.test(vehicleId)||typeof driverId!=="string"||!/^D\d+$/.test(driverId)||typeof date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(date))return respond(400,{error:"invalid_delivery_request"});
- const payload=JSON.stringify({action:"delivery_complete",receiptId,vehicleId,driverId,date,actor,issuedAt:Date.now(),nonce:crypto.randomUUID()});
+ const write=body.action==="delivery_complete";
+ if(write&&(Deno.env.get("GF_DELIVERY_VALIDATION_READ_ENABLED")!=="YES"||Deno.env.get("GF_DELIVERY_WRITE_ENABLED")!=="YES"))return respond(503,{error:"delivery_write_not_configured"});
+ if(write&&(typeof receiptId!=="string"||!receiptId.trim()||receiptId.length>150||typeof vehicleId!=="string"||!/^V\d{6}$/.test(vehicleId)||typeof driverId!=="string"||!/^D\d{6,7}$/.test(driverId)||typeof date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(date)))return respond(400,{error:"invalid_delivery_request"});
+ const payload=JSON.stringify({action:write?"delivery_complete":"read",receiptId,vehicleId,driverId,date,actor,issuedAt:Date.now(),nonce:crypto.randomUUID()});
  const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
  const signature=bytes(new Uint8Array(await crypto.subtle.sign("HMAC",k,new TextEncoder().encode(payload))));
  let res=await fetch(target+"?gf_delivery_bridge=complete_v1",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payload,signature}),redirect:"manual",signal:AbortSignal.timeout(30000)});
  if([302,303].includes(res.status)){const next=new URL(res.headers.get("location")||"");if(next.protocol!=="https:"||next.hostname!=="script.googleusercontent.com")throw Error("invalid_bridge_redirect");res=await fetch(next,{redirect:"error",signal:AbortSignal.timeout(30000)});}
  const result=await res.json();
+ if(!write){
+  if(!res.ok||!Array.isArray(result.summary)||!Array.isArray(result.details)||!Array.isArray(result.completionCandidates))return respond(503,{error:"validation_report_unavailable"});
+  return respond(200,{...result,completionCandidates:Deno.env.get("GF_DELIVERY_WRITE_ENABLED")==="YES"?result.completionCandidates:[]});
+ }
  if(!res.ok||result.status!=="verified")return respond(409,{error:"delivery_write_unconfirmed"});
  return respond(200,{status:"verified"});
 }
@@ -55,8 +61,9 @@ Deno.serve(async req=>{
  const raw=await req.text();
  if(raw.length>8192)return respond(413,{error:"request_too_large"});
  const body=raw.trim()?JSON.parse(raw):{};
- if(body.action==="delivery_complete")return await completeDelivery(body,user.id);
+ if(body.action==="delivery_complete")return await deliveryBridge(body,user.id);
  if(body.action!==undefined&&body.action!=="read")return respond(400,{error:"invalid_action"});
+ if(Deno.env.get("GF_DELIVERY_VALIDATION_READ_ENABLED")==="YES")return await deliveryBridge({action:"read"},user.id);
  const token=await googleToken();
  const range="'月別納車管理'!A3:O3000";
  const res=await fetch("https://sheets.googleapis.com/v4/spreadsheets/17IzIUJeYQw3nO8GZsUSCgLfHVECNINZNkQdg38GW57o/values/"+encodeURIComponent(range),{headers:{Authorization:"Bearer "+token}});
