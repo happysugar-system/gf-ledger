@@ -1,12 +1,12 @@
 /** Isolated DB-backed return/cancel worker. Does not access queue/history sheets. */
 function GF_ActualDBSnapshotMatches_(v, snapshot, book) {
   if(!snapshot || !snapshot.gfReturnHistory) throw Error('actual_snapshot_missing');
+  const keys=Object.keys(snapshot).filter(k=>k!=='gfReturnHistory');
+  const missing=keys.filter(k=>!(k in v.data));
+  if(missing.length)throw Error('actual_snapshot_column_missing:'+missing.join(','));
   if(!GF_MainReturnHistoryMatches_(v,snapshot.gfReturnHistory))return false;
-  return Object.keys(snapshot).filter(k=>k!=='gfReturnHistory').every(k=>{
-    if(!(k in v.data))throw Error('actual_snapshot_column_missing');
-    const norm=x=>String(x??'').replace(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/,(_,y,m,d)=>y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0'));
-    return norm(v.data[k])===norm(snapshot[k]);
-  });
+  const norm=x=>x instanceof Date?Utilities.formatDate(x,book.getSpreadsheetTimeZone(),'yyyy-MM-dd'):String(x??'').replace(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/,(_,y,m,d)=>y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0'));
+  return keys.every(k=>norm(v.data[k])===norm(snapshot[k]));
 }
 function GF_ActualDBApply_(book,v,from,to){
   if(!GF_ActualDBSnapshotMatches_(v,from,book))throw Error('actual_snapshot_conflict');
