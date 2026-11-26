@@ -265,7 +265,7 @@ function GF_ScheduleStorageTest_(book,action,rows){
 }
 function GF_ScheduleImportValidation_(book,headers,rows){
  const plan=headers.map(x=>String(x).trim()).includes('予定ID')?GF_ScheduleActualHeaderTestPlan_(headers,rows):GF_ScheduleImportPlan_(headers,rows);
- if(plan.length>100)throw Error('validation_batch_limit');
+ if(plan.length>=1000)throw Error('validation_read_limit');
  const before=GF_ScheduleStorageTest_(book,'read').data;
  if(!Array.isArray(before)||before.length>=1000)throw Error('read_limit');
  const canonical=x=>JSON.stringify(x,Object.keys(x).sort());
@@ -277,8 +277,12 @@ function GF_ScheduleImportValidation_(book,headers,rows){
  if(k==='source_data'?canonical(old[k])!==canonical(p[k]):old[k]!==p[k])throw Error('schedule_conflict:'+p.schedule_id);
  }
  }
- if(pending.length)GF_ScheduleStorageTest_(book,'import',pending);
+ if(before.length+pending.length>=1000)throw Error('validation_read_limit');
+ for(let start=0;start<pending.length;start+=100){
+  GF_ScheduleStorageTest_(book,'import',pending.slice(start,start+100));
+ }
  const after=GF_ScheduleStorageTest_(book,'read').data;
+ if(!Array.isArray(after)||after.length>=1000)throw Error('read_limit');
  for(const p of plan){
  const saved=after.find(x=>x.schedule_id===p.schedule_id);
  if(!saved||Object.keys(p).some(k=>k==='source_data'?canonical(saved[k])!==canonical(p[k]):saved[k]!==p[k]))throw Error('schedule_readback_failed');
