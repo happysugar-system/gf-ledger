@@ -46,7 +46,8 @@ function GFA_DB同期履歴照合_(book,requestKey){
 }
 function GFW_DB同期依頼追加_(book,vehicleId,action,driverId){
  GF_IsolatedValidationBook_(book);
- if(!/^V9[0-9]{5}$/.test(vehicleId)||!/^D999[0-9]{3}$/.test(driverId)||!['割当','取消'].includes(action))throw Error('validation_assignment_denied');
+ driverId=String(driverId||'').trim();
+ if(!/^V9[0-9]{5}$/.test(vehicleId)||!(/^D999[0-9]{3}$/.test(driverId)||(action==='取消'&&!driverId))||!['割当','取消'].includes(action))throw Error('validation_assignment_denied');
  const id='TEST-'+Utilities.getUuid().toUpperCase();
  GF_SyncStorageTestInsert_(book,'queue',{request_id:id,requested_at:new Date().toISOString(),vehicle_id:vehicleId,operation:action,driver_id:driverId,state:'待機',attempts:0});
  const saved=GF_SyncStorageTestRead_(book,'queue',id);
