@@ -37,3 +37,11 @@ The test 3-sheet workbook contains only 26 columns in 車両台帳 and 7 populat
 `integrations/gas/review/GF3_ThreeSheetMigrationPlan.gs` generates candidate cell patches and collision/review reasons only; it does not write, retrieve production data, or expose private values to logs. It must be run only against reviewed snapshots, with Drive rich-link metadata included. Its mock tests cover conflicting values, occupied targets, invalid links and duplicate VehicleID.
 
 `GF3_検証3シート書込前確認` now additionally requires `GF3_MIGRATION_VERIFIED=true` in the *new isolated validation GAS*. Do not set that flag merely after adding headers; it is an explicit acceptance acknowledgement following value/formula/validation/link reconciliation and full end-to-end checks. No existing staff routes or old GAS test workbook guards have been switched.
+
+## Return acceptance evidence and production identity
+
+- Operator-reported isolated R006 readback after return: connected=true, queueState=完了, historyState=完了, beforeMatches=false, afterMatches=true.
+- After cancellation and repeated cancellation: connected=true, queueState=取消済, historyState=取消済, beforeMatches=true, afterMatches=false. Do not repeat this isolated test as a prerequisite to schema preparation.
+- The original production workbook ID and URL remain unchanged. The three-sheet copy is test-only; never promote its dummy rows into production. Preserve original sheet IDs for the three retained tabs. Archive retired tabs only after dependency and readback checks, with explicit production approval.
+- A diagnostic previously overwrote Z1:AA4 in the old validation ledger. Z1 and the R006 target row were corrected sufficiently for the successful readback; remaining original cell restoration is not verified. Diagnostics must log only, never write into ledger cells.
+- These results do not certify the new three-sheet environment or production deployment. Keep the migration gate disabled until full schema and integration acceptance.
