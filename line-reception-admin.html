@@ -225,6 +225,10 @@ const contract=document.querySelector('#requestContractPanel');contract.classLis
      const status=document.createElement('p');status.textContent=active?(active.status==='requested'?'再提出依頼中':'再提出済み・確認待ち')+'：'+active.reason:'再提出依頼なし';block.append(status);
      if(active?.status==='submitted'&&/^https:\/\/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{10,200}\/view$/.test(active.review_file_url||'')){
       const link=document.createElement('a');link.href=active.review_file_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='再提出された'+label+'を確認';block.append(link);
+      const approve=document.createElement('button');approve.type='button';approve.textContent='確認OK・承認する';approve.disabled=true;approve.title='安全な台帳保存処理の接続待ち';
+      const again=document.createElement('button');again.type='button';again.textContent='もう一度再提出を依頼する';
+      again.onclick=async()=>{if(selectedReception!==r)return;const reason=prompt('再提出理由を入力してください');if(!reason?.trim()||reason.length>1000)return;again.disabled=true;try{await receptionGateway.request('document_review_again',{receipt_id:r.受付ID,request_id:active.id,reason:reason.trim()});if(selectedReception===r)await refreshReview();}catch(e){if(selectedReception===r){reviewNote.textContent='再提出依頼を保存できませんでした：'+e.message;again.disabled=false;}}};
+      block.append(approve,again);
      }
      const postal=type==='residence_certificate'&&/郵送/.test(String(rawContract['住民票PDF']||'')+' '+String(rawContract['書類状態']||''));
      if(!active&&postal){status.textContent='郵送提出：アップロード不要（既存の書類確認をご利用ください）';}
