@@ -57,6 +57,13 @@ edit(cancel, "Object.keys(before).forEach(k=>{after[k]=vehicle.data[k]||'';});",
     if(!planned||!GF_MainReturnHistoryMatches_(vehicle,planned))throw Error('return_history_changed');
     after.gfReturnHistory=planned;
   }""")
+# Reject history conflicts before any legacy-sheet cancellation side effects.
+edit(cancel, "changes[target]=before[target]||'';",
+     """changes[target]=before[target]||'';
+    if(before.gfReturnHistory&&(!after.gfReturnHistory||
+       !GF_MainReturnHistoryEnabled_(ss)||
+       !GF_MainReturnHistoryMatches_(v,after.gfReturnHistory)))
+      throw Error('return_history_changed');""")
 edit(cancel, "行を書き込む_(ledger,v.row,changes);",
      """if(before.gfReturnHistory){
       if(!after.gfReturnHistory||!GF_MainReturnHistoryEnabled_(ss)||
