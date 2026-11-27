@@ -231,7 +231,6 @@ function GF_FAST_runWorker() {
       if (!/^TEST145-\d{14}-[a-f0-9]{8}$/i.test(receipt) || !/^[a-f0-9]{64}$/i.test(row[21])) continue;
       const key = 'GF_FAST_RETRY_' + receipt;
       const retry = JSON.parse(props.getProperty(key)||'{}');
-      if (retry.next > Date.now()) continue;
       try {
         const mr = GF115_受付行_(master,masterId+1,row[20]);
         if (!mr || !row[20]) throw Error('FAST_LINE_RECEIPT');
@@ -243,6 +242,7 @@ function GF_FAST_runWorker() {
         // A failed attempt must not prevent document transfer.
         try { GF_FAST_masterSync_(request); }
         catch (_) { console.warn(JSON.stringify({event:'gf_fast_driver_sync_deferred'})); }
+        if (retry.next > Date.now()) continue;
         if (row[19]===GF_FAST_PENDING) {
           const result = GF_FAST_bridgeCall_(Object.assign({},payload,{demo_action:'gf_fast_transfer_v1'}));
           if (result.pending) {
