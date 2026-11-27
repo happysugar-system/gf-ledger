@@ -202,7 +202,8 @@ function GF3_GF_ThreeSheetDocumentPlan_(target,sources){
  for(const k of fields){
  const urls=[...new Set(sources.map(s=>s[k]).filter(valid))];
  const current=target[k];
- if(current&&!valid(current)){if(urls.length)conflicts.push(k);continue;}
+ if(current&&!valid(current)){conflicts.push(k);continue;}
+ if(sources.some(s=>s[k]&&!valid(s[k]))){conflicts.push(k);continue;}
  if(urls.length>1||(current&&urls.some(u=>u!==current))){conflicts.push(k);continue;}
  if(!current&&urls.length===1)patch[k]=urls[0];
  }
@@ -219,6 +220,7 @@ function GF3_GF_ThreeSheetDocumentRead_(sheet,row){
 /** Validation-only application of a reviewed plan. Never creates columns or folders. */
 function GF3_GF_ThreeSheetDocumentApply_(book,id,sources){
  GF3_AssertBook_(book);
+ if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
  if(!/^V9\d{5}$/.test(id))throw Error('validation_vehicle_required');
  const lock=LockService.getScriptLock();
  if(!lock.tryLock(1000))throw Error('document_busy');
@@ -236,10 +238,15 @@ function GF3_GF_ThreeSheetDocumentApply_(book,id,sources){
  if(cell.getFormula()||cell.getDisplayValue())throw Error('destination_not_empty:'+k);
  return {k,cell};
  });
+ try{
  for(const w of writes)w.cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(w.k+'を見る').setLinkUrl(plan.patch[w.k]).build());
  SpreadsheetApp.flush();
  const after=GF3_GF_ThreeSheetDocumentRead_(v.sheet,v.row);
  if(keys.some(k=>after[k]!==plan.patch[k]))throw Error('document_readback_failed');
+ }catch(e){
+ try{for(const w of writes){const current=w.cell.getRichTextValue();if(current&&current.getLinkUrl()===plan.patch[w.k]&&current.getText()===w.k+'を見る')w.cell.clearContent();else if(w.cell.getDisplayValue()||w.cell.getFormula())throw Error('document_concurrent_edit');}SpreadsheetApp.flush();}catch(restore){throw Error('document_rollback_failed_manual_review');}
+ throw e;
+ }
  return {ok:true,updated:keys};
  }finally{lock.releaseLock();}
 }
@@ -364,4 +371,17 @@ function GF3_割当取消自己テスト(){
  const missing=Object.assign({},d);delete missing['電話番号'];
  rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,missing,q),'missing_master_column');
  const result={passed,total:10,writes:0};console.log(JSON.stringify(result));return result;
+}
+
+function GF3_書類引継ぎ自己テスト(){
+ const id='V999991',k='車両フォルダ',u='https://drive.google.com/drive/folders/TEST_A',v='https://drive.google.com/drive/folders/TEST_B';
+ const t={VehicleID:id},s={VehicleID:id,[k]:u};
+ let passed=0;const check=(ok,n)=>{if(!ok)throw Error('document_test_failed:'+n);passed++;};
+ check(GF3_GF_ThreeSheetDocumentPlan_(t,[s]).patch[k]===u,'copy');
+ check(Object.keys(GF3_GF_ThreeSheetDocumentPlan_(s,[s]).patch).length===0,'idempotent');
+ check(GF3_GF_ThreeSheetDocumentPlan_(s,[{VehicleID:id,[k]:v}]).conflicts.includes(k),'occupied');
+ check(GF3_GF_ThreeSheetDocumentPlan_(t,[s,{VehicleID:id,[k]:v}]).conflicts.includes(k),'ambiguous');
+ check(GF3_GF_ThreeSheetDocumentPlan_(t,[{VehicleID:id,[k]:'invalid'}]).conflicts.includes(k),'invalid');
+ let rejected=false;try{GF3_GF_ThreeSheetDocumentPlan_(t,[{VehicleID:'V999992',[k]:u}]);}catch(e){rejected=true;}check(rejected,'wrong_vehicle');
+ const result={passed,total:6,writes:0};console.log(JSON.stringify(result));return result;
 }
