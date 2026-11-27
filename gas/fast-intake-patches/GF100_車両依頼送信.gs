@@ -9,7 +9,8 @@ function GF_車両テスト送信_(e) {
     const token = String(p.gf_entry || '');
     if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('LINK_INVALID');
     const cache = CacheService.getScriptCache();
-    const userId = cache.get('GF_VEHICLE_ENTRY_' + token);
+    const fast = p.action === 'gf_vehicle_submit_fast_test_v1';
+    const userId = cache.get((fast ? 'GF_FAST_TEST_ENTRY_' : 'GF_VEHICLE_ENTRY_') + token);
     if (!/^U[0-9a-f]{32}$/i.test(String(userId || ''))) throw new Error('LINK_EXPIRED');
     const props = PropertiesService.getScriptProperties();
     const receiver = String(props.getProperty('GF_VEHICLE_TEST_RECEIVER_URL') || '');
@@ -17,7 +18,6 @@ function GF_車両テスト送信_(e) {
     if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(receiver) || secret.length < 40)
       throw new Error('SERVER_NOT_CONFIGURED');
     const started = Date.now();
-    const fast = p.action === 'gf_vehicle_submit_fast_test_v1';
     if (fast && (typeof GF_FAST_property_ !== 'function' || GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true')) throw Error('FAST_TEST_DISABLED');
     let data = fast ? GF_FAST_existingIntake_(token) : null;
     if (!data) {
@@ -72,4 +72,12 @@ return HtmlService.createHtmlOutput(
     console.error('車両依頼テスト送信エラー（個人情報は記録しません）: ' + String(err.message || err));
     return result('送信を完了できませんでした', '入力内容はまだ受付完了になっていません。', false);
   }
+}
+
+/** Editor-only synthetic test token; never expose through a web route. */
+function GF_FAST_架空受付トークン発行() {
+  const token = (Utilities.getUuid()+Utilities.getUuid()).replace(/-/g,'').toLowerCase();
+  const user = 'U'+Utilities.getUuid().replace(/-/g,'').toLowerCase();
+  CacheService.getScriptCache().put('GF_FAST_TEST_ENTRY_'+token,user,600);
+  console.log('検証トークン: '+token);
 }
