@@ -46,7 +46,31 @@ def patch(source):
     const users = 必須シートを取得する_(ss, シート名.利用者管理);
     u = 対象行を取得する_(users) || {};
   }""", 1)
-    return prefix + name + entry
+    # In isolated validation mode, other 25-series entrypoints remain unported.
+    # Block them before any production-license spreadsheet or trigger is touched.
+    blocked = [
+        "GF_実績受付本体_25(data)",
+        "GF_実績キューワーカー()",
+        "GF_貸出情報を実績から反映する_25(ss,job)",
+        "GF_貸出連携列を準備する_25(ss)",
+        "GF_貸出先連携を設定する_25()",
+        "GF_貸出先連携の準備を進める_25()",
+        "GF_予定の貸出情報を保存する_25(ss,planId,data)",
+    ]
+    guarded = prefix + name + entry
+    for signature in blocked:
+        original = "function " + signature + "{"
+        # source-13 may use whitespace before the opening brace.
+        alternate = "function " + signature + " {"
+        old = original if guarded.count(original) == 1 else alternate
+        if guarded.count(old) != 1:
+            raise ValueError("Source-13 write entrypoint changed: " + signature)
+        new = old + """
+  if(PropertiesService.getScriptProperties().getProperty('GF3_VALIDATION_ENABLED')==='true')
+    throw Error('gf3_actual_writer_not_migrated');
+"""
+        guarded = guarded.replace(old,new,1)
+    return guarded
 
 
 def main():
