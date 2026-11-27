@@ -37,7 +37,14 @@ function GF_車両テスト送信_(e) {
       GF115_車両依頼受付へ反映_(p,userId,data,token);
     }
     if (fast) {
-      GF_FAST_masterSync_(token);
+      // The receipt and staging are already durable. Driver sync must never turn
+      // a completed intake into a misleading failure/retry for the applicant.
+      // GF_FAST_runWorker retries synchronization from the pending intake row.
+      try {
+        GF_FAST_masterSync_(token);
+      } catch (_) {
+        console.warn(JSON.stringify({event:'gf_fast_driver_sync_deferred'}));
+      }
       console.log(JSON.stringify({event:'gf_fast_acceptance', ms:Date.now()-started}));
     } else {
       cache.remove('GF_VEHICLE_ENTRY_' + token);
