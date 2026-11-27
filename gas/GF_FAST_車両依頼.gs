@@ -239,6 +239,10 @@ function GF_FAST_runWorker() {
         const request = row[21];
         const payload = {receipt,bridge_line_user_id:user,bridge_request_id:request,
           residentMethod:row[17]==='原本郵送予定'?'mail':'upload'};
+        // Register the driver independently of Drive availability.
+        // A failed attempt must not prevent document transfer.
+        try { GF_FAST_masterSync_(request); }
+        catch (_) { console.warn(JSON.stringify({event:'gf_fast_driver_sync_deferred'})); }
         if (row[19]===GF_FAST_PENDING) {
           const result = GF_FAST_bridgeCall_(Object.assign({},payload,{demo_action:'gf_fast_transfer_v1'}));
           if (result.pending) {
