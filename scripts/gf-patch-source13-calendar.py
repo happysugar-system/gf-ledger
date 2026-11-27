@@ -34,7 +34,8 @@ def patch(source, three_sheet_validation=False):
     if three_sheet_validation:
         source = replace_once(
             source,
-            "function GF_予定関連だけ反映する_40(ss,VehicleID) {\\n  const lock=LockService.getScriptLock();",
+            """function GF_予定関連だけ反映する_40(ss,VehicleID) {
+  const lock=LockService.getScriptLock();""",
             """function GF_予定関連だけ反映する_40(ss,VehicleID) {
   // Isolated validation only. Fail closed instead of writing to legacy sheets.
   if(PropertiesService.getScriptProperties().getProperty('GF3_VALIDATION_ENABLED')==='true'){
