@@ -53,3 +53,11 @@ Production workbook 17IzIUJeYQw3nO8GZsUSCgLfHVECNINZNkQdg38GW57o is authoritativ
 
 ### GF3 dedicated API connectivity acceptance
 Operator executed `GF3_GF_検証同期DB接続診断` in the new validation GAS and reported `{"connected":true,"sync":true,"schedule":true}`. Health-only connectivity accepted; no repeat required. This does not establish write-path, migration reconciliation or calendar integration acceptance. Keep migration and write gates disabled pending those checks.
+
+
+## 2026-11-27 schedule source reconciliation and validation GAS
+
+- Read-only production reconciliation: 190 unique schedule IDs, 188 unique populated CalendarEventIDs, 9 unique schedule-type master IDs. The identifier join resolves 11 schedule rows. The remaining 179 all have the legacy type 車検満了, whose ID and display name are absent from the current master. Preserve the original type ID, label and CalendarEventID for each row. Resolve the existing calendar routing in the deployed GAS before migrating this type. Do not infer routing from 車検 or recreate existing events.
+- No rows with a shift label were present in the 190-row source read. Preserve the four shift-specific columns and verify against a dedicated dummy shift before acceptance.
+- The dedicated GAS contained two definitions of 27 synchronization functions. The named bundle matched the GitHub bundle and contained all definitions. The older duplicate in 無題 2.gs was replaced with GF3_TriggerInventory.gs from 421bb1f. Running GF3_検証トリガー棚卸し returned an empty inventory for the current user/current script and zero calendar writes. No trigger was created.
+- Before activating the new trigger or issuing the operation URL, route the authenticated staff and driver entrypoints to this validation environment and verify legacy dependencies are absent during actual operations. Production routing, calendar events and the original workbook remain untouched.
