@@ -358,13 +358,13 @@ function GF3_割当取消自己テスト(){
  const check=(ok,label)=>{if(!ok)throw Error('gf3_test_failed:'+label);passed++;};
  const rejects=(fn,label)=>{let failed=false;try{fn();}catch(e){failed=true;}check(failed,label);};
  const p=GF3_GF_ThreeSheetAssignmentPlan_(v,d,q);
- check(Object.keys(p).length===11,'projection_count');
+ check(Object.keys(p).length===fields.length,'projection_count');
  check(p['電話番号']==='09000000000','phone');
  check(p['ドライバーステータス']==='有効'&&p['ドライバー備考']==='新備考','mapped_fields');
  check(!('前使用者' in p),'previous_driver_preserved');
  const cancel=Object.assign({},q,{operation:'取消'});
  const cleared=GF3_GF_ThreeSheetAssignmentPlan_(Object.assign({},v,{DriverID:'','現在使用者':''}),null,cancel);
- check(Object.keys(cleared).length===11&&Object.values(cleared).every(x=>x===''),'cancel_clear');
+ check(Object.keys(cleared).length===fields.length&&Object.values(cleared).every(x=>x===''),'cancel_clear');
  rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,null,cancel),'active_driver_cancel');
  rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,Object.assign({},d,{DriverID:'D999992'}),q),'wrong_driver');
  rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,Object.assign({},d,{'ステータス':'無効'}),q),'inactive_driver');
