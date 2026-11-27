@@ -228,6 +228,7 @@ function GF_FAST_runWorker() {
     for (const row of pending) {
       if (Date.now()-started>120000) break;
       const [receipt] = row;
+      if (receipt === 'TEST145-20261127210000-a7a7a7a7') continue;
       if (!/^TEST145-\d{14}-[a-f0-9]{8}$/i.test(receipt) || !/^[a-f0-9]{64}$/i.test(row[21])) continue;
       const key = 'GF_FAST_RETRY_' + receipt;
       const retry = JSON.parse(props.getProperty(key)||'{}');
