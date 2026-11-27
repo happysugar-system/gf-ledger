@@ -130,7 +130,7 @@ function GF3_GF_ThreeSheetAssignmentPlan_(vehicle,driver,q){
  const fields={'フリガナ':'フリガナ','電話番号':'電話番号','紹介元':'紹介元','所属会社名':'所属会社名','稼働エリア':'稼働エリア','契約者メールアドレス':'契約者メールアドレス','緊急連絡先氏名':'緊急連絡先氏名','緊急連絡先メールアドレス':'緊急連絡先メールアドレス','ドライバーステータス':'ステータス','ドライバー備考':'備考'};
  if(q.operation==='取消'){
  if(norm(vehicle.DriverID)||norm(vehicle['現在使用者']))throw Error('cancel_mismatch');
- return {};
+ return Object.fromEntries(Object.keys(fields).filter(k=>Object.prototype.hasOwnProperty.call(vehicle,k)).map(k=>[k,'']));
  }
  if(q.operation!=='割当'||!driver||norm(driver.DriverID)!==q.driver_id||norm(vehicle.DriverID)!==q.driver_id||!norm(driver['氏名'])||norm(driver['氏名'])!==norm(vehicle['現在使用者'])||norm(driver['ステータス'])!=='有効')throw Error('driver_mismatch');
  const patch={};
@@ -143,6 +143,7 @@ function GF3_GF_ThreeSheetAssignmentPlan_(vehicle,driver,q){
 }
 function GF3_GF_ThreeSheetAssignmentSync_(book,row,q){
  GF3_AssertBook_(book);
+ if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
  const lock=LockService.getScriptLock();
  if(!lock.tryLock(1000))throw Error('assignment_busy');
  try{
@@ -165,15 +166,25 @@ function GF3_GF_ThreeSheetAssignmentSync_(book,row,q){
  const cell=v.sheet.getRange(row,cols[k]+1);
  if(cell.getFormula())throw Error('formula_protected:'+k);
  }
+ const snapshots=keys.map(k=>{const cell=v.sheet.getRange(row,cols[k]+1);return {cell,value:cell.getValue(),rich:cell.getRichTextValue(),format:cell.getNumberFormat()};});
+ try{
  for(const k of keys){
  const cell=v.sheet.getRange(row,cols[k]+1);
  if(k==='電話番号')cell.setNumberFormat('@');
  if(k.includes('メールアドレス')&&patch[k])cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(patch[k]).setLinkUrl('mailto:'+patch[k]).build());
- else cell.setValue(patch[k]);
+ else if(patch[k])cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(patch[k]).build());
+ else cell.clearContent();
  }
  SpreadsheetApp.flush();
  const after=GF3_GF_DB同期車両情報_(book,q.vehicle_id);
  if(keys.some(k=>String(after.data[k]||'')!==patch[k]))throw Error('profile_readback_failed');
+ }catch(e){
+ try{
+ for(const snap of snapshots){snap.cell.setNumberFormat(snap.format);if(snap.rich)snap.cell.setRichTextValue(snap.rich);else snap.cell.setValue(snap.value);}
+ SpreadsheetApp.flush();
+ }catch(restore){throw Error('profile_rollback_failed_manual_review');}
+ throw e;
+ }
  }
  return {ok:true};
  }finally{lock.releaseLock();}
