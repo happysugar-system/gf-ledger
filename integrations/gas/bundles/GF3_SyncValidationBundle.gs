@@ -339,3 +339,29 @@ function GF3_GF_ScheduleActualHeaderTestPlan_(headers,rows){
  return p;
  });
 }
+
+/** Pure regression tests: no spreadsheet or network writes. */
+function GF3_割当取消自己テスト(){
+ const fields=['フリガナ','電話番号','紹介元','所属会社名','稼働エリア','契約者メールアドレス','緊急連絡先氏名','緊急連絡先メールアドレス','ドライバーステータス','ドライバー備考'];
+ const v=Object.assign({VehicleID:'V999991',DriverID:'D999991','現在使用者':'検証用','前使用者':'保持'},Object.fromEntries(fields.map(k=>[k,'旧値'])));
+ const d=Object.assign({},Object.fromEntries(fields.map(k=>[k,'新値'])),{DriverID:'D999991','氏名':'検証用','ステータス':'有効','備考':'新備考','電話番号':'09000000000'});
+ const q={vehicle_id:'V999991',driver_id:'D999991',operation:'割当'};
+ let passed=0;
+ const check=(ok,label)=>{if(!ok)throw Error('gf3_test_failed:'+label);passed++;};
+ const rejects=(fn,label)=>{let failed=false;try{fn();}catch(e){failed=true;}check(failed,label);};
+ const p=GF3_GF_ThreeSheetAssignmentPlan_(v,d,q);
+ check(Object.keys(p).length===11,'projection_count');
+ check(p['電話番号']==='09000000000','phone');
+ check(p['ドライバーステータス']==='有効'&&p['ドライバー備考']==='新備考','mapped_fields');
+ check(!('前使用者' in p),'previous_driver_preserved');
+ const cancel=Object.assign({},q,{operation:'取消'});
+ const cleared=GF3_GF_ThreeSheetAssignmentPlan_(Object.assign({},v,{DriverID:'','現在使用者':''}),null,cancel);
+ check(Object.keys(cleared).length===11&&Object.values(cleared).every(x=>x===''),'cancel_clear');
+ rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,null,cancel),'active_driver_cancel');
+ rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,Object.assign({},d,{DriverID:'D999992'}),q),'wrong_driver');
+ rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,Object.assign({},d,{'ステータス':'無効'}),q),'inactive_driver');
+ rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,d,Object.assign({},q,{vehicle_id:'V999992'})),'wrong_vehicle');
+ const missing=Object.assign({},d);delete missing['電話番号'];
+ rejects(()=>GF3_GF_ThreeSheetAssignmentPlan_(v,missing,q),'missing_master_column');
+ const result={passed,total:10,writes:0};console.log(JSON.stringify(result));return result;
+}
