@@ -185,7 +185,7 @@ function GF_FAST_masterSync_(request) {
   const secret = GF_FAST_property_('GF_FAST_DRIVER_SECRET');
   if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(url) ||
       secret.length < 48) throw Error('FAST_DRIVER_CONFIGURATION');
-  const result = JSON.parse(GF_FAST_http_(url,{payload:{
+  const result = JSON.parse(GF_FAST_http_(url,{headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()},payload:{
     action:'gf_fast_driver_sync_test_v1',request,secret
   }}).getContentText());
   if (result.ok !== true) throw Error('FAST_DRIVER_SYNC');
