@@ -7,6 +7,7 @@ function GF3_LegacyProjectionPlan_(vehicleId,kind,fields){
  };
  if(!Object.prototype.hasOwnProperty.call(allowed,kind)||!fields||typeof fields!=='object'||Array.isArray(fields))throw Error('projection_invalid');
  const patch={};
+ if(!Object.keys(fields).length)throw Error('projection_empty');
  for(const [k,v] of Object.entries(fields)){
   if(!allowed[kind].includes(k))throw Error('projection_field_unmapped:'+k);
   if(kind==='document'&&(typeof v!=='string'||!/^https:\/\/drive\.google\.com\/(?:file\/d\/|drive\/(?:u\/\d+\/)?folders\/)[A-Za-z0-9_-]+(?:[/?#].*)?$/.test(v)))throw Error('document_url_invalid');
@@ -30,9 +31,16 @@ function GF3_LegacyProjectionApply_(book,vehicleId,kind,fields){
  if(cell.getFormula())throw Error('formula_protected:'+k);
  return {k,cell,value:cell.getValue(),rich:cell.getRichTextValue(),format:cell.getNumberFormat()};
  });
+ if(kind==='document')for(const e of entries){
+ const existing=e.rich&&e.rich.getLinkUrl();
+ if(existing!==plan.patch[e.k]&&e.value!==''&&e.value!==null)throw Error('document_existing_link_conflict:'+e.k);
+ }
+ const attempted=[];
  try{
  for(const e of entries){
  const value=plan.patch[e.k];
+ if(kind==='document'&&e.rich&&e.rich.getLinkUrl()===value)continue;
+ attempted.push(e);
  if(kind==='document')e.cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(e.k+'を見る').setLinkUrl(value).build());
  else if(value==='')e.cell.clearContent();else e.cell.setValue(value);
  }
@@ -43,7 +51,7 @@ function GF3_LegacyProjectionApply_(book,vehicleId,kind,fields){
  else if(expected instanceof Date?!(actual instanceof Date)||actual.getTime()!==expected.getTime():actual!==expected)throw Error('projection_readback_failed');
  }
  }catch(err){
- try{for(const e of entries){e.cell.setNumberFormat(e.format);if(e.rich)e.cell.setRichTextValue(e.rich);else e.cell.setValue(e.value);}SpreadsheetApp.flush();}catch(restore){throw Error('projection_rollback_failed_manual_review');}
+ try{for(const e of attempted){e.cell.setNumberFormat(e.format);if(e.rich)e.cell.setRichTextValue(e.rich);else e.cell.setValue(e.value);}SpreadsheetApp.flush();}catch(restore){throw Error('projection_rollback_failed_manual_review');}
  throw err;
  }
  return {ok:true,updated:keys};
