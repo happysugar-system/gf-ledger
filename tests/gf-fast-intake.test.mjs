@@ -46,3 +46,25 @@ test('Drive conversion pending does not read or delete staging objects',()=>{
   });
   assert.equal(result.pending,true);
 });
+
+
+test('a deferred driver sync never turns a saved fast intake into a failed submission',()=>{
+  const source100=readFileSync(new URL('../gas/fast-intake-patches/GF100_車両依頼送信.gs',import.meta.url),'utf8');
+  const request='a'.repeat(64);
+  const events=[];
+  const ctx={
+    CacheService:{getScriptCache:()=>({get:()=> 'U'+'1'.repeat(32)})},
+    PropertiesService:{getScriptProperties:()=>({getProperty:key=>
+      key==='GF_VEHICLE_TEST_RECEIVER_URL'
+        ? 'https://script.google.com/macros/s/test/exec' : 's'.repeat(64)})},
+    GF_FAST_property_:key=>key==='GF_FAST_TEST_ENABLED'?'true':'',
+    GF_FAST_existingIntake_:()=>({ok:true,receipt:'TEST145-20261127123456-01234567'}),
+    GF_FAST_masterSync_:()=>{throw Error('test driver sync unavailable')},
+    HtmlService:{createHtmlOutput:html=>({html})},
+    console:{warn:s=>events.push(JSON.parse(s).event),error:()=>{},log:()=>{}}
+  };
+  const result=runInNewContext(source100+'\nGF_車両テスト送信_({parameter:{gf_entry:"'+request+'"}})',ctx);
+  assert.match(result.html,/受付完了画面へ移動しています/);
+  assert.doesNotMatch(result.html,/送信を完了できませんでした/);
+  assert.deepEqual(events,['gf_fast_driver_sync_deferred']);
+});
