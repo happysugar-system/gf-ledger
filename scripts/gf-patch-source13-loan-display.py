@@ -27,11 +27,11 @@ def patch(source):
     if (!match) return null;"""
     strict_finder = """    const finder = sheet.getRange(2, idColumn, lastRow - 1, 1)
       .createTextFinder(id).matchEntireCell(true).matchCase(true);
-    const matches = finder.findAll();
-    if (matches.length > 1 && threeSheetValidation) {
-      throw new Error('validation_vehicle_duplicate');
-    }
-    const match = matches[0];
+    const match = threeSheetValidation ? (() => {
+      const matches = finder.findAll();
+      if (matches.length > 1) throw new Error('validation_vehicle_duplicate');
+      return matches[0] || null;
+    })() : finder.findNext();
     if (!match) return null;"""
     if entry.count(finder) != 1:
         raise ValueError("Source-13 VehicleID finder changed")
