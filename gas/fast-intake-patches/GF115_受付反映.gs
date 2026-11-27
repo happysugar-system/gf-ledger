@@ -1,11 +1,12 @@
-function GF115_車両依頼受付へ反映_(p,lineUserId,result,requestId) {
+function GF115_車両依頼受付へ反映_(p,lineUserId,result,requestId,fastMode) {
   if(!/^[a-f0-9]{64}$/i.test(requestId))throw Error('受付識別子が不正です');
   const receipt=String(result.receipt||'');
   if(!/^TEST145-\d{14}-[a-f0-9]{8}$/i.test(receipt))throw Error('受付番号が不正です');
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(20000))throw Error('受付同期が混み合っています');
   try {
-    const fast = typeof GF_FAST_property_ === 'function' && GF_FAST_property_('GF_FAST_TEST_ENABLED') === 'true';
+    const fast = fastMode === true;
+    if (fast && (typeof GF_FAST_property_ !== 'function' || GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true')) throw Error('FAST_TEST_DISABLED');
     const ss=fast ? GF_FAST_lineTestBook_() : 対象スプレッドシートを開く_();
     const detail=GF115_詳細シート_(ss);
     const master=ss.getSheetByName('LINE受付管理');
