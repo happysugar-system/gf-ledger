@@ -296,7 +296,8 @@ function GF3_GF_ScheduleImportValidation_(book,headers,rows){
  if(plan.length>=1000)throw Error('validation_read_limit');
  const before=GF3_GF_ScheduleStorageTest_(book,'read').data;
  if(!Array.isArray(before)||before.length>=1000)throw Error('read_limit');
- const canonical=x=>JSON.stringify(x,Object.keys(x).sort());
+ const normalize=x=>Array.isArray(x)?x.map(normalize):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,normalize(x[k])])):x;
+ const canonical=x=>JSON.stringify(normalize(x));
  const pending=[];
  for(const p of plan){
  const old=before.find(x=>x.schedule_id===p.schedule_id);
@@ -339,7 +340,7 @@ function GF3_GF_ScheduleSourcePlan_(headers,rows){
 
 function GF3_GF_ScheduleActualHeaderTestPlan_(headers,rows){
  return GF3_GF_ScheduleSourcePlan_(headers,rows).map(p=>{
- if(!/^TEST-[A-Z0-9-]+$/.test(p.schedule_id))throw Error('test_schedule_required');
+ if(!/^TEST-SCHEDULE-\d+$/.test(p.schedule_id))throw Error('test_schedule_required');
  if(p.vehicle_id&&!/^V9[0-9]{5}$/.test(p.vehicle_id))throw Error('test_vehicle_required');
  if(!p.vehicle_id&&!['シフト','スタッフシフト'].includes(p.schedule_type))throw Error('vehicle_required');
  if(p.calendar_event_id)throw Error('existing_event_requires_review');
@@ -384,4 +385,31 @@ function GF3_書類引継ぎ自己テスト(){
  check(GF3_GF_ThreeSheetDocumentPlan_(t,[{VehicleID:id,[k]:'invalid'}]).conflicts.includes(k),'invalid');
  let rejected=false;try{GF3_GF_ThreeSheetDocumentPlan_(t,[{VehicleID:'V999992',[k]:u}]);}catch(e){rejected=true;}check(rejected,'wrong_vehicle');
  const result={passed,total:6,writes:0};console.log(JSON.stringify(result));return result;
+}
+
+/** Read-only regression tests; never creates or updates Calendar events. */
+function GF3_予定管理自己テスト(){
+ const h=['予定ID','VehicleID','予定種類名','予定日','状態','CalendarEventID','シフト担当者','シフト開始時間','シフト終了時間','シフトメモ'];
+ const row=['TEST-SCHEDULE-901','V999991','車検','2026/12/3','未完了','','','','',''];
+ let passed=0;const check=(ok,n)=>{if(!ok)throw Error('schedule_test_failed:'+n);passed++;};
+ const rejects=(fn,n)=>{let rejected=false;try{fn();}catch(e){rejected=true;}check(rejected,n);};
+ const plan=GF3_GF_ScheduleActualHeaderTestPlan_(h,[row]);
+ check(plan.length===1&&plan[0].schedule_id===row[0]&&plan[0].schedule_date==='2026-12-03','stable_id_date');
+ const event=row.slice();event[5]='existing-event@example.invalid';
+ check(GF3_GF_ScheduleSourcePlan_(h,[event])[0].calendar_event_id===event[5],'preserve_event');
+ rejects(()=>GF3_GF_ScheduleActualHeaderTestPlan_(h,[event]),'existing_event_blocked');
+ rejects(()=>GF3_GF_ScheduleSourcePlan_(h,[row,row]),'duplicate_id');
+ const event2=event.slice();event2[0]='TEST-SCHEDULE-902';
+ rejects(()=>GF3_GF_ScheduleSourcePlan_(h,[event,event2]),'duplicate_event');
+ const bad=row.slice();bad[3]='2026/2/30';
+ rejects(()=>GF3_GF_ScheduleSourcePlan_(h,[bad]),'invalid_date');
+ const live=row.slice();live[1]='V000001';
+ rejects(()=>GF3_GF_ScheduleActualHeaderTestPlan_(h,[live]),'live_vehicle_blocked');
+ const shift=['TEST-SCHEDULE-903','','スタッフシフト','2026/12/3','未完了','','検証担当','09:00','18:00','保持'];
+ check(GF3_GF_ScheduleActualHeaderTestPlan_(h,[shift])[0].source_data['シフトメモ']==='保持','shift_preserved');
+ const result={passed,total:8,calendarWrites:0};console.log(JSON.stringify(result));return result;
+}
+function GF3_統合読み取り自己テスト(){
+ const result={schema:GF3_全列照合自己テスト(),assignment:GF3_割当取消自己テスト(),documents:GF3_書類引継ぎ自己テスト(),schedule:GF3_予定管理自己テスト()};
+ console.log(JSON.stringify(result));return result;
 }
