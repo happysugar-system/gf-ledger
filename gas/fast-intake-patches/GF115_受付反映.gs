@@ -5,7 +5,8 @@ function GF115_車両依頼受付へ反映_(p,lineUserId,result,requestId) {
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(20000))throw Error('受付同期が混み合っています');
   try {
-    const ss=対象スプレッドシートを開く_();
+    const fast = typeof GF_FAST_property_ === 'function' && GF_FAST_property_('GF_FAST_TEST_ENABLED') === 'true';
+    const ss=fast ? GF_FAST_lineTestBook_() : 対象スプレッドシートを開く_();
     const detail=GF115_詳細シート_(ss);
     const master=ss.getSheetByName('LINE受付管理');
     if(!master)throw Error('LINE受付管理シートがありません');
@@ -23,11 +24,18 @@ function GF115_車両依頼受付へ反映_(p,lineUserId,result,requestId) {
     if(related.length>1)throw Error('LINE受付管理に同一申込番号が重複しています');
     if(related.length===1)lineReceptionId=String(related[0][idx['受付ID']]);
     if(!lineReceptionId) {
-      lineReceptionId=GF_LINE受付を登録する_({
+      const entry = {
         受付種別:'車両依頼',LINEユーザーID:lineUserId,ドライバー名:GF115_文字_(p.name),
         受付内容:'車両依頼申込 / 申込番号: '+receipt+' / 納車希望: '+GF115_文字_(p.deliveryWish)+' / 稼働エリア: '+GF115_文字_(p.area),
         写真フォルダURL:String(result.folderUrl||'')
-      });
+      };
+      if (fast) {
+        lineReceptionId = 'TEST-FAST-' + requestId;
+        const values = Object.assign({}, entry, {'受付ID':lineReceptionId,'受付日時':new Date(),'ステータス':'未対応'});
+        master.appendRow(headers.map(h => Object.prototype.hasOwnProperty.call(values,h) ? values[h] : ''));
+      } else {
+        lineReceptionId=GF_LINE受付を登録する_(entry);
+      }
     }
     const staged = typeof GF_FAST_PENDING !== 'undefined' && result.documentStatus === GF_FAST_PENDING;
     if (staged && existing && detail.getRange(existing,21).getDisplayValue() === lineReceptionId &&
