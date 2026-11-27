@@ -21,14 +21,23 @@ function GF3_Source13ProjectionCutover_(book,vehicleId) {
  if(typeof 予定表示キャッシュを削除する==='function')予定表示キャッシュを削除する();
  return true;
 }
-/** 純粋テスト。スプレッドシート・予定DB・カレンダーにはアクセスしない。 */
+/** Pure activation guard. Never enables a new route from a missing readiness flag. */
+function GF3_Source13ProjectionMode_(validationEnabled,writeEnabled,uiReady){
+ if(!validationEnabled)return 'legacy';
+ if(!writeEnabled)throw Error('gf3_cutover_not_verified');
+ if(!uiReady)throw Error('gf3_canonical_ui_not_verified');
+ return 'three_sheet';
+}
 function GF3_Source13ProjectionSelfTest_(){
- const fixture=(props,allowed,ui,ledger,db)=>{
-  const oldProps=PropertiesService,oldAssert=GF3_AssertBook_,oldWrite=GF3_WriteEnabled_;
-  const oldVehicle=GF3_GF_DB同期車両情報_,oldSchedule=GF3_GF_ScheduleStorageTest_;
-  const oldCache=typeof 予定表示キャッシュを削除する==='function'?予定表示キャッシュを削除する:null;
-  // Apps Script global variables are not rebound in this function. Test harness injects dependencies.
-  return [props,allowed,ui,ledger,db].length===5;
- };
- return {passed:1,writes:0};
+ const fails=(a,b,c)=>{try{GF3_Source13ProjectionMode_(a,b,c);return false;}catch(_){return true;}};
+ const checks=[
+  GF3_Source13ProjectionMode_(false,false,false)==='legacy',
+  GF3_Source13ProjectionMode_(false,true,true)==='legacy',
+  fails(true,false,false),
+  fails(true,false,true),
+  fails(true,true,false),
+  GF3_Source13ProjectionMode_(true,true,true)==='three_sheet'
+ ];
+ if(!checks.every(Boolean))throw Error('gf3_projection_mode_fixture_failed');
+ return {passed:checks.length,writes:0};
 }
