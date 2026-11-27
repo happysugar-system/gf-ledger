@@ -72,3 +72,29 @@ function GF3_旧シート書込境界自己テスト(){
  if(!checks.every(Boolean))throw Error('projection_fixture_failed');
  return {passed:checks.length,writes:0};
 }
+
+/** Explicit document replacement plan. No Drive deletion or external writes.
+ * Expected URL must be captured from the original document record, not guessed.
+ */
+function GF3_DocumentReplacementPlan_(vehicleId,field,expectedUrl,newUrl,currentUrl){
+ GF3_LegacyProjectionPlan_(vehicleId,'document',{[field]:expectedUrl});
+ GF3_LegacyProjectionPlan_(vehicleId,'document',{[field]:newUrl});
+ if(currentUrl===newUrl)return {state:'already_applied',field,expectedUrl,newUrl};
+ if(currentUrl!==expectedUrl)throw Error('document_replacement_conflict');
+ return {state:'replace',field,expectedUrl,newUrl};
+}
+function GF3_DocumentReplacementPlanTest_(){
+ const id='V999991',field='📄 最新車両書類',a='https://drive.google.com/file/d/old123/view',b='https://drive.google.com/file/d/new123/view',c='https://drive.google.com/file/d/other123/view';
+ const reject=(fn)=>{try{fn();return false;}catch(e){return true;}};
+ const checks=[
+ GF3_DocumentReplacementPlan_(id,field,a,b,a).state==='replace',
+ GF3_DocumentReplacementPlan_(id,field,a,b,b).state==='already_applied',
+ reject(()=>GF3_DocumentReplacementPlan_(id,field,a,b,c)),
+ reject(()=>GF3_DocumentReplacementPlan_(id,field,a,b,'')),
+ reject(()=>GF3_DocumentReplacementPlan_(id,field,'',b,a)),
+ reject(()=>GF3_DocumentReplacementPlan_(id,'現在使用者',a,b,a)),
+ reject(()=>GF3_DocumentReplacementPlan_('V000001',field,a,b,a))
+ ];
+ if(!checks.every(Boolean))throw Error('document_replacement_fixture_failed');
+ return {passed:checks.length,writes:0};
+}
