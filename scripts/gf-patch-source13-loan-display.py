@@ -22,6 +22,20 @@ def patch(source):
     throw new Error('validation_vehicle_required');
   }
   const ss = threeSheetValidation ? GF3_Open_() : 対象スプレッドシートを開く_();""", 1)
+    finder = """    const match = sheet.getRange(2, idColumn, lastRow - 1, 1)
+      .createTextFinder(id).matchEntireCell(true).matchCase(true).findNext();
+    if (!match) return null;"""
+    strict_finder = """    const finder = sheet.getRange(2, idColumn, lastRow - 1, 1)
+      .createTextFinder(id).matchEntireCell(true).matchCase(true);
+    const matches = finder.findAll();
+    if (matches.length > 1 && threeSheetValidation) {
+      throw new Error('validation_vehicle_duplicate');
+    }
+    const match = matches[0];
+    if (!match) return null;"""
+    if entry.count(finder) != 1:
+        raise ValueError("Source-13 VehicleID finder changed")
+    entry = entry.replace(finder, strict_finder, 1)
     entry = entry.replace(legacy, """  const kind = String(car['区分/ステータス'] || '').trim();
   let u;
   if (threeSheetValidation) {
