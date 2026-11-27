@@ -49,3 +49,7 @@ The test 3-sheet workbook contains only 26 columns in 車両台帳 and 7 populat
 ## Operator-approved canonical schema
 
 Production workbook 17IzIUJeYQw3nO8GZsUSCgLfHVECNINZNkQdg38GW57o is authoritative for existing header names and positions. Operator confirmed this explicitly. Full-schema fixture test passed 8 cases in GAS. Live audit: ledger 63 source / 71 target, all 63 positions differ; waiting 13 / 16, old header 旧シート行 differs from 旧社長シート行; driver master 17 / 36 with blank positions 8–26. No duplicate headers. Align validation schema to production, preserving existing values, formulas, validation and links. Review eight additional ledger fields and three additional waiting fields before appending; do not delete blank-header columns until their contents and metadata are checked. Do not rename or reorder production columns. No production writes authorized.
+
+
+### GF3 dedicated API connectivity acceptance
+Operator executed `GF3_GF_検証同期DB接続診断` in the new validation GAS and reported `{"connected":true,"sync":true,"schedule":true}`. Health-only connectivity accepted; no repeat required. This does not establish write-path, migration reconciliation or calendar integration acceptance. Keep migration and write gates disabled pending those checks.
