@@ -32,6 +32,17 @@ def patch(source, three_sheet_validation=False):
   }""",
     )
     if three_sheet_validation:
+        # Source-13 retrieves the production calendar via the licensing sheet.
+        # Validation must never reach that router until its calendars are isolated.
+        source = replace_once(
+            source,
+            """function 予定種類のカレンダーを取得する_(種類) {
+  const map={""",
+            """function 予定種類のカレンダーを取得する_(種類) {
+  if(PropertiesService.getScriptProperties().getProperty('GF3_VALIDATION_ENABLED')==='true')
+    throw Error('gf3_calendar_isolation_unverified');
+  const map={""",
+        )
         source = replace_once(
             source,
             """function GF_予定関連だけ反映する_40(ss,VehicleID) {
