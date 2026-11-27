@@ -98,3 +98,39 @@ function GF3_DocumentReplacementPlanTest_(){
  if(!checks.every(Boolean))throw Error('document_replacement_fixture_failed');
  return {passed:checks.length,writes:0};
 }
+
+/** Isolated ledger replacement only; no Drive mutation. */
+function GF3_DocumentReplacementApply_(book,id,field,expectedUrl,newUrl){
+ GF3_AssertBook_(book);
+ if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
+ const lock=LockService.getScriptLock();
+ if(!lock.tryLock(1000))throw Error('projection_busy');
+ try{
+  GF3_LegacyProjectionPlan_(id,'document',{[field]:newUrl});
+  const v=GF3_GF_DB同期車両情報_(book,id);
+  GF3_AssertSheet_(v.sheet);
+  if(v.sheet.getName()!=='車両台帳')throw Error('projection_sheet_denied');
+  const cols=GF3_Columns_(v.sheet,[field]);
+  const cell=v.sheet.getRange(v.row,cols[field]+1);
+  if(cell.getFormula())throw Error('formula_protected');
+  const old=cell.getRichTextValue();
+  const plan=GF3_DocumentReplacementPlan_(id,field,expectedUrl,newUrl,old&&old.getLinkUrl());
+  if(plan.state==='already_applied')return plan;
+  const replacement=SpreadsheetApp.newRichTextValue().setText(old.getText()).setLinkUrl(newUrl).build();
+  try{
+   cell.setRichTextValue(replacement);
+   SpreadsheetApp.flush();
+   const current=cell.getRichTextValue();
+   if(!current||current.getLinkUrl()!==newUrl)throw Error('replacement_readback_failed');
+  }catch(e){
+   const current=cell.getRichTextValue();
+   if(current&&current.getLinkUrl()===newUrl){
+    cell.setRichTextValue(old);SpreadsheetApp.flush();
+    const restored=cell.getRichTextValue();
+    if(!restored||restored.getLinkUrl()!==expectedUrl)throw Error('replacement_rollback_manual_review');
+   }else if(!current||current.getLinkUrl()!==expectedUrl)throw Error('replacement_conflict_manual_review');
+   throw e;
+  }
+  return {state:'replaced',field,expectedUrl,newUrl};
+ }finally{lock.releaseLock();}
+}
