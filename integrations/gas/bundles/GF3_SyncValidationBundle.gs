@@ -13,7 +13,7 @@ function GF3_Columns_(s,keys){GF3_AssertSheet_(s);const h=s.getRange(1,1,1,s.get
 /** Isolated sync storage client. Uses existing test token; no production fallback. */
 function GF3_GF_SyncStorageTest_(book,action,kind,id,args){
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
+ if(action!=='health'&&!GF3_WriteEnabled_(book))throw Error('validation_disabled');
  const token=PropertiesService.getScriptProperties().getProperty('GF3_SYNC_TEST_TOKEN');
  if(!token||token.length<32)throw Error('sync_storage_token_missing');
  if(!['health','read','insert','transition','candidates'].includes(action))throw Error('sync_storage_action_denied');
@@ -43,7 +43,8 @@ function GF3_GF_SyncStorageTestTransition_(book,id,expected,next,result){
 function GF3_GF_検証同期DB接続診断(){
  const book=GF3_Open_();
  GF3_GF_SyncStorageTest_(book,'health');
- const result={connected:true};
+ GF3_GF_ScheduleStorageTest_(book,'health');
+ const result={connected:true,sync:true,schedule:true};
  console.log(JSON.stringify(result));return result;
 }
 
@@ -257,7 +258,7 @@ function GF3_GF_ScheduleImportPlan_(headers,rows){
 
 function GF3_GF_ScheduleStorageTest_(book,action,rows){
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
+ if(action!=='health'&&!GF3_WriteEnabled_(book))throw Error('validation_disabled');
  if(!['health','read','import'].includes(action))throw Error('invalid_action');
  const token=PropertiesService.getScriptProperties().getProperty('GF3_SYNC_TEST_TOKEN')||'';
  if(token.length<32)throw Error('token_missing');
