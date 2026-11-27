@@ -17,7 +17,8 @@ function GF_車両テスト送信_(e) {
     if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(receiver) || secret.length < 40)
       throw new Error('SERVER_NOT_CONFIGURED');
     const started = Date.now();
-    const fast = typeof GF_FAST_property_ === 'function' && GF_FAST_property_('GF_FAST_TEST_ENABLED') === 'true';
+    const fast = p.action === 'gf_vehicle_submit_fast_test_v1';
+    if (fast && (typeof GF_FAST_property_ !== 'function' || GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true')) throw Error('FAST_TEST_DISABLED');
     let data = fast ? GF_FAST_existingIntake_(token) : null;
     if (!data) {
       const payload = Object.assign({}, p, {
@@ -34,7 +35,7 @@ function GF_車両テスト送信_(e) {
       try { data = JSON.parse(response.getContentText()); }
       catch (_) { throw new Error('BRIDGE_RESPONSE_INVALID'); }
       if (!data || data.ok !== true) throw new Error('SAVE_FAILED');
-      GF115_車両依頼受付へ反映_(p,userId,data,token);
+      GF115_車両依頼受付へ反映_(p,userId,data,token,fast);
     }
     if (fast) {
       // The durable pending row is the worker queue; do not wait for driver registration.
