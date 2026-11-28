@@ -1,0 +1,34 @@
+name: GF3 review static artifact (no deployment)
+on:
+  push:
+    branches:
+      - review/form-progress-adapter-20261126
+    paths:
+      - 'mobile-management/**'
+      - '.github/workflows/gf3-review-pages-artifact.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm review-only test boundary
+        run: |
+          node --check mobile-management/vehicle-reader.mjs
+          node --check mobile-management/vehicle-schema.mjs
+          node --test mobile-management/demo-save-basic.test.mjs mobile-management/demo-save-confirmation.test.mjs
+      - name: Prepare review artifact only
+        run: |
+          mkdir -p gf3-review-site/mobile-management
+          cp mobile-management/index.html mobile-management/vehicle-reader.mjs mobile-management/vehicle-schema.mjs gf3-review-site/mobile-management/
+          test -s gf3-review-site/mobile-management/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gf3-review-static-html
+          path: gf3-review-site/
+          retention-days: 5
