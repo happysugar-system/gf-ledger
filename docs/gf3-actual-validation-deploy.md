@@ -13,4 +13,4 @@
 
 台帳直編集の同期を確認する場合は、専用検証GASで `GF3_LEDGER_SYNC_TEST_ENABLED=true` を設定し、オーナーとして `GF3_InstallLedgerFixtureSync` を一度実行する。直接編集はインストール型編集トリガーで、GASからの更新・集計・失敗後の回復は5分間隔で確認する。同じデータは書き直さない。停止する場合は同期フラグを `false` にする。
 
-LINEマイページの検証入口は `integrations/edge/gf3-line-mypage-test.ts`。既存LINE認証でD999902に一意に紐づく検証ユーザーと、検証用LINEチャネル設定が必要。既存のマイページ入口は引き続き利用できる。検証予定画面は台帳日付と専用予定DBを読み、既存の予定IDとイベントIDを保持する。
+LINEマイページの検証入口は、レビュー成果物に含まれる `mypage-assignment-progress-test.html?gf3_liff=<検証用LIFF ID>`。検証用LIFFの登録済みURLで開く。対応する検証用チャネルIDをEdge Functionの `GF3_MYPAGE_LINE_CHANNEL_ID` に設定し、D999902に一意に紐づく検証LINEユーザーで確認する。GitHub Actionsの成果物生成は公開URLを変更しない。検証予定画面は台帳日付と専用予定DBを読み、既存の予定IDとイベントIDを保持する。

@@ -32,5 +32,55 @@ async function load(){out.replaceChildren();msg.textContent='取得中…';try{c
    }
    const note=document.createElement('p');note.className='muted';note.textContent='車両進捗はスタッフが登録した内容を表示します。未登録の場合は申込・契約情報のみから表示しています。';out.append(note);
 }catch(e){msg.textContent=e.message;}}
-el('login').onsubmit=async e=>{e.preventDefault();const r=await client.auth.signInWithPassword({email:el('email').value.trim(),password:el('pw').value});el('pw').value='';if(r.error){msg.textContent='ログイン失敗';return;}el('login').hidden=true;el('refresh').hidden=false;await load();};el('refresh').onclick=load;
+const gf3LiffId=new URLSearchParams(location.search).get('gf3_liff');
+if(gf3LiffId!==null){
+  el('login').hidden=true;
+  el('login').previousElementSibling.textContent='GF3検証専用・LINE本人確認';
+  el('refresh').hidden=false;
+  el('refresh').textContent='LINEで車両情報を表示';
+  el('refresh').onclick=loadGf3;
+}else{
+  el('login').onsubmit=async e=>{e.preventDefault();const r=await client.auth.signInWithPassword({email:el('email').value.trim(),password:el('pw').value});el('pw').value='';if(r.error){msg.textContent='ログイン失敗';return;}el('login').hidden=true;el('refresh').hidden=false;await load();};
+  el('refresh').onclick=load;
+}
+let gf3LiffReady;
+async function loadGf3(){
+  const button=el('refresh');
+  button.disabled=true;
+  out.replaceChildren();
+  msg.textContent='LINE本人確認中…';
+  try{
+    if(!/^\d{8,12}-[A-Za-z0-9]+$/.test(gf3LiffId))throw Error('検証用LIFF IDを確認してください。');
+    gf3LiffReady??=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='https://static.line-scdn.net/liff/edge/2/sdk.js';
+      script.onload=()=>window.liff.init({liffId:gf3LiffId}).then(resolve,reject);
+      script.onerror=reject;
+      document.head.append(script);
+    }).catch(error=>{gf3LiffReady=null;throw error;});
+    await gf3LiffReady;
+    if(!window.liff.isLoggedIn()){window.liff.login();return;}
+    const token=window.liff.getIDToken();
+    if(!token)throw Error('LINEから開き直してください。');
+    const response=await fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf3-line-mypage-test',{
+      method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({line_id_token:token})
+    });
+    if(response.status===403)throw Error('検証ドライバーとのLINE紐付けが確認できません。');
+    if(!response.ok)throw Error('検証用マイページを取得できませんでした。');
+    const {vehicles,vehicle_progress:progress}=await response.json();
+    if(!vehicles?.length||!progress){msg.textContent='現在割り当てられている車両はありません。';return;}
+    for(const [label,value] of [
+      ['車番',vehicles[0].vehicle_number],['管理区分',progress.stage],
+      ['納車可能日',progress.delivery_available_date],['納車確定日',progress.delivery_confirmed_date],
+      ['納車予定日',progress.delivery_planned_date],['納車実績日',progress.delivered_date]
+    ]){
+      const row=document.createElement('p');
+      row.textContent=label+'　'+(value||'未登録');
+      out.append(row);
+    }
+    msg.textContent='';
+  }catch(error){
+    msg.textContent=error?.message||'LINE認証を開始できませんでした。';
+  }finally{button.disabled=false;}
+}
 </script></html>

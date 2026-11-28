@@ -5,6 +5,7 @@ on:
       - review/form-progress-adapter-20261126
     paths:
       - 'mobile-management/**'
+      - 'mypage-assignment-progress-test.html'
       - '.github/workflows/gf3-review-pages-artifact.yml'
   workflow_dispatch:
 permissions:
@@ -26,6 +27,7 @@ jobs:
         run: |
           mkdir -p gf3-review-site/mobile-management
           cp mobile-management/index.html mobile-management/vehicle-reader.mjs mobile-management/vehicle-schema.mjs gf3-review-site/mobile-management/
+          cp mypage-assignment-progress-test.html gf3-review-site/
           test -s gf3-review-site/mobile-management/index.html
       - uses: actions/upload-artifact@v4
         with:
