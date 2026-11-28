@@ -52,6 +52,7 @@ function GF3_VehicleDocumentSave_(id,blobs,requestId){
    return {成功:true,種類:'車両書類',車番:String(v.data['車番']||''),氏名:String(v.data['現在使用者']||''),PDFURL:existing.new_url,取消情報:{種類:'車両書類',受付ID:receipt,VehicleID:id}};
   }
  }
+ if(!blobs.every(blob=>GF_JPEG情報を読む_60(blob)))throw Error('gf3_document_jpeg_unsupported');
  const transition=(expected,next)=>GF3_DocumentStorage_(book,'transition',receipt,{expected,next});
  GF3_DocumentStorage_(book,'insert',receipt,{receipt_id:receipt,vehicle_id:id,kind:'車両書類',previous_url:previous});
  transition('待機','保存中');
