@@ -12,4 +12,5 @@ const html = execFileSync(process.execPath, [fileURLToPath(new URL('./gf3-build-
 mkdirSync(destination, { recursive: true });
 writeFileSync(resolve(destination, 'GF3_ActualValidation.gs'), code);
 writeFileSync(resolve(destination, 'GF3_FixtureSnapshot.gs'), readFileSync(new URL('GF3_FixtureSnapshot.gs', review)));
+writeFileSync(resolve(destination, 'GF3_FixtureProgress.gs'), readFileSync(new URL('GF3_FixtureProgress.gs', review)));
 writeFileSync(resolve(destination, 'GF3_MobileManagement.html'), html);

@@ -105,7 +105,9 @@ function scheduleItems(onlyId=null){
  return out.sort((a,b)=>(toDate(a.date)||a.date).localeCompare(toDate(b.date)||b.date));
 }
 const scheduleRows=items=>items.length?items.map(v=>'<button class="item" data-car="'+safe(v.id)+'"><strong>'+safe(v.date)+'　'+safe(v.type)+'</strong><small>'+safe(v.plate)+'</small></button>').join(''):'<p class="muted">登録済みの予定はありません</p>';
-let actualDeliveryMonths=null,actualDeliveryError=false,actualWriteEnabled=false;
+let actualDeliveryMonths=null,actualDeliveryError=false,actualWriteEnabled=false,monthlyReportUrl='';
+const projectionNotice=result=>Object.values(result?.projections||{}).includes('pending')
+ ?' 台帳の保存は完了しました。集計または同期は定期処理で再試行します。':'';
 async function loadActualDeliveryMonths(){
  actualDeliveryMonths=null;
  actualDeliveryError=false;
@@ -120,6 +122,7 @@ async function loadActualDeliveryMonths(){
 function monthlyDeliverySummary(){
  const months=new Map();
  for(const vehicle of cars){
+   if(!vehicle.DriverID)continue;
    for(const [field,type] of [['納車予定日','planned']]){
      const iso=toDate(vehicle[field]);
      if(!iso)continue;
@@ -134,7 +137,9 @@ function monthlyDeliverySummary(){
  for(const [month,delivered] of actualDeliveryMonths){
   months.set(month,{planned:months.get(month)?.planned||0,delivered});
  }
- return '<div class="box"><h3>月別納車集計（検証）</h3>'+([...months].sort(([a],[b])=>b.localeCompare(a))
+ return '<div class="box"><h3>月別納車集計（検証）</h3>'+
+  (monthlyReportUrl?'<p><a target="_blank" rel="noopener noreferrer" href="'+safe(monthlyReportUrl)+'">月別納車管理の明細を開く</a></p>':'')+
+  ([...months].sort(([a],[b])=>b.localeCompare(a))
    .map(([month,counts])=>'<p>'+safe(month)+'　予定 '+counts.planned+'件 ／ 引渡し実績 '+counts.delivered+'件</p>').join('')
    ||'<p class="muted">納車予定と引渡し実績はありません。</p>')+'</div>';
 }
@@ -244,7 +249,7 @@ async function saveFixtureActual(operation){
   if(!cancel)sessionStorage.setItem('gf3-actual-last',request.id);
   else if(sessionStorage.getItem('gf3-actual-last')===request.id)sessionStorage.removeItem('gf3-actual-last');
   if(carId==='V900005')draft={...car()};
-  $('state').textContent=request.operation+'を確認しました。受付ID '+request.id;
+  $('state').textContent=request.operation+'を確認しました。受付ID '+request.id+projectionNotice(result);
  }catch(error){
   $('state').textContent='実績結果を確認できません。受付ID '+request.id+' ／ '+error.message;
   if(/gf3_actual_(?:missing|identity_mismatch|date_invalid|delivery_conflict|return_conflict)\b|gf3_progress_date_invalid\b/.test(error.message))
@@ -266,7 +271,7 @@ async function saveFixtureAssignment(button,action){
    if(result?.state!==(action==='assign'?'assigned':'cancelled')||receipt?.['割当VehicleID']!==expected)
      throw Error('再読み込みした割当状態が一致しません');
    selectedAssignments={};
-   $('state').textContent=action==='assign'?'受付2の割当を3シートで確認しました。':'受付2の取消と復元を3シートで確認しました。';
+   $('state').textContent=(action==='assign'?'受付2の割当を3シートで確認しました。':'受付2の取消と復元を3シートで確認しました。')+projectionNotice(result);
    render();
  }catch(error){
    $('state').textContent='割当操作を確認できません：'+error.message;
@@ -296,7 +301,7 @@ async function saveFixtureProgress(button){
     toDate(actual['納車確定日'])!==fields['納車確定日'])
     throw Error('進捗保存後の再読取が一致しません');
   if(carId==='V900005')draft={...actual};
-  $('state').textContent='V900005｜進捗保存・再読取を確認しました';
+  $('state').textContent='V900005｜進捗保存・再読取を確認しました'+projectionNotice(result);
   render();
  }catch(error){
   $('state').textContent='進捗保存を確認できません：'+error.message;
@@ -306,6 +311,7 @@ async function readFixture(){
   const result=await gasCall('GF3_ReadFixtureSnapshot');
   if(result?.environment!=='gf3')throw Error('検証台帳の応答が不正です');
   actualWriteEnabled=result.actualWriteEnabled===true;
+  monthlyReportUrl=result.monthlyReportUrl||'';
   cars=result.sheets['車両台帳'];
   waiting=result.sheets['名変待ち管理'];
   drivers=result.sheets['ドライバーマスター'];

@@ -7,9 +7,7 @@ function GF3_SaveActualFixture(operation,date,id){
  const result=GF3_RunCanonicalActual_(book,operation,date,id,{
   rows:GF3_ActualRows_,plan:GF3_ActualPlan_,storage:GF3_ActualStorage_,assertWrite:GF3_AssertActualWriteEnabled_
  });
- try{GF3_RefreshMonthlyDelivery_(book);}
- catch(error){console.error('gf3_monthly_refresh_pending:'+error.message);}
- return result;
+ return {...result,projections:GF3_RefreshFixtureProjections_(book)};
 }
 
 function GF3_ActualCell_(row,k){

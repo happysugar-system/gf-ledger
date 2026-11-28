@@ -31,8 +31,12 @@ function GF3_ReadFixtureSnapshot_(){
     }));
    });
  }
- const actualWriteEnabled=PropertiesService.getScriptProperties().getProperty('GF3_ACTUAL_TEST_ENABLED')==='true';
- return {environment:'gf3',sheets,actualWriteEnabled};
+ const properties=PropertiesService.getScriptProperties();
+ const actualWriteEnabled=properties.getProperty('GF3_ACTUAL_TEST_ENABLED')==='true';
+ const report=book.getSheetByName('月別納車管理');
+ const monthlyReportUrl=report?.getDeveloperMetadata().some(item=>item.getKey()==='GF3_MONTHLY_PROJECTION')
+  ?book.getUrl()+'#gid='+report.getSheetId():'';
+ return {environment:'gf3',sheets,actualWriteEnabled,monthlyReportUrl};
 }
 function GF3_ReadFixtureSnapshot(){return GF3_ReadFixtureSnapshot_();}
 
@@ -109,6 +113,10 @@ function GF3_CheckFixtureAssignment(receiptId,vehicleId){
 
 /** Changes only the explicitly approved assignment fixture. */
 function GF3_SaveFixtureAssignment(receiptId,vehicleId,action){
+ const result=GF3_SaveFixtureAssignmentLocked_(receiptId,vehicleId,action);
+ return {...result,projections:GF3_RefreshFixtureProjections_(GF3_DocumentUiOwner_())};
+}
+function GF3_SaveFixtureAssignmentLocked_(receiptId,vehicleId,action){
  const book=GF3_DocumentUiOwner_();
  if(String(receiptId)!=='2'||vehicleId!=='V900005'||!['assign','cancel'].includes(action))
   throw Error('gf3_assignment_fixture_denied');

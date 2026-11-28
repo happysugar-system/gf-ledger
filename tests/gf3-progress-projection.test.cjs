@@ -31,6 +31,7 @@ function setup(){
  const context={
   GF3_DocumentUiOwner_:()=>({getId:()=> 'TEST_BOOK'}),
   GF3_AssignmentFixtureRow_:gf3Row,
+  GF3_RefreshFixtureProjections_:()=>({ledger:'updated',monthly:'updated'}),
   LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},
   SpreadsheetApp:{flush:()=>{}},
   Sheets:{Spreadsheets:{batchUpdate:({requests},book)=>{

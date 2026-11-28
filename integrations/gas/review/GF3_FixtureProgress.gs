@@ -53,6 +53,10 @@ function GF3_ReadFixtureProgress(){
  return {vehicleId:'V900005',assigned:current.assigned,fields:current.fields};
 }
 function GF3_SaveFixtureProgress(vehicleId,expected,next){
+ const result=GF3_SaveFixtureProgressLocked_(vehicleId,expected,next);
+ return {...result,projections:GF3_RefreshFixtureProjections_(GF3_DocumentUiOwner_())};
+}
+function GF3_SaveFixtureProgressLocked_(vehicleId,expected,next){
  const book=GF3_DocumentUiOwner_();
  if(vehicleId!=='V900005')throw Error('gf3_progress_fixture_denied');
  const prior=GF3_ProgressFields_(expected);

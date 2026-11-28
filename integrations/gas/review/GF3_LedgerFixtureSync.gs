@@ -24,6 +24,16 @@ function GF3_OnLedgerFixtureEdit(e){
  return GF3_SyncLedgerFixture_(e.source,range);
 }
 
+/** A committed ledger operation stays committed if a derived view needs retry. */
+function GF3_RefreshFixtureProjections_(book){
+ const state={ledger:'disabled',monthly:'not_installed'};
+ for(const [key,refresh] of [['ledger',GF3_SyncLedgerFixture_],['monthly',GF3_RefreshMonthlyDelivery_]]){
+  try{if(refresh(book))state[key]='updated';}
+  catch(error){state[key]='pending';console.error('gf3_'+key+'_refresh_pending:'+error.message);}
+ }
+ return state;
+}
+
 function GF3_RefreshLedgerFixtureSync(){
  const book=GF3_Open_();
  try{return GF3_SyncLedgerFixture_(book);}
