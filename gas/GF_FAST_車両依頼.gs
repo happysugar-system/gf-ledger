@@ -59,8 +59,21 @@ function GF_FAST_receiver_(e) {
     GF_FAST_workerCall_('cleanup', request, receipt, '');
     return GF_FAST_json_({ok:true});
   } catch (error) {
-    console.warn(JSON.stringify({event:'gf_fast_receiver_error', ms:Date.now()-started}));
-    return GF_FAST_json_({ok:false,error:'FAST_RECEIVER_FAILED'});
+    // Return an allowlisted diagnostic code only; never expose Google/Drive tokens,
+    // user data, script properties, or raw exception details to the requester.
+    const safeCodes = new Set([
+      'FAST_BRIDGE_DISABLED','FAST_WRONG_DESTINATION','FAST_ID','FAST_RECEIPT',
+      'FAST_OWNER','FAST_TRANSFER_BUSY','FAST_ACTION','FAST_DRIVE_PENDING',
+      'FAST_METHOD','FAST_CONFIGURATION','FAST_SESSION','FAST_UPLOAD',
+      'FAST_VERIFY','FAST_DRIVER_CONFIGURATION','FAST_DRIVER_SYNC',
+      'FAST_TEST_DISABLED','FAST_HTTP_400','FAST_HTTP_401','FAST_HTTP_403',
+      'FAST_HTTP_404','FAST_HTTP_409','FAST_HTTP_413','FAST_HTTP_429',
+      'FAST_HTTP_500','FAST_HTTP_502','FAST_HTTP_503','FAST_HTTP_504'
+    ]);
+    const raw = String(error && error.message || '');
+    const code = safeCodes.has(raw) ? raw : 'FAST_RECEIVER_INTERNAL';
+    console.warn(JSON.stringify({event:'gf_fast_receiver_error', code, stage:String(p.demo_action || '').slice(0,50), ms:Date.now()-started}));
+    return GF_FAST_json_({ok:false,error:code});
   }
 }
 
