@@ -55,7 +55,7 @@ function GF3_VehicleDocumentSave_(id,blobs,requestId){
  // Reject unsupported images before creating a document receipt. Never log document bytes.
  const unsupported=blobs.findIndex(blob=>{
   if(!blob||typeof blob.getBytes!=='function')return true;
-  try{return !GF_JPEG情報を読む_60(blob);}catch(e){return true;}
+  try{return !GF_JPEG情報を読む_60(blob,true);}catch(e){return true;}
  });
  if(unsupported>=0)throw Error('gf3_document_jpeg_unsupported:image_'+(unsupported+1));
  const transition=(expected,next)=>GF3_DocumentStorage_(book,'transition',receipt,{expected,next});
