@@ -3,7 +3,7 @@ function GF3_DocumentStorage_(book,action,id,args){
  GF3_AssertBook_(book);
  if(!['health','read','insert','transition','attach'].includes(action))throw new Error('gf3_document_action');
  if(action!=='health'&&!/^TEST-GF3-[A-Z0-9-]{1,60}$/.test(id||''))throw new Error('gf3_document_id');
- if(['insert','transition','attach'].includes(action)&&!GF3_WriteEnabled_(book))throw new Error('gf3_document_disabled');
+ if(['insert','transition','attach'].includes(action)&&!GF3_DocumentWriteEnabled_(book))throw new Error('gf3_document_disabled');
  const token=PropertiesService.getScriptProperties().getProperty('GF3_SYNC_TEST_TOKEN')||'';
  if(token.length<32)throw new Error('gf3_document_token');
  const payload={action:action,id:id};
