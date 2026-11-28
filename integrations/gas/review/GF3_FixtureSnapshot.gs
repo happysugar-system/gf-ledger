@@ -2,7 +2,7 @@
 function GF3_ReadFixtureSnapshot_(){
  const book=GF3_DocumentUiOwner_();
  const specs=[
-  ['車両台帳','VehicleID',/^V9[0-9]{5}$/,['VehicleID','車種','区分/ステータス','管理区分','納車予定日','フォルダ備考']],
+  ['車両台帳','VehicleID',/^V9[0-9]{5}$/,['VehicleID','車種','区分/ステータス','管理区分','DriverID','現在使用者','納車予定日','納車可能日','納車確定日','フォルダ備考']],
   ['名変待ち管理','受付ID',/^[1-9][0-9]{0,3}$/,['受付ID','ステータス','割当VehicleID','DriverID','LINE受付ID','受付識別子']],
   ['ドライバーマスター','DriverID',/^D9[0-9]{5}$/,['DriverID','ステータス','割当VehicleID']]
  ];
