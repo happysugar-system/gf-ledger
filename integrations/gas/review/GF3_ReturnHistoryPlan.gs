@@ -6,9 +6,15 @@
  * Rich document URL preservation must be verified in the actual sheet adapter.
  */
 function GF3_ReturnHistoryPlan_(before,after,receipt){
- const norm=x=>String(x==null?'':x).trim();
- const id=norm(receipt&&receipt.id),operation=norm(receipt&&receipt.operation);
+ const id=String(receipt?.id??'').trim();
  if(!/^TEST-(?:GF3-|RETURN-)[A-Z0-9-]{1,70}$/.test(id))throw Error('gf3_return_receipt_invalid');
+ if(!/^V9\d{5}$/.test(String(before?.VehicleID??'').trim()))throw Error('gf3_return_vehicle_mismatch');
+ return GF3_CanonicalReturnHistoryPlan_(before,after,receipt);
+}
+function GF3_CanonicalReturnHistoryPlan_(before,after,receipt){
+ const norm=x=>String(x==null?'':x).trim();
+ const operation=norm(receipt?.operation);
+ if(!norm(receipt?.id))throw Error('gf3_return_receipt_invalid');
  if(operation!=='返却完了'||norm(receipt.state)!=='完了')
   throw Error('gf3_return_not_confirmed');
  const keys=['VehicleID','現在使用者','DriverID','前使用者','前DriverID','前使用者 車両書類',
@@ -18,7 +24,7 @@ function GF3_ReturnHistoryPlan_(before,after,receipt){
  for(const k of ['VehicleID','現在使用者','DriverID','区分/ステータス'])
   if(!Object.prototype.hasOwnProperty.call(after||{},k))
    throw Error('gf3_return_after_missing:'+k);
- if(norm(before.VehicleID)!==norm(after.VehicleID)||norm(receipt.vehicleId)!==norm(before.VehicleID)||!/^V9\d{5}$/.test(norm(before.VehicleID)))
+ if(norm(before.VehicleID)!==norm(after.VehicleID)||norm(receipt.vehicleId)!==norm(before.VehicleID)||!/^V\d{6}$/.test(norm(before.VehicleID)))
   throw Error('gf3_return_vehicle_mismatch');
  if(!norm(before['現在使用者'])||!norm(before.DriverID))
   throw Error('gf3_return_previous_driver_missing');

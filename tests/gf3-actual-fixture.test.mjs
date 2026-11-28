@@ -81,7 +81,7 @@ test('GF3 journals delivery and return, retries an interrupted return, and resto
       }
     }
   });
-  for (const name of ['GF3_FixtureProgress', 'GF3_ReturnHistoryPlan', 'GF3_ActualPlan', 'GF3_ActualFixtureWorker'])
+  for (const name of ['GF3_FixtureProgress', 'GF3_CanonicalRows', 'GF3_ReturnHistoryPlan', 'GF3_ActualPlan', 'GF3_ActualFixtureWorker'])
     vm.runInContext(source(name), context);
   const save = context.GF3_SaveActualFixture;
   const deliveryId = 'TEST-GF3-DELIVERY';

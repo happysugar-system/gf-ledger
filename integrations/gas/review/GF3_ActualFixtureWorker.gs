@@ -1,8 +1,17 @@
 /** GF3 actual worker: exact dummy rows, journal before mutation, atomic Sheets batch. */
 function GF3_ActualRows_(book){
- const vf=['VehicleID','区分/ステータス','DriverID','現在使用者','引渡し','前使用者','前DriverID','前使用者 車両書類','前々使用者','前々DriverID','前々使用者 車両書類','📄 最新車両書類','管理区分','納車可能日','納車確定日'];
- return [GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID','V900005',vf),GF3_AssignmentFixtureRow_(book,'名変待ち管理','受付ID','2',['受付ID','DriverID','ステータス','割当VehicleID','割当車番']),GF3_AssignmentFixtureRow_(book,'ドライバーマスター','DriverID','D999902',['DriverID','氏名','割当VehicleID','割当車番'])];
+ return GF3_CanonicalActualRows_(book,{vehicleId:'V900005',applicationId:'2',driverId:'D999902'},GF3_AssignmentFixtureRow_);
 }
+function GF3_SaveActualFixture(operation,date,id){
+ const book=GF3_DocumentUiOwner_();
+ const result=GF3_RunCanonicalActual_(book,operation,date,id,{
+  rows:GF3_ActualRows_,plan:GF3_ActualPlan_,storage:GF3_ActualStorage_,assertWrite:GF3_AssertActualWriteEnabled_
+ });
+ try{GF3_RefreshMonthlyDelivery_(book);}
+ catch(error){console.error('gf3_monthly_refresh_pending:'+error.message);}
+ return result;
+}
+
 function GF3_ActualCell_(row,k){
  const c=row.sheet.getRange(row.number,row.columns[k]+1);
  if(c.getFormula())throw Error('gf3_actual_formula:'+k);
@@ -15,7 +24,7 @@ function GF3_ActualCell_(row,k){
 function GF3_ActualSnapshot_(rows,shape){
  return rows.map((row,i)=>Object.fromEntries(Object.keys(shape?shape[i]:row.data).map(k=>[k,GF3_ActualCell_(row,k)])));
 }
-function GF3_ActualApply_(book,rows,from,to){
+function GF3_ActualApply_(book,rows,from,to,adapter){
  const current=GF3_ActualSnapshot_(rows,from);
  if(JSON.stringify(current)===JSON.stringify(to))return;
  if(JSON.stringify(current)!==JSON.stringify(from))throw Error('gf3_actual_snapshot_conflict');
@@ -29,30 +38,41 @@ function GF3_ActualApply_(book,rows,from,to){
  if(b.url)value.textFormatRuns=[{startIndex:0,format:{link:{uri:b.url}}}];
  requests.push({updateCells:{start:{sheetId:row.sheet.getSheetId(),rowIndex:row.number-1,columnIndex:row.columns[k]},rows:[{values:[value]}],fields:'userEnteredValue,textFormatRuns'}});
  }));
- GF3_AssertActualWriteEnabled_();
+ adapter.assertWrite();
  if(requests.length)Sheets.Spreadsheets.batchUpdate({requests},book.getId());
  SpreadsheetApp.flush();
- if(JSON.stringify(GF3_ActualSnapshot_(GF3_ActualRows_(book),to))!==JSON.stringify(to))throw Error('gf3_actual_readback');
+ if(JSON.stringify(GF3_ActualSnapshot_(adapter.rows(book),to))!==JSON.stringify(to))throw Error('gf3_actual_readback');
 }
-function GF3_SaveActualFixture(operation,date,id){
- const result=GF3_SaveActualFixtureLocked_(operation,date,id);
- try{GF3_RefreshMonthlyDelivery_(GF3_DocumentUiOwner_());}
- catch(error){console.error('gf3_monthly_refresh_pending:'+error.message);}
- return result;
+/** Caller supplies authorized workbook, row/receipt scope, journal and write guard. */
+function GF3_RunCanonicalVehicleReceipt_(book,identity,operation,date,id,journal,assertWrite){
+ const scope={...identity};
+ const scopedStorage=(target,action,receiptId,args)=>{
+  const fields={vehicle_id:scope.vehicleId,application_id:scope.applicationId,driver_id:scope.driverId};
+  const result=journal(target,action,receiptId,action==='insert'?{...args,...fields}:args);
+  if(action==='read'&&result&&(result.receipt_id!==receiptId||
+    Object.keys(fields).some(field=>result[field]!==fields[field])))
+   throw Error('gf3_actual_identity_mismatch');
+  return result;
+ };
+ return GF3_RunCanonicalActual_(book,operation,date,id,{
+  rows:target=>GF3_CanonicalActualRows_(target,scope),
+  plan:GF3_CanonicalActualPlan_,storage:scopedStorage,assertWrite
+ });
 }
-function GF3_SaveActualFixtureLocked_(operation,date,id){
- const book=GF3_DocumentUiOwner_(),lock=LockService.getScriptLock();
+
+function GF3_RunCanonicalActual_(book,operation,date,id,adapter){
+ const lock=LockService.getScriptLock();
  if(!['納車完了','返却完了','取消'].includes(operation))throw Error('gf3_actual_operation');
  if(!lock.tryLock(5000))throw Error('gf3_actual_busy');
  try{
- GF3_AssertActualWriteEnabled_();
- const rows=GF3_ActualRows_(book);
- let r=GF3_ActualStorage_(book,'read',id);
+ adapter.assertWrite();
+ const rows=adapter.rows(book);
+ let r=adapter.storage(book,'read',id);
  if(!r){
  if(operation==='取消')throw Error('gf3_actual_missing');
  const before=GF3_ActualSnapshot_(rows);
  const plain=before.map(row=>Object.fromEntries(Object.entries(row).map(([k,v])=>[k,v.url||v.value])));
- const patch=GF3_ActualPlan_(...plain,operation,date,id);
+ const patch=adapter.plan(...plain,operation,date,id);
  if(patch.vehicle['引渡し']&&!/y/i.test(rows[0].sheet
   .getRange(rows[0].number,rows[0].columns['引渡し']+1).getNumberFormat()))
   throw Error('gf3_actual_date_format');
@@ -62,8 +82,8 @@ function GF3_SaveActualFixtureLocked_(operation,date,id){
  const source=k==='前使用者 車両書類'?before[0]['📄 最新車両書類']:k==='前々使用者 車両書類'?before[0]['前使用者 車両書類']:null;
  after[i][k]=source?{...source}:{value:v,url:'',date:k==='引渡し'&&!!v};
  }));
- GF3_ActualStorage_(book,'insert',id,{kind:operation,actual_date:date,before_data:{rows:before},after_data:{rows:after}});
- r=GF3_ActualStorage_(book,'read',id);
+ adapter.storage(book,'insert',id,{kind:operation,actual_date:date,before_data:{rows:before},after_data:{rows:after}});
+ r=adapter.storage(book,'read',id);
  }
  if(operation!=='取消'&&(r.kind!==operation||r.actual_date!==date))throw Error('gf3_actual_replay_mismatch');
  const cancel=operation==='取消',initial=cancel?'完了':'待機',active=cancel?'取消処理中':'処理中',done=cancel?'取消済':'完了';
@@ -80,10 +100,10 @@ function GF3_SaveActualFixtureLocked_(operation,date,id){
  const f=order(from),t=order(to),current=GF3_ActualSnapshot_(rows,f);
  if(f.some((row,i)=>Object.keys(row).join('|')!==Object.keys(t[i]).join('|')))throw Error('gf3_actual_snapshot_invalid');
  if(r.state===done){if(!same(current,t))throw Error('gf3_actual_completed_conflict');return {state:done,receiptId:id,replayed:true};}
- if(r.state===initial){if(!same(current,f))throw Error('gf3_actual_snapshot_conflict');GF3_ActualStorage_(book,'transition',id,{expected:initial,next:active});}
+ if(r.state===initial){if(!same(current,f))throw Error('gf3_actual_snapshot_conflict');adapter.storage(book,'transition',id,{expected:initial,next:active});}
  else if(r.state!==active)throw Error('gf3_actual_state');
- GF3_ActualApply_(book,rows,f,t);
- GF3_ActualStorage_(book,'transition',id,{expected:active,next:done});
+ GF3_ActualApply_(book,rows,f,t,adapter);
+ adapter.storage(book,'transition',id,{expected:active,next:done});
  return {state:done,receiptId:id};
  }finally{lock.releaseLock();}
 }

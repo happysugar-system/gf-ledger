@@ -182,11 +182,5 @@ function GF3_MatchesReturnedAssignment_(current,returned){
 }
 
 function GF3_AssignmentFixtureRow_(book,name,key,id,fields){
- const sheet=GF3_AssertSheet_(book.getSheetByName(name));
- const columns=GF3_Columns_(sheet,[key,...fields]);
- const hits=sheet.getDataRange().getDisplayValues().slice(1)
-  .flatMap((row,i)=>row[columns[key]]===id?[{row,number:i+2}]:[]);
- if(hits.length!==1)throw Error('gf3_assignment_row_not_unique:'+name);
- const {row,number}=hits[0];
- return {sheet,key,id,columns,number,data:Object.fromEntries(fields.map(field=>[field,row[columns[field]]]))};
+ return GF3_CanonicalRow_(GF3_AssertSheet_(book.getSheetByName(name)),key,id,fields);
 }
