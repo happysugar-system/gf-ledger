@@ -65,9 +65,18 @@ else{if(page==='cars'){const a=filterVehicles(cars,query).filter(x=>matchesGroup
 
 if(page==='car'){const x=car();if(!x){go('cars');return;}h='<button class="back" data-page="cars">← 車両一覧へ</button><div class="box"><div class="row"><h2>'+safe(x['車番']||x.VehicleID)+'</h2><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><div class="muted">'+safe(x.VehicleID)+' ・ '+safe(x['管理区分'])+'</div><p>👤 現在使用者：<b>'+safe(x['現在使用者']||'なし')+'</b></p></div><div class="detailtabs">'+[['basic','基本情報'],['action','貸出・返却'],['schedule','予定'],['files','写真・書類'],['history','履歴']].map(([k,t])=>'<button data-tab="'+k+'" class="'+(detailTab===k?'active':'')+'">'+t+'</button>').join('')+'</div>';
 if(detailTab==='basic'){h+='<div class="box"><h2>車両台帳の編集（基本・契約情報）</h2><div class="notice">Ver.9デモと同じ画面構成です。実データを表示していますが、編集内容はまだ保存されません。</div><div class="detailtabs">'+groups.map(([n],i)=>'<button data-section="'+i+'" class="'+(ledgerSection===i?'active':'')+'">'+n+'</button>').join('')+'</div>'+groups[ledgerSection][1].map(i=>field(VEHICLE_HEADERS[i])).join('')+(gf3Host&&x.VehicleID==='V900005'&&ledgerSection===0?'<button class="action primary" data-fixture-save="model">車種を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">編集を破棄</button></div>';}
-if(detailTab==='action'){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
+if(detailTab==='action'&&(!gf3Host||x.VehicleID!=='V900005')){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
 if(gf3Host&&detailTab==='action'&&x.VehicleID==='V900005'){
  const assigned=x.DriverID==='D999902'&&waiting.some(r=>r['受付ID']==='2'&&r['ステータス']==='割当済'&&r['割当VehicleID']==='V900005')&&drivers.some(r=>r.DriverID==='D999902'&&r['割当VehicleID']==='V900005');
+ const pending=sessionStorage.getItem('gf3-actual-pending');
+ h+='<div class="box"><h2>納車・返却の実績</h2>'
+  +(pending?'<button class="action primary" data-fixture-actual="retry">前回の操作結果を確認・再試行</button>':
+   '<div class="field"><label for="gf3-actual-date">実施日</label><input id="gf3-actual-date" type="date"></div>'
+   +'<button class="action primary" data-fixture-actual="納車完了"'+(assigned&&x['区分/ステータス']==='空車'?'':' disabled')+'>納車完了</button>'
+   +'<button class="action primary" data-fixture-actual="返却完了"'+(assigned&&x['区分/ステータス']==='貸出中'?'':' disabled')+'>返却完了</button>'
+   +'<div class="field"><label for="gf3-actual-id">取消対象の実績受付ID</label><input id="gf3-actual-id" value="'+safe(sessionStorage.getItem('gf3-actual-last')||'')+'"></div>'
+   +'<button class="action secondary" data-fixture-actual="取消">実績を取り消す</button>')
+  +'</div>';
  const stages=['車両準備中','車両手配済み','名義変更前','名義変更中','名義変更済み'];
  h+='<div class="box"><h2>車両手配・進捗の検証保存</h2><p class="muted">検証車両 V900005／受付2のみ。貸出・返却の実績登録とは別の操作です。</p>'
   +(assigned?'':'<div class="notice">進捗保存は割当済みのときだけ使用できます。まず名変待ち・車両割当から割当を行ってください。</div>')
@@ -103,8 +112,50 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
   return;
 }alert('【割当プレビュー・保存なし】\\n'+person['氏名']+'\\n'+vehicle['車番']+'（'+vehicle.VehicleID+'）\\n\\n名変待ち管理・車両台帳・履歴には保存されません');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\\n'+car()['車番']+'\\n'+type+'：'+day+'\\n\\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
 let assignmentSaving=false;
+document.addEventListener('click',event=>{
+ const button=event.target.closest('button[data-fixture-actual]');
+ if(gf3Host&&button)saveFixtureActual(button.dataset.fixtureActual);
+});
+async function saveFixtureActual(operation){
+ if(fixtureSaving||assignmentSaving||carId!=='V900005')return;
+ let request;
+ if(operation==='retry'){
+  request=JSON.parse(sessionStorage.getItem('gf3-actual-pending')||'null');
+  if(!request)return;
+ }else{
+  const cancel=operation==='取消';
+  const date=cancel?'':$('gf3-actual-date').value;
+  const id=cancel?$('gf3-actual-id').value.trim():'TEST-GF3-'+crypto.randomUUID().toUpperCase();
+  if((!cancel&&!date)||!/^TEST-GF3-[A-Z0-9-]{1,70}$/.test(id)){
+   $('state').textContent='実施日または取消対象の受付IDを確認してください。';
+   return;
+  }
+  if(!confirm((cancel?id:date)+' の'+operation+'を検証台帳に反映しますか？'))return;
+  request={operation,date,id};
+  sessionStorage.setItem('gf3-actual-pending',JSON.stringify(request));
+ }
+ fixtureSaving=true;
+ try{
+  const result=await gasCall('GF3_SaveActualFixture',request.operation,request.date,request.id);
+  const cancel=request.operation==='取消';
+  if(result?.state!==(cancel?'取消済':'完了')||result.receiptId!==request.id)throw Error('実績状態が一致しません');
+  await readFixture();
+  sessionStorage.removeItem('gf3-actual-pending');
+  if(!cancel)sessionStorage.setItem('gf3-actual-last',request.id);
+  else if(sessionStorage.getItem('gf3-actual-last')===request.id)sessionStorage.removeItem('gf3-actual-last');
+  if(carId==='V900005')draft={...car()};
+  $('state').textContent=request.operation+'を確認しました。受付ID '+request.id;
+ }catch(error){
+  $('state').textContent='実績結果を確認できません。受付ID '+request.id+' ／ '+error.message;
+  if(/gf3_actual_(?:missing|identity_mismatch|date_invalid|delivery_conflict|return_conflict)\b|gf3_progress_date_invalid\b/.test(error.message))
+   sessionStorage.removeItem('gf3-actual-pending');
+ }finally{
+  fixtureSaving=false;
+  render();
+ }
+}
 async function saveFixtureAssignment(button,action){
- if(assignmentSaving)return;
+ if(assignmentSaving||fixtureSaving){button.disabled=false;return;}
  assignmentSaving=true;
  button.disabled=true;
  try{

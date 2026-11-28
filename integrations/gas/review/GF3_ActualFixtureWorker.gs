@@ -35,6 +35,7 @@ function GF3_ActualApply_(book,rows,from,to){
 }
 function GF3_SaveActualFixture(operation,date,id){
  const book=GF3_DocumentUiOwner_(),lock=LockService.getScriptLock();
+ if(!['納車完了','返却完了','取消'].includes(operation))throw Error('gf3_actual_operation');
  if(!lock.tryLock(5000))throw Error('gf3_actual_busy');
  try{
  const rows=GF3_ActualRows_(book);
@@ -44,6 +45,9 @@ function GF3_SaveActualFixture(operation,date,id){
  const before=GF3_ActualSnapshot_(rows);
  const plain=before.map(row=>Object.fromEntries(Object.entries(row).map(([k,v])=>[k,v.url||v.value])));
  const patch=GF3_ActualPlan_(...plain,operation,date,id);
+ if(patch.vehicle['引渡し']&&!/y/i.test(rows[0].sheet
+  .getRange(rows[0].number,rows[0].columns['引渡し']+1).getNumberFormat()))
+  throw Error('gf3_actual_date_format');
  const after=JSON.parse(JSON.stringify(before));
  [patch.vehicle,patch.waiting,patch.driver].forEach((p,i)=>Object.entries(p).forEach(([k,v])=>{
  if(!(k in after[i]))throw Error('gf3_actual_field');
@@ -60,7 +64,7 @@ function GF3_SaveActualFixture(operation,date,id){
  // JSONB reorders object keys; reconstruct in current sheet field order.
  const order=s=>rows.map((row,i)=>Object.fromEntries(Object.keys(row.data).map(k=>[k,{value:s[i][k].value,url:s[i][k].url,date:s[i][k].date}])));
  const f=order(from),t=order(to),current=GF3_ActualSnapshot_(rows);
- if(r.state===done){if(!same(current,t))throw Error('gf3_actual_completed_conflict');return {state:done,replayed:true};}
+ if(r.state===done){if(!same(current,t))throw Error('gf3_actual_completed_conflict');return {state:done,receiptId:id,replayed:true};}
  if(r.state===initial){if(!same(current,f))throw Error('gf3_actual_snapshot_conflict');GF3_ActualStorage_(book,'transition',id,{expected:initial,next:active});}
  else if(r.state!==active)throw Error('gf3_actual_state');
  GF3_ActualApply_(book,rows,f,t);

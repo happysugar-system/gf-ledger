@@ -10,7 +10,9 @@ function GF3_ActualPlan_(vehicle,waiting,driver,operation,date,receiptId){
  if(!/^TEST-GF3-[A-Z0-9-]{1,70}$/.test(receiptId))throw Error('gf3_actual_receipt_invalid');
  if(!date||GF3_ProgressDate_(date)!==date)throw Error('gf3_actual_date_invalid');
  if(operation==='納車完了'){
- if(vehicle['区分/ステータス']!=='空車'||vehicle['引渡し'])throw Error('gf3_actual_delivery_conflict');
+ if(vehicle['区分/ステータス']!=='空車'||
+    (vehicle['引渡し']&&GF3_ProgressDate_(vehicle['引渡し'])>date))
+  throw Error('gf3_actual_delivery_conflict');
  return {vehicle:{'区分/ステータス':'貸出中','引渡し':date},waiting:{},driver:{}};
  }
  if(operation!=='返却完了'||vehicle['区分/ステータス']!=='貸出中'||!vehicle['引渡し']||
