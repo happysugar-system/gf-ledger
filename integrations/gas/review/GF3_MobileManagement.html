@@ -180,6 +180,53 @@ const matchesGroup=(x,name)=>name==='すべて'||(name==='空車'?String(x['区�
 const planTypes=[['車検','車検予定日'],['12点検',' 12点検予定日'],['名義変更','名変予定日'],['整備',' 整備予定日'],['板金',' 板金予定日'],['納車予定','納車予定日'],['返却予定','返却予定日'],['代車開始予定','代車予定日'],['代車返却予定','代車返却予定日']];
 const validDriveLink=value=>{const raw=String(value||'').trim();if(!raw)return null;const id=raw.match(/^[a-zA-Z0-9_-]{25,}$/);if(id)return 'https://drive.google.com/drive/folders/'+encodeURIComponent(raw);try{const u=new URL(raw);if(u.protocol!=='https:'||!['drive.google.com','docs.google.com'].includes(u.hostname))return null;return u.href;}catch{return null;}};
 const fileLink=(k,value)=>{const url=validDriveLink(value);return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+(url?'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer">📂 Google Driveで開く ↗</a>':safe(value||'未登録（台帳にリンクがありません）'))+'</div></div>';};
+const fixtureMedia=new Map();
+async function loadFixtureMedia(id){
+ try{fixtureMedia.set(id,await gasCall('GF3_ReadFixtureMedia',id));}
+ catch(_){fixtureMedia.set(id,{error:true});}
+ if(carId===id&&detailTab==='files'&&page==='car')render();
+}
+function fixtureMediaView(vehicle){
+ const media=fixtureMedia.get(vehicle.VehicleID);
+ const links=media?.links||{};
+ const editable=vehicle.VehicleID==='V900005';
+ return (editable?documentValidationLink():'')+'<div class="box"><h2>写真・書類</h2>'
+  +(media?.error?'<p>台帳のリンクを取得できませんでした。</p>':media?'':'<p>台帳のリンクを読み込んでいます…</p>')
+  +Object.entries(links).map(([label,url])=>fileLink(label,url)).join('')
+  +(media?.recent||[]).map(({date,url},i)=>fileLink((i===0?'最新の撮影':'前回の撮影')+' '+date,url)).join('')
+  +(media?.photoWriteEnabled?'<label for="gf3-photo-date">撮影日</label><input id="gf3-photo-date" type="date">'
+   +'<label for="gf3-photo-files">車両状態写真（JPEG、最大5枚）</label><input id="gf3-photo-files" type="file" accept="image/jpeg" multiple>'
+   +'<button class="action primary" data-fixture-photo="1">車両状態写真を保存</button>':'')
+  +(editable?'<h3>フォルダ備考</h3>'+field('フォルダ備考')+'<button class="action primary" data-fixture-save="1">フォルダ備考を検証台帳に保存</button>':'')
+  +'</div>';
+}
+document.addEventListener('click',event=>{
+ const button=event.target.closest('button[data-fixture-photo]');
+ if(gf3Host&&button)saveFixturePhotos(button);
+});
+async function saveFixturePhotos(button){
+ if(fixtureSaving||carId!=='V900005')return;
+ const id=carId,date=$('gf3-photo-date').value,files=Array.from($('gf3-photo-files').files);
+ if(!date||!files.length||files.length>5||files.some(file=>file.type!=='image/jpeg'||file.size>2750000)){
+  $('state').textContent='撮影日とJPEG写真1〜5枚（各2.75 MB以下）を選択してください。';
+  return;
+ }
+ fixtureSaving=true;
+ button.disabled=true;
+ try{
+  const images=await Promise.all(files.map(file=>new Promise((resolve,reject)=>{
+   const reader=new FileReader();
+   reader.onload=()=>resolve(reader.result);
+   reader.onerror=reject;
+   reader.readAsDataURL(file);
+  })));
+  const result=await gasCall('GF3_SaveFixturePhotos',id,date,images);
+  if(result?.saved!==files.length)throw Error('保存件数が一致しません。');
+  $('state').textContent='写真を'+result.saved+'枚保存しました。';
+  await loadFixtureMedia(id);
+ }catch(error){$('state').textContent='写真の保存を確認できませんでした。'+(error?.message||'');}
+ finally{fixtureSaving=false;button.disabled=false;}
+}
 let fixtureSchedules=[];
 async function loadFixtureSchedules(){
  try{fixtureSchedules=await gasCall('GF3_ReadFixtureSchedules');}
@@ -273,7 +320,8 @@ if(gf3Host&&detailTab==='action'&&x.VehicleID==='V900005'){
 }
 if(detailTab==='schedule'){h+='<div class="box"><h2>この車両の予定</h2><p>📅 車検満了日：'+safe(x['車検満了日']||'未登録')+'</p><p class="muted">引渡し予定は納車予定日として管理します。</p><div class="field"><label>予定種類</label><select id="planType">'+planTypes.map(([name])=>'<option>'+safe(name)+'</option>').join('')+'</select></div><div class="field"><label>予定日</label><input type="date" id="planDate"></div><button class="action primary" data-plan-preview="1">予定を登録（保存前確認のみ）</button><h3>車両台帳に登録されている予定日</h3>'+scheduleRows(scheduleItems(x.VehicleID))+'</div>';}
 
-if(detailTab==='files'){if(x.VehicleID==='V900005')h+=documentValidationLink();h+='<div class="box"><h2>📷 写真・書類</h2><p class="muted">車両台帳に登録済みのDriveリンクを開きます。アクセス権限が必要な場合があります。</p><h3>保存済みの写真・書類</h3>'+[57,58,61].map(i=>{const k=VEHICLE_HEADERS[i];return fileLink(k,x[k]);}).join('')+'<h3>写真・書類を追加</h3><div class="field"><label>車両状態写真を選択（複数可）</label><input type="file" accept="image/*" multiple></div><div class="field"><label>車両書類3点を選択（複数可）</label><input type="file" accept="image/*,.pdf" multiple></div><button class="action secondary" data-info="撮影・ファイル選択は可能ですが、アップロードとAI判定は未接続です">📤 写真・書類を保存（準備中）</button><h3>フォルダ備考</h3><p class="muted">V900005のフォルダ備考だけ検証台帳へ保存できます。その他の操作は未接続です。</p>'+field('フォルダ備考')+''+(gf3Host&&x.VehicleID==='V900005'?'<button class="action primary" data-fixture-save="1">フォルダ備考を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">備考の変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">備考の変更を破棄</button></div>';}
+if(detailTab==='files'&&gf3Host)h+=fixtureMediaView(x);
+if(detailTab==='files'&&!gf3Host){if(x.VehicleID==='V900005')h+=documentValidationLink();h+='<div class="box"><h2>📷 写真・書類</h2><p class="muted">車両台帳に登録済みのDriveリンクを開きます。アクセス権限が必要な場合があります。</p><h3>保存済みの写真・書類</h3>'+[57,58,61].map(i=>{const k=VEHICLE_HEADERS[i];return fileLink(k,x[k]);}).join('')+'<h3>写真・書類を追加</h3><div class="field"><label>車両状態写真を選択（複数可）</label><input type="file" accept="image/*" multiple></div><div class="field"><label>車両書類3点を選択（複数可）</label><input type="file" accept="image/*,.pdf" multiple></div><button class="action secondary" data-info="撮影・ファイル選択は可能ですが、アップロードとAI判定は未接続です">📤 写真・書類を保存（準備中）</button><h3>フォルダ備考</h3><p class="muted">V900005のフォルダ備考だけ検証台帳へ保存できます。その他の操作は未接続です。</p>'+field('フォルダ備考')+''+(gf3Host&&x.VehicleID==='V900005'?'<button class="action primary" data-fixture-save="1">フォルダ備考を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">備考の変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">備考の変更を破棄</button></div>';}
 
 if(detailTab==='history'){h+='<div class="box"><h2>操作履歴</h2><p class="muted">操作履歴の取得は未接続です。台帳の管理項目のみ表示します。</p>'+section.history.map(i=>{const k=VEHICLE_HEADERS[i];return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+safe(x[k]||'未登録')+'</div></div>';}).join('')+'</div>';}
 }
@@ -296,7 +344,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
   t.disabled=false;
   $('state').textContent='割当操作は受付2・V900005の組み合わせで検証できます。';
   return;
-}alert('【割当プレビュー・保存なし】\\n'+person['氏名']+'\\n'+vehicle['車番']+'（'+vehicle.VehicleID+'）\\n\\n名変待ち管理・車両台帳・履歴には保存されません');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;if(gf3Host&&detailTab==='schedule')loadFixtureSchedules();render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\\n'+car()['車番']+'\\n'+type+'：'+day+'\\n\\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
+}alert('【割当プレビュー・保存なし】\\n'+person['氏名']+'\\n'+vehicle['車番']+'（'+vehicle.VehicleID+'）\\n\\n名変待ち管理・車両台帳・履歴には保存されません');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;if(gf3Host&&detailTab==='schedule')loadFixtureSchedules();if(gf3Host&&detailTab==='files')loadFixtureMedia(carId);render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\\n'+car()['車番']+'\\n'+type+'：'+day+'\\n\\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
 let assignmentSaving=false;
 document.addEventListener('click',event=>{
  const button=event.target.closest('button[data-fixture-actual]');
