@@ -196,6 +196,16 @@ else{if(page==='cars'){const a=filterVehicles(cars,query).filter(x=>matchesGroup
 if(page==='car'){const x=car();if(!x){go('cars');return;}h='<button class="back" data-page="cars">← 車両一覧へ</button><div class="box"><div class="row"><h2>'+safe(x['車番']||x.VehicleID)+'</h2><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><div class="muted">'+safe(x.VehicleID)+' ・ '+safe(x['管理区分'])+'</div><p>👤 現在使用者：<b>'+safe(x['現在使用者']||'なし')+'</b></p></div><div class="detailtabs">'+[['basic','基本情報'],['action','貸出・返却'],['schedule','予定'],['files','写真・書類'],['history','履歴']].map(([k,t])=>'<button data-tab="'+k+'" class="'+(detailTab===k?'active':'')+'">'+t+'</button>').join('')+'</div>';
 if(detailTab==='basic'){h+='<div class="box"><h2>車両台帳の編集（基本・契約情報）</h2><div class="notice">Ver.9デモと同じ画面構成です。実データを表示していますが、編集内容はまだ保存されません。</div><div class="detailtabs">'+groups.map(([n],i)=>'<button data-section="'+i+'" class="'+(ledgerSection===i?'active':'')+'">'+n+'</button>').join('')+'</div>'+groups[ledgerSection][1].map(i=>field(VEHICLE_HEADERS[i])).join('')+(gf3Host&&x.VehicleID==='V900005'&&ledgerSection===0?'<button class="action primary" data-fixture-save="model">車種を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">編集を破棄</button></div>';}
 if(detailTab==='action'){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
+if(gf3Host&&detailTab==='action'&&x.VehicleID==='V900005'){
+ const assigned=x.DriverID==='D999902'&&waiting.some(r=>r['受付ID']==='2'&&r['ステータス']==='割当済'&&r['割当VehicleID']==='V900005')&&drivers.some(r=>r.DriverID==='D999902'&&r['割当VehicleID']==='V900005');
+ const stages=['車両準備中','車両手配済み','名義変更前','名義変更中','名義変更済み'];
+ h+='<div class="box"><h2>車両手配・進捗の検証保存</h2><p class="muted">検証車両 V900005／受付2のみ。貸出・返却の実績登録とは別の操作です。</p>'
+  +(assigned?'':'<div class="notice">進捗保存は割当済みのときだけ使用できます。まず名変待ち・車両割当から割当を行ってください。</div>')
+  +'<div class="field"><label>管理区分</label><select id="gf3-progress-stage">'+stages.map(stage=>'<option value="'+safe(stage)+'"'+(stage===x['管理区分']?' selected':'')+'>'+safe(stage)+'</option>').join('')+'</select></div>'
+  +'<div class="field"><label>納車可能日</label><input id="gf3-progress-available" type="date" value="'+safe(toDate(x['納車可能日']))+'"></div>'
+  +'<div class="field"><label>納車確定日</label><input id="gf3-progress-confirmed" type="date" value="'+safe(toDate(x['納車確定日']))+'"></div>'
+  +'<button class="action primary" data-fixture-progress="1"'+(assigned?'':' disabled')+'>進捗を検証台帳に保存・再読取</button></div>';
+}
 if(detailTab==='schedule'){h+='<div class="box"><h2>この車両の予定</h2><p>📅 車検満了日：'+safe(x['車検満了日']||'未登録')+'</p><p class="muted">引渡し予定は納車予定日として管理します。</p><div class="field"><label>予定種類</label><select id="planType">'+planTypes.map(([name])=>'<option>'+safe(name)+'</option>').join('')+'</select></div><div class="field"><label>予定日</label><input type="date" id="planDate"></div><button class="action primary" data-plan-preview="1">予定を登録（保存前確認のみ）</button><h3>車両台帳に登録されている予定日</h3>'+scheduleRows(scheduleItems(x.VehicleID))+'</div>';}
 
 if(detailTab==='files'){if(x.VehicleID==='V900005')h+=documentValidationLink();h+='<div class="box"><h2>📷 写真・書類</h2><p class="muted">車両台帳に登録済みのDriveリンクを開きます。アクセス権限が必要な場合があります。</p><h3>保存済みの写真・書類</h3>'+[57,58,61].map(i=>{const k=VEHICLE_HEADERS[i];return fileLink(k,x[k]);}).join('')+'<h3>写真・書類を追加</h3><div class="field"><label>車両状態写真を選択（複数可）</label><input type="file" accept="image/*" multiple></div><div class="field"><label>車両書類3点を選択（複数可）</label><input type="file" accept="image/*,.pdf" multiple></div><button class="action secondary" data-info="撮影・ファイル選択は可能ですが、アップロードとAI判定は未接続です">📤 写真・書類を保存（準備中）</button><h3>フォルダ備考</h3><p class="muted">V900005のフォルダ備考だけ検証台帳へ保存できます。その他の操作は未接続です。</p>'+field('フォルダ備考')+''+(gf3Host&&x.VehicleID==='V900005'?'<button class="action primary" data-fixture-save="1">フォルダ備考を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">備考の変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">備考の変更を破棄</button></div>';}
@@ -214,7 +224,7 @@ $('content').innerHTML=h;
 function preview(){const x=car(),diff=changed();alert('【仮編集・保存なし】\n'+(diff.length?diff.map(k=>k.trim()+': '+String(x[k]??'')+' → '+String(draft[k]??'')).join('\n'):'変更なし')+'\n\nSupabase・スプレッドシートには保存されません');}
 document.addEventListener('input',e=>{if(e.target.id==='search'){query=e.target.value;const pos=e.target.selectionStart;render();const el=$('search');el.focus();el.setSelectionRange(pos,pos);return;}const k=e.target.dataset.field;if(k&&draft&&!locked.has(k)&&VEHICLE_HEADERS.includes(k))draft[k]=e.target.value;});
 document.addEventListener('change',e=>{const id=e.target.dataset.assignment;if(id)selectedAssignments[id]=e.target.value;});
-document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;if(d.fixtureCancel&&gf3Host){saveFixtureAssignment(t,'cancel');return;}if(d.fixtureSave&&gf3Host){saveFixtureField(t,d.fixtureSave==='model'?'車種':'フォルダ備考');return;}if(d.page){go(d.page);return;}if(d.car){openCar(d.car);return;}if(d.carview){carView=d.carview;render();return;}if(d.assignPreview){const person=waiting.find(x=>x['受付ID']===d.assignPreview),id=selectedAssignments[d.assignPreview],vehicle=cars.find(x=>x.VehicleID===id);if(!person||!vehicle){alert('空車を選択してください');return;}if(gf3Host){
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;if(d.fixtureProgress&&gf3Host){saveFixtureProgress(t);return;}if(d.fixtureCancel&&gf3Host){saveFixtureAssignment(t,'cancel');return;}if(d.fixtureSave&&gf3Host){saveFixtureField(t,d.fixtureSave==='model'?'車種':'フォルダ備考');return;}if(d.page){go(d.page);return;}if(d.car){openCar(d.car);return;}if(d.carview){carView=d.carview;render();return;}if(d.assignPreview){const person=waiting.find(x=>x['受付ID']===d.assignPreview),id=selectedAssignments[d.assignPreview],vehicle=cars.find(x=>x.VehicleID===id);if(!person||!vehicle){alert('空車を選択してください');return;}if(gf3Host){
   t.disabled=true;
   if(d.assignPreview==='2'&&id==='V900005'){saveFixtureAssignment(t,'assign');return;}
   t.disabled=false;
@@ -242,6 +252,33 @@ async function saveFixtureAssignment(button,action){
    assignmentSaving=false;
    button.disabled=false;
  }
+}
+async function saveFixtureProgress(button){
+ if(fixtureSaving||carId!=='V900005')return;
+ const x=car();
+ if(!x)return;
+ const fields={'管理区分':$('gf3-progress-stage')?.value||'',
+  '納車可能日':$('gf3-progress-available')?.value||'',
+  '納車確定日':$('gf3-progress-confirmed')?.value||''};
+ const expected={'管理区分':String(x['管理区分']||''),
+  '納車可能日':toDate(x['納車可能日']),
+  '納車確定日':toDate(x['納車確定日'])};
+ fixtureSaving=true;button.disabled=true;
+ try{
+  const result=await gasCall('GF3_SaveFixtureProgress','V900005',expected,fields);
+  await readFixture();
+  const actual=cars.find(row=>row.VehicleID==='V900005');
+  if(!['saved','unchanged'].includes(result?.status)||!actual||
+    actual['管理区分']!==fields['管理区分']||
+    toDate(actual['納車可能日'])!==fields['納車可能日']||
+    toDate(actual['納車確定日'])!==fields['納車確定日'])
+    throw Error('進捗保存後の再読取が一致しません');
+  if(carId==='V900005')draft={...actual};
+  $('state').textContent='V900005｜進捗保存・再読取を確認しました';
+  render();
+ }catch(error){
+  $('state').textContent='進捗保存を確認できません：'+error.message;
+ }finally{fixtureSaving=false;button.disabled=false;}
 }
 async function readFixture(){
   const result=await gasCall('GF3_ReadFixtureSnapshot');
