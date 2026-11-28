@@ -1,6 +1,6 @@
 /** GF3 actual worker: exact dummy rows, journal before mutation, atomic Sheets batch. */
 function GF3_ActualRows_(book){
- const vf=['VehicleID','区分/ステータス','DriverID','現在使用者','引渡し','前使用者','前DriverID','前使用者 車両書類','前々使用者','前々DriverID','前々使用者 車両書類','📄 最新車両書類'];
+ const vf=['VehicleID','区分/ステータス','DriverID','現在使用者','引渡し','前使用者','前DriverID','前使用者 車両書類','前々使用者','前々DriverID','前々使用者 車両書類','📄 最新車両書類','管理区分','納車可能日','納車確定日'];
  return [GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID','V900005',vf),GF3_AssignmentFixtureRow_(book,'名変待ち管理','受付ID','2',['受付ID','DriverID','ステータス','割当VehicleID','割当車番']),GF3_AssignmentFixtureRow_(book,'ドライバーマスター','DriverID','D999902',['DriverID','氏名','割当VehicleID','割当車番'])];
 }
 function GF3_ActualCell_(row,k){
@@ -12,11 +12,11 @@ function GF3_ActualCell_(row,k){
  const value=c.getValue();
  return {value:value instanceof Date?Utilities.formatDate(value,'Asia/Tokyo','yyyy-MM-dd'):String(value??''),url:links.length?links[0].getLinkUrl():'',date:value instanceof Date};
 }
-function GF3_ActualSnapshot_(rows){
- return rows.map(row=>Object.fromEntries(Object.keys(row.data).map(k=>[k,GF3_ActualCell_(row,k)])));
+function GF3_ActualSnapshot_(rows,shape){
+ return rows.map((row,i)=>Object.fromEntries(Object.keys(shape?shape[i]:row.data).map(k=>[k,GF3_ActualCell_(row,k)])));
 }
 function GF3_ActualApply_(book,rows,from,to){
- const current=GF3_ActualSnapshot_(rows);
+ const current=GF3_ActualSnapshot_(rows,from);
  if(JSON.stringify(current)===JSON.stringify(to))return;
  if(JSON.stringify(current)!==JSON.stringify(from))throw Error('gf3_actual_snapshot_conflict');
  const requests=[];
@@ -29,15 +29,17 @@ function GF3_ActualApply_(book,rows,from,to){
  if(b.url)value.textFormatRuns=[{startIndex:0,format:{link:{uri:b.url}}}];
  requests.push({updateCells:{start:{sheetId:row.sheet.getSheetId(),rowIndex:row.number-1,columnIndex:row.columns[k]},rows:[{values:[value]}],fields:'userEnteredValue,textFormatRuns'}});
  }));
+ GF3_AssertActualWriteEnabled_();
  if(requests.length)Sheets.Spreadsheets.batchUpdate({requests},book.getId());
  SpreadsheetApp.flush();
- if(JSON.stringify(GF3_ActualSnapshot_(GF3_ActualRows_(book)))!==JSON.stringify(to))throw Error('gf3_actual_readback');
+ if(JSON.stringify(GF3_ActualSnapshot_(GF3_ActualRows_(book),to))!==JSON.stringify(to))throw Error('gf3_actual_readback');
 }
 function GF3_SaveActualFixture(operation,date,id){
  const book=GF3_DocumentUiOwner_(),lock=LockService.getScriptLock();
  if(!['納車完了','返却完了','取消'].includes(operation))throw Error('gf3_actual_operation');
  if(!lock.tryLock(5000))throw Error('gf3_actual_busy');
  try{
+ GF3_AssertActualWriteEnabled_();
  const rows=GF3_ActualRows_(book);
  let r=GF3_ActualStorage_(book,'read',id);
  if(!r){
@@ -62,8 +64,15 @@ function GF3_SaveActualFixture(operation,date,id){
  const from=(cancel?r.after_data:r.before_data).rows,to=(cancel?r.before_data:r.after_data).rows;
  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
  // JSONB reorders object keys; reconstruct in current sheet field order.
- const order=s=>rows.map((row,i)=>Object.fromEntries(Object.keys(row.data).map(k=>[k,{value:s[i][k].value,url:s[i][k].url,date:s[i][k].date}])));
- const f=order(from),t=order(to),current=GF3_ActualSnapshot_(rows);
+ const order=s=>rows.map((row,i)=>Object.fromEntries(Object.keys(row.data).flatMap(k=>{
+  const cell=s[i][k];
+  if(!cell&&i===0&&['管理区分','納車可能日','納車確定日'].includes(k))return [];
+  if(!cell||typeof cell.value!=='string'||typeof cell.url!=='string'||typeof cell.date!=='boolean')
+   throw Error('gf3_actual_snapshot_invalid');
+  return [[k,{value:cell.value,url:cell.url,date:cell.date}]];
+ })));
+ const f=order(from),t=order(to),current=GF3_ActualSnapshot_(rows,f);
+ if(f.some((row,i)=>Object.keys(row).join('|')!==Object.keys(t[i]).join('|')))throw Error('gf3_actual_snapshot_invalid');
  if(r.state===done){if(!same(current,t))throw Error('gf3_actual_completed_conflict');return {state:done,receiptId:id,replayed:true};}
  if(r.state===initial){if(!same(current,f))throw Error('gf3_actual_snapshot_conflict');GF3_ActualStorage_(book,'transition',id,{expected:initial,next:active});}
  else if(r.state!==active)throw Error('gf3_actual_state');

@@ -11,20 +11,28 @@ function GF3_ReadFixtureSnapshot_(){
   const sheet=GF3_AssertSheet_(book.getSheetByName(name));
   const cols=GF3_Columns_(sheet,fields);
   const seen=new Set();
-  sheets[name]=sheet.getDataRange().getDisplayValues().slice(1)
+  const [head,...data]=sheet.getDataRange().getDisplayValues();
+  const extra=name==='車両台帳'?['車番','車検満了日','車検予定日',' 12点検予定日','名変予定日',
+    ' 整備予定日',' 板金予定日','返却予定日','代車予定日','代車返却予定日']:[];
+  extra.forEach(field=>{
+   const hits=head.flatMap((header,i)=>header.trim()===field.trim()?[i]:[]);
+   if(hits.length===1)cols[field]=hits[0];
+  });
+  sheets[name]=data
    .filter(row=>pattern.test(row[cols[key]]))
    .map(row=>{
     const id=row[cols[key]];
     if(seen.has(id))throw Error('gf3_duplicate_fixture');
     seen.add(id);
-    return Object.fromEntries(fields.map(field=>{
+    return Object.fromEntries(Object.keys(cols).map(field=>{
      const value=row[cols[field]]||'';
      const restricted=field==='DriverID'?/^D9[0-9]{5}$/:field==='割当VehicleID'?/^V9[0-9]{5}$/:field==='LINE受付ID'?/^TEST-[A-Z0-9-]+$/:field==='受付識別子'?/^[a-f0-9]{64}$/:null;
      return [field,restricted&&!restricted.test(value)?'':value];
     }));
    });
  }
- return {environment:'gf3',sheets};
+ const actualWriteEnabled=PropertiesService.getScriptProperties().getProperty('GF3_ACTUAL_TEST_ENABLED')==='true';
+ return {environment:'gf3',sheets,actualWriteEnabled};
 }
 function GF3_ReadFixtureSnapshot(){return GF3_ReadFixtureSnapshot_();}
 

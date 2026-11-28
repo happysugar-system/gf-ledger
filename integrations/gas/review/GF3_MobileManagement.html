@@ -182,10 +182,22 @@ const validDriveLink=value=>{const raw=String(value||'').trim();if(!raw)return n
 const fileLink=(k,value)=>{const url=validDriveLink(value);return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+(url?'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer">📂 Google Driveで開く ↗</a>':safe(value||'未登録（台帳にリンクがありません）'))+'</div></div>';};
 const scheduleItems=(onlyId=null)=>{const out=[];for(const x of cars){if(onlyId&&x.VehicleID!==onlyId)continue;for(const [name,k] of planTypes){const v=x[k];if(v)out.push({date:String(v),type:name,plate:x['車番'],id:x.VehicleID});}}return out.sort((a,b)=>a.date.localeCompare(b.date));};
 const scheduleRows=items=>items.length?items.map(v=>'<button class="item" data-car="'+safe(v.id)+'"><strong>'+safe(v.date)+'　'+safe(v.type)+'</strong><small>'+safe(v.plate)+'</small></button>').join(''):'<p class="muted">登録済みの予定はありません</p>';
+let actualDeliveryMonths=null,actualDeliveryError=false,actualWriteEnabled=false;
+async function loadActualDeliveryMonths(){
+ actualDeliveryMonths=null;
+ actualDeliveryError=false;
+ try{
+  const rows=await gasCall('GF3_ReadActualDeliveryMonths');
+  actualDeliveryMonths=new Map(rows.map(row=>[row.month,row.delivered]));
+ }catch(_){
+  actualDeliveryError=true;
+ }
+ if(page==='schedule')render();
+}
 function monthlyDeliverySummary(){
  const months=new Map();
  for(const vehicle of cars){
-   for(const [field,type] of [['納車予定日','planned'],['引渡し','delivered']]){
+   for(const [field,type] of [['納車予定日','planned']]){
      const iso=toDate(vehicle[field]);
      if(!iso)continue;
      const month=iso.slice(0,7);
@@ -194,18 +206,23 @@ function monthlyDeliverySummary(){
      months.set(month,counts);
    }
  }
- return '<div class="box"><h3>月別納車の参考集計（検証台帳）</h3><p class="muted">車両台帳の納車予定日・引渡しから算出する画面上の件数です。既存の「月別納車管理」シートへの反映・実績履歴との突合は未接続です。</p>'+([...months].sort(([a],[b])=>b.localeCompare(a))
+ if(!actualDeliveryMonths)return '<div class="box"><h3>月別納車集計</h3><p class="muted">'+
+  (actualDeliveryError?'納車実績を取得できませんでした。予定画面を開き直してください。':'納車実績を読み込んでいます…')+'</p></div>';
+ for(const [month,delivered] of actualDeliveryMonths){
+  months.set(month,{planned:months.get(month)?.planned||0,delivered});
+ }
+ return '<div class="box"><h3>月別納車集計（検証）</h3>'+([...months].sort(([a],[b])=>b.localeCompare(a))
    .map(([month,counts])=>'<p>'+safe(month)+'　予定 '+counts.planned+'件 ／ 引渡し実績 '+counts.delivered+'件</p>').join('')
    ||'<p class="muted">納車予定と引渡し実績はありません。</p>')+'</div>';
 }
 function nav(){const opts=[['home','🏠','ホーム'],['cars','🚗','車両'],['drivers','👤','ドライバー'],['schedule','📅','予定']];$('nav').innerHTML=opts.map(([p,i,t])=>'<button data-page="'+p+'" class="'+((page===p)||(p==='cars'&&page==='car')?'active':'')+'"><b>'+i+'</b>'+t+'</button>').join('');}
-function go(p){page=p;draft=null;render();window.scrollTo(0,0);}
+function go(p){page=p;draft=null;if(gf3Host&&p==='schedule')loadActualDeliveryMonths();render();window.scrollTo(0,0);}
 function openCar(id){carId=id;detailTab='basic';ledgerSection=0;draft={...car()};page='car';render();window.scrollTo(0,0);}
 function changed(){const x=car();return Object.keys(draft||{}).filter(k=>String(x[k]??'')!==String(draft[k]??''));}
 function render(){nav();let h='';
 if(!ready){$('content').innerHTML='<div class="box">車両データを読み込んでいます…</div>';return;}
 if(page==='home'){h='<h2>今日の管理</h2><div class="stats"><div class="box stat"><strong>'+cars.length+'</strong><small>登録車両</small></div><div class="box stat"><strong>'+cars.filter(x=>x['区分/ステータス']==='貸出中').length+'</strong><small>貸出中</small></div><div class="box stat"><strong>'+cars.filter(x=>x['管理区分']&&x['管理区分']!=='通常管理').length+'</strong><small>要確認</small></div></div><h2>何をしますか？</h2><button class="action" data-page="cars">🚗 車両を探す・編集する<span>車両台帳63項目・貸出返却・予定・写真・書類</span></button><button class="action" data-page="drivers">👤 ドライバーを探す・登録する<span>次の開発対象：現在は車両台帳の使用者情報のみ</span></button><button class="action" data-page="schedule">📅 車両の予定を見る<span>車検・返却・代車など</span></button>'+documentValidationLink();}
-if(page==='cars'&&carView==='waiting'){const available=cars.filter(x=>String(x['区分/ステータス']||'').trim()==='空車');h='<h2>名変待ち・車両割当</h2><div class="detailtabs"><button data-carview="vehicles">車両一覧</button><button class="active" data-carview="waiting">名変待ち・車両割当（'+waiting.length+'）</button></div><div class="notice">名変待ち管理シートの読込み用スナップショットです。割当はプレビューのみ。最新情報・二重割当の確認と保存処理は未接続です。</div>'+(waitingSyncedAt?'<p class="muted">取込日時：'+safe(new Date(waitingSyncedAt).toLocaleString('ja-JP'))+'</p>':'')+(waitingError?'<div class="box">名変待ちデータの取得エラー：'+safe(waitingError)+'</div>':'')+waiting.filter(x=>x['ステータス']==='名変待ち'&&!x['割当VehicleID']).map(x=>'<div class="box"><h3>'+safe(gf3Host?x['受付ID']:x['氏名'])+'</h3><p class="muted">'+safe(x['所属会社名']||'会社未登録')+' ・ '+safe(x['稼働エリア']||'エリア未登録')+' ・ '+safe(x['希望日']||'希望日未登録')+'</p><p class="muted">進捗：'+safe(x['進捗']||'未登録')+' / 備考：'+safe(x['備考']||'なし')+'</p><div class="field"><label>割り当てる空車を選択</label><select data-assignment="'+safe(x['受付ID'])+'"><option value="">車両を選択してください</option>'+available.map(v=>'<option value="'+safe(v.VehicleID)+'" '+(selectedAssignments[x['受付ID']]===v.VehicleID?'selected':'')+'>'+safe(v['車番'])+' / '+safe(v['車種'])+' / '+safe(v.VehicleID)+'</option>').join('')+'</select></div><button class="action primary" data-assign-preview="'+safe(x['受付ID'])+'">'+(gf3Host?'照合して検証台帳に割当':'この車両を割り当てる（確認のみ）')+'</button></div>').join('')+'<div class="box"><p class="muted">未割当の名変待ち：'+waiting.filter(x=>x['ステータス']==='名変待ち'&&!x['割当VehicleID']).length+'件 / 空車候補：'+available.length+'台</p></div>';}
+if(page==='cars'&&carView==='waiting'){const assignedIds=new Set([...waiting,...drivers].map(row=>row['割当VehicleID']).filter(Boolean));const available=cars.filter(x=>String(x['区分/ステータス']||'').trim()==='空車'&&(!gf3Host||(!x.DriverID&&!x['現在使用者']&&!assignedIds.has(x.VehicleID))));h='<h2>名変待ち・車両割当</h2><div class="detailtabs"><button data-carview="vehicles">車両一覧</button><button class="active" data-carview="waiting">名変待ち・車両割当（'+waiting.length+'）</button></div><div class="notice">'+(gf3Host?'検証対象は受付2とV900005です。保存時に3シートの割当状態を照合します。':'名変待ち管理シートの読込み用スナップショットです。割当はプレビューのみ。最新情報・二重割当の確認と保存処理は未接続です。')+'</div>'+(waitingSyncedAt?'<p class="muted">取込日時：'+safe(new Date(waitingSyncedAt).toLocaleString('ja-JP'))+'</p>':'')+(waitingError?'<div class="box">名変待ちデータの取得エラー：'+safe(waitingError)+'</div>':'')+waiting.filter(x=>x['ステータス']==='名変待ち'&&!x['割当VehicleID']).map(x=>'<div class="box"><h3>'+safe(gf3Host?x['受付ID']:x['氏名'])+'</h3><p class="muted">'+safe(x['所属会社名']||'会社未登録')+' ・ '+safe(x['稼働エリア']||'エリア未登録')+' ・ '+safe(x['希望日']||'希望日未登録')+'</p><p class="muted">進捗：'+safe(x['進捗']||'未登録')+' / 備考：'+safe(x['備考']||'なし')+'</p><div class="field"><label>割り当てる空車を選択</label><select data-assignment="'+safe(x['受付ID'])+'"><option value="">車両を選択してください</option>'+available.map(v=>'<option value="'+safe(v.VehicleID)+'" '+(selectedAssignments[x['受付ID']]===v.VehicleID?'selected':'')+'>'+safe(v['車番'])+' / '+safe(v['車種'])+' / '+safe(v.VehicleID)+'</option>').join('')+'</select></div><button class="action primary" data-assign-preview="'+safe(x['受付ID'])+'">'+(gf3Host?'照合して検証台帳に割当':'この車両を割り当てる（確認のみ）')+'</button></div>').join('')+'<div class="box"><p class="muted">未割当の名変待ち：'+waiting.filter(x=>x['ステータス']==='名変待ち'&&!x['割当VehicleID']).length+'件 / 空車候補：'+available.length+'台</p></div>';}
 else{if(page==='cars'){const a=filterVehicles(cars,query).filter(x=>matchesGroup(x,filter));h='<div class="row"><h2>🚗 車両管理</h2><button class="action secondary" style="width:auto" data-info="新規車両登録は未接続です">＋ 車両追加</button></div><div class="detailtabs"><button data-carview="vehicles" class="'+(carView==='vehicles'?'active':'')+'">車両一覧</button><button data-carview="waiting" class="'+(carView==='waiting'?'active':'')+'">名変待ち・車両割当（'+waiting.length+'）</button></div><input id="search" placeholder="車番・使用者・車種で検索" value="'+safe(query)+'"><p class="muted">管理区分ごとの車両一覧</p><div class="detailtabs">'+groupNames().map(x=>'<button data-filter="'+safe(x)+'" class="'+(filter===x?'active':'')+'">'+safe(x)+'（'+(x==='すべて'?cars.length:cars.filter(v=>matchesGroup(v,x)).length)+'）</button>').join('')+'</div><p class="muted">'+a.length+'台表示</p>'+a.map(x=>'<button class="item" data-car="'+safe(x.VehicleID)+'"><div class="row"><strong>'+safe(x['車番']||x.VehicleID)+'</strong><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><small>'+safe(x['現在使用者']||'使用者未登録')+' ・ '+safe(managementGroup(x))+'</small></button>').join('')||'<p class="muted">該当する車両はありません</p>';}
 }
 
@@ -216,12 +233,13 @@ if(gf3Host&&detailTab==='action'&&x.VehicleID==='V900005'){
  const assigned=x.DriverID==='D999902'&&waiting.some(r=>r['受付ID']==='2'&&r['ステータス']==='割当済'&&r['割当VehicleID']==='V900005')&&drivers.some(r=>r.DriverID==='D999902'&&r['割当VehicleID']==='V900005');
  const pending=sessionStorage.getItem('gf3-actual-pending');
  h+='<div class="box"><h2>納車・返却の実績</h2>'
-  +(pending?'<button class="action primary" data-fixture-actual="retry">前回の操作結果を確認・再試行</button>':
+  +(!actualWriteEnabled?'<p class="muted">実績の書き込み設定は停止中です。</p>':'')
+  +(pending?'<button class="action primary" data-fixture-actual="retry"'+(actualWriteEnabled?'':' disabled')+'>前回の操作結果を確認・再試行</button>':
    '<div class="field"><label for="gf3-actual-date">実施日</label><input id="gf3-actual-date" type="date"></div>'
-   +'<button class="action primary" data-fixture-actual="納車完了"'+(assigned&&x['区分/ステータス']==='空車'?'':' disabled')+'>納車完了</button>'
-   +'<button class="action primary" data-fixture-actual="返却完了"'+(assigned&&x['区分/ステータス']==='貸出中'?'':' disabled')+'>返却完了</button>'
+   +'<button class="action primary" data-fixture-actual="納車完了"'+(actualWriteEnabled&&assigned&&x['区分/ステータス']==='空車'?'':' disabled')+'>納車完了</button>'
+   +'<button class="action primary" data-fixture-actual="返却完了"'+(actualWriteEnabled&&assigned&&x['区分/ステータス']==='貸出中'?'':' disabled')+'>返却完了</button>'
    +'<div class="field"><label for="gf3-actual-id">取消対象の実績受付ID</label><input id="gf3-actual-id" value="'+safe(sessionStorage.getItem('gf3-actual-last')||'')+'"></div>'
-   +'<button class="action secondary" data-fixture-actual="取消">実績を取り消す</button>')
+   +'<button class="action secondary" data-fixture-actual="取消"'+(actualWriteEnabled?'':' disabled')+'>実績を取り消す</button>')
   +'</div>';
  const stages=['車両準備中','車両手配済み','名義変更前','名義変更中','名義変更済み'];
  h+='<div class="box"><h2>車両手配・進捗の検証保存</h2><p class="muted">検証車両 V900005／受付2のみ。貸出・返却の実績登録とは別の操作です。</p>'
@@ -351,6 +369,7 @@ async function saveFixtureProgress(button){
 async function readFixture(){
   const result=await gasCall('GF3_ReadFixtureSnapshot');
   if(result?.environment!=='gf3')throw Error('検証台帳の応答が不正です');
+  actualWriteEnabled=result.actualWriteEnabled===true;
   cars=result.sheets['車両台帳'];
   waiting=result.sheets['名変待ち管理'];
   drivers=result.sheets['ドライバーマスター'];

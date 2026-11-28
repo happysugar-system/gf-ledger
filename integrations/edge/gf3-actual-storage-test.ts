@@ -6,9 +6,34 @@ Deno.serve(async req=>{
  try{
  const p=await req.json();
  if(p.action==="health")return reply(200,{ok:true});
- if(!/^TEST-GF3-[A-Z0-9-]{1,70}$/.test(p.id||""))return reply(400,{ok:false});
  const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false}});
  const table=db.from("gf3_actual_receipts_test");
+ if(p.action==="ledger-sync"){
+  const row=p.row;
+  const fields=["VehicleID","車番","DriverID","区分/ステータス","管理区分","納車可能日","納車確定日"];
+  if(!row||Object.keys(row).length!==fields.length||fields.some(key=>typeof row[key]!=="string"||row[key].length>100)||
+   row.VehicleID!=="V900005"||!["","D999902"].includes(row.DriverID))return reply(400,{ok:false});
+  const {data,error}=await db.from("gf_vehicles_test").upsert({
+   vehicle_id:row.VehicleID,vehicle_number:row["車番"],vehicle_data:row,updated_at:new Date().toISOString()
+  },{onConflict:"vehicle_id"}).select("vehicle_data").single();
+  return error?reply(409,{ok:false}):reply(200,{ok:true,data:data.vehicle_data});
+ }
+ if(p.action==="delivery-months"){
+  const counts=new Map<string,number>();
+  const size=500;
+  for(let offset=0;;offset+=size){
+   const {data,error}=await table.select("actual_date").eq("kind","納車完了").eq("state","完了")
+    .order("receipt_id").range(offset,offset+size-1);
+   if(error)return reply(409,{ok:false});
+   for(const row of data){
+    const month=row.actual_date.slice(0,7);
+    counts.set(month,(counts.get(month)||0)+1);
+   }
+   if(data.length<size)break;
+  }
+  return reply(200,{ok:true,data:Array.from(counts,([month,delivered])=>({month,delivered}))});
+ }
+ if(!/^TEST-GF3-[A-Z0-9-]{1,70}$/.test(p.id||""))return reply(400,{ok:false});
  let result;
  if(p.action==="read")result=await table.select("*").eq("receipt_id",p.id).maybeSingle();
  else if(p.action==="insert"){

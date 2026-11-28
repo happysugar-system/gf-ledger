@@ -9,7 +9,8 @@ test('GF3 journals delivery and return, retries an interrupted return, and resto
   const vehicle = { VehicleID: 'V900005', '区分/ステータス': '空車', DriverID: 'D999902',
     '現在使用者': 'Fixture', '引渡し': '', '前使用者': 'Previous', '前DriverID': 'D999901',
     '前使用者 車両書類': 'Old PDF', '前々使用者': '', '前々DriverID': '',
-    '前々使用者 車両書類': '', '📄 最新車両書類': 'Current PDF' };
+    '前々使用者 車両書類': '', '📄 最新車両書類': 'Current PDF',
+    '管理区分': '車両準備中', '納車可能日': '2026-12-01', '納車確定日': '2026-12-01' };
   const waiting = { '受付ID': '2', DriverID: 'D999902', 'ステータス': '割当済', '割当VehicleID': 'V900005', '割当車番': '5' };
   const driver = { DriverID: 'D999902', '氏名': 'Fixture', '割当VehicleID': 'V900005', '割当車番': '5' };
   const rows = [vehicle, waiting, driver];
@@ -19,10 +20,14 @@ test('GF3 journals delivery and return, retries an interrupted return, and resto
   const journal = new Map();
   let writes = 0;
   let interrupt = true;
+  let enabled = true;
   const context = vm.createContext({
     Date,
     Utilities: { formatDate: date => date.toISOString().slice(0, 10) },
     GF3_DocumentUiOwner_: () => book,
+    GF3_AssertActualWriteEnabled_() {
+      if (!enabled) throw Error('gf3_actual_write_disabled');
+    },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) },
     SpreadsheetApp: { flush() {} },
     GF3_AssignmentFixtureRow_(_book, name, _key, _id, fields) {
@@ -82,9 +87,19 @@ test('GF3 journals delivery and return, retries an interrupted return, and resto
   const returnId = 'TEST-GF3-RETURN';
   assert.equal(save('納車完了', '2026-12-01', deliveryId).state, '完了');
   assert.throws(() => save('返却完了', '2026-12-02', returnId), /interrupted/);
+  enabled = false;
+  assert.throws(() => save('返却完了', '2026-12-02', returnId), /gf3_actual_write_disabled/);
+  assert.equal(journal.get(returnId).state, '処理中');
+  enabled = true;
   assert.equal(save('返却完了', '2026-12-02', returnId).state, '完了');
   assert.equal(writes, 2);
   assert.equal(vehicle.DriverID, '');
+  assert.equal(vehicle['管理区分'], '通常管理');
+  assert.equal(vehicle['納車可能日'], '');
+  assert.equal(vehicle['納車確定日'], '');
+  assert.equal(waiting['ステータス'], '名変待ち');
+  assert.equal(waiting['割当VehicleID'], '');
+  assert.equal(driver['割当VehicleID'], '');
   assert.equal(vehicle['前DriverID'], 'D999902');
   assert.equal(links['前使用者 車両書類'], initial.links['📄 最新車両書類']);
   assert.equal(links['前々使用者 車両書類'], initial.links['前使用者 車両書類']);
