@@ -6,7 +6,7 @@ function GF115_車両依頼受付へ反映_(p,lineUserId,result,requestId,fastMo
   if(!lock.tryLock(20000))throw Error('受付同期が混み合っています');
   try {
     const fast = fastMode === true;
-    if (fast && (typeof GF_FAST_property_ !== 'function' || GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true')) throw Error('FAST_TEST_DISABLED');
+    if (fast && (typeof GF_FAST_property_ !== 'function' || GF_FAST_property_('GF_FAST_ISOLATED_TEST_ENABLED') !== 'true')) throw Error('FAST_TEST_DISABLED');
     const ss=fast ? GF_FAST_lineTestBook_() : 対象スプレッドシートを開く_();
     const detail=GF115_詳細シート_(ss);
     const master=ss.getSheetByName('LINE受付管理');
