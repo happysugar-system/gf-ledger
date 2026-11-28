@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GF3 書類検証</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#19324d;background:#f2f5f9;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;padding:18px}main{max-width:540px;margin:auto}
+header{padding:12px 0 20px}h1{font-size:22px;margin:4px 0}
+article{background:white;border:1px solid #dae2ea;border-radius:12px;padding:16px;margin:14px 0}
+label{display:block;font-weight:700;margin:12px 0 6px}input{display:block;width:100%;font-size:16px}
+button{font-size:16px;border:0;border-radius:9px;background:#235990;color:white;padding:13px;margin:8px 8px 0 0;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#4e5f73}
+#log{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.5}
+small{color:#59697b}a{color:#235990}
+</style></head>
+<body><main>
+<header><small>GOLD FIRST · GF3 検証環境専用</small><h1>車両書類・操作テスト</h1>
+<div>対象車両：<strong>V900005</strong>（ダミーのみ）</div></header>
+<article><strong id="state">Googleアカウントを検証中...</strong>
+<p><small>この画面は書類保存・同一受付再送・取消だけの検証用です。車両割当・納車・返却・予定は未接続です。</small></p></article>
+<article>
+<label for="f1">書類画像1（JPEG）</label><input id="f1" type="file" accept="image/jpeg,.jpg,.jpeg">
+<label for="f2">書類画像2（JPEG）</label><input id="f2" type="file" accept="image/jpeg,.jpg,.jpeg">
+<label for="f3">書類画像3（JPEG）</label><input id="f3" type="file" accept="image/jpeg,.jpg,.jpeg">
+<p><small>各画像2.75MB以下。アップロード時に再圧縮せず、JPEG原本のバイトを使用します。</small></p>
+<button id="save" disabled>書類を保存・同一受付再送</button>
+<button id="cancel" class="secondary" disabled>直前の受付を取消</button>
+<p id="link"></p>
+<pre id="log" aria-live="polite"></pre>
+</article>
+</main>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const K='GF3_DOCUMENT_ISOLATED_RECEIPT_V1';
+let allowed=false,busy=false;
+const receipt=()=>{let id=sessionStorage.getItem(K);
+ if(id&&/^TEST-GF3-[A-Z0-9-]{1,60}$/.test(id))return id;
+ if(!crypto?.randomUUID)throw Error('安全な受付IDを生成できない環境です');
+ id='TEST-GF3-'+crypto.randomUUID().toUpperCase();sessionStorage.setItem(K,id);return id;};
+function status(t){$('log').textContent=t;}
+function setBusy(v){busy=v;$('save').disabled=v||!allowed;$('cancel').disabled=v||!allowed||!sessionStorage.getItem(K);}
+function error(e){status('処理を停止しました：'+String(e&&e.message||e));setBusy(false);}
+function run(name,args){return new Promise((resolve,reject)=>{
+ const runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+ runner[name](...args);
+});}
+function readFile(f){return new Promise((resolve,reject)=>{
+ if(!f||f.size<16||f.size>2750000){reject(Error('JPEG画像のサイズが条件外です'));return;}
+ if(f.type&&f.type!=='image/jpeg'){reject(Error('JPEG画像を指定してください'));return;}
+ const rd=new FileReader();rd.onload=()=>resolve(String(rd.result||''));rd.onerror=()=>reject(Error('画像を読み込めません'));rd.readAsDataURL(f);
+});}
+$('save').onclick=async()=>{
+ setBusy(true);$('link').textContent='';
+ try{
+ const files=['f1','f2','f3'].map(id=>$(id).files[0]);
+ const images=await Promise.all(files.map(readFile));
+ status('保存中... 同じ受付の再送では同一PDFを確認します');
+ const result=await run('GF3_DocumentUiSave_',[images,receipt()]);
+ if(!result||result.成功!==true)throw Error('保存完了を確認できません');
+ status('保存成功。受付ID: '+sessionStorage.getItem(K));
+ if(/^https:\/\/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]+\/view$/.test(String(result.PDFURL||''))){
+ const a=document.createElement('a');a.href=result.PDFURL;a.target='_blank';a.rel='noopener noreferrer';a.textContent='検証用PDFを開く';$('link').replaceChildren(a);}
+ }catch(e){error(e);return;}setBusy(false);
+};
+$('cancel').onclick=async()=>{
+ const id=sessionStorage.getItem(K);if(!id){status('受付IDがありません');return;}
+ if(!confirm('検証用書類の受付を取り消しますか？'))return;
+ setBusy(true);
+ try{
+ const result=await run('GF3_DocumentUiCancel_',[id]);
+ if(!result||result.成功!==true)throw Error('取消結果を確認できません');
+ status('取消成功。Drive後処理: '+String(result.driveCleanup||'未確認'));
+ $('link').textContent='';
+ if(result.driveCleanup==='archived'||result.driveCleanup==='完了')sessionStorage.removeItem(K);
+ }catch(e){error(e);return;}setBusy(false);
+};
+run('GF3_DocumentUiStatus_',[]).then(r=>{
+ if(!r||r.testOnly!==true||r.vehicleId!=='V900005')throw Error('検証環境が一致しません');
+ allowed=r.saveEnabled===true;
+ $('state').textContent=allowed?'検証用の書き込みが許可されています':'検証用の書き込みは停止中です';
+ setBusy(false);
+}).catch(e=>{$('state').textContent='接続を拒否しました';error(e);});
+})();
+</script></body></html>
