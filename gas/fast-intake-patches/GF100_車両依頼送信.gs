@@ -18,7 +18,7 @@ function GF_車両テスト送信_(e) {
     if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(receiver) || secret.length < 40)
       throw new Error('SERVER_NOT_CONFIGURED');
     const started = Date.now();
-    if (fast && (typeof GF_FAST_property_ !== 'function' || GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true')) throw Error('FAST_TEST_DISABLED');
+    if (fast && (typeof GF_FAST_property_ !== 'function' || GF_FAST_property_('GF_FAST_ISOLATED_TEST_ENABLED') !== 'true')) throw Error('FAST_TEST_DISABLED');
     let data = fast ? GF_FAST_existingIntake_(token) : null;
     if (!data) {
       const payload = Object.assign({}, p, {
