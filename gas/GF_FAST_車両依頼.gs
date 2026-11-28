@@ -25,7 +25,7 @@ function GF_FAST_receiver_(e) {
   const started = Date.now();
   try {
     const secret = GF_FAST_property_('GF_VEHICLE_BRIDGE_SECRET');
-    if (GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true' || secret.length < 40 ||
+    if (GF_FAST_property_('GF_FAST_ISOLATED_TEST_ENABLED') !== 'true' || secret.length < 40 ||
         p.bridge_secret !== secret) throw Error('FAST_BRIDGE_DISABLED');
     const testBook = GF_FAST_property_('GF_FAST_RECEIVER_TEST_BOOK_ID');
     if (!testBook || GF_FAST_property_('GF144_TEST_SHEET_ID').trim() !== testBook ||
@@ -192,14 +192,14 @@ function GF_FAST_masterSync_(request) {
 }
 
 function GF_FAST_workerInstall() {
-  if (GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true') throw Error('FAST_TEST_DISABLED');
+  if (GF_FAST_property_('GF_FAST_ISOLATED_TEST_ENABLED') !== 'true') throw Error('FAST_TEST_DISABLED');
   if (!ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='GF_FAST_runWorker')) {
     ScriptApp.newTrigger('GF_FAST_runWorker').timeBased().everyMinutes(1).create();
   }
 }
 
 function GF_FAST_runWorker() {
-  if (GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true') return;
+  if (GF_FAST_property_('GF_FAST_ISOLATED_TEST_ENABLED') !== 'true') return;
   // Worker-only lock, separate from the short GF115 reception lock.
   const lock = LockService.getUserLock();
   if (!lock.tryLock(1000)) return;
@@ -294,7 +294,7 @@ function GF_FAST_existingIntake_(request) {
 
 function GF_FAST_lineTestBook_() {
   const id = GF_FAST_property_('GF_FAST_LINE_TEST_BOOK_ID');
-  if (GF_FAST_property_('GF_FAST_TEST_ENABLED') !== 'true' ||
+  if (GF_FAST_property_('GF_FAST_ISOLATED_TEST_ENABLED') !== 'true' ||
       id !== '1cyoGorl67jbSkdgSE3m2ofZF8TWh3-MhPaRNW2OyRcA') throw Error('FAST_WRONG_SHEET');
   const ss = SpreadsheetApp.openById(id);
   if (!ss.getSheetByName('車両依頼受付') || !ss.getSheetByName('LINE受付管理')) throw Error('FAST_HEADER');
