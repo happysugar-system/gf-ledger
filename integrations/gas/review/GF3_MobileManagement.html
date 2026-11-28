@@ -90,7 +90,6 @@ function validateVehicleHeaders(actual) {
   const unassigned=VEHICLE_HEADERS.filter(h=>!groupNames.includes(h));
   return {ok:actual.length===63&&!missing.length&&!extra.length&&!duplicates.length&&!duplicateAssignments.length&&!unassigned.length,missing,extra,duplicates,duplicateAssignments,unassigned};
 }
-import { VEHICLE_HEADERS } from './vehicle-schema.mjs';
 
 // Read-only frontend adapter. The API must validate Supabase JWT AND staff access
 // on every request. Never connect directly to gf_vehicles from a public page.

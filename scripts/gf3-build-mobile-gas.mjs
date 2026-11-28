@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL('../mobile-management/' + path, import.meta.url), 'utf8');
-const inline = (path) => read(path).replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
+const inline = (path) => read(path).replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
 const source = read('index.html')
   .replace(/<html\b/, '<html data-gf3-host="true"')
   .replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/[^"]+"><\/script>/, '')
