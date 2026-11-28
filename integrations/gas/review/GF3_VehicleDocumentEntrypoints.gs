@@ -1,5 +1,5 @@
 /** Isolated vehicle document orchestration. Failed operations retain evidence for review. */
-function GF3_VehicleDocumentSave_(id,blobs){
+function GF3_VehicleDocumentSave_(id,blobs,requestId){
  const book=SpreadsheetApp.openById('1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0');
  GF3_AssertBook_(book);
  if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
@@ -9,7 +9,19 @@ function GF3_VehicleDocumentSave_(id,blobs){
  if(cell.getFormula())throw Error('formula_protected');
  const rich=cell.getRichTextValue(),previous=rich&&rich.getLinkUrl()||'';
  if(!previous&&cell.getValue()!=='')throw Error('gf3_document_existing_link_unverified');
- const receipt='TEST-GF3-'+Utilities.getUuid().toUpperCase();
+ const receipt=requestId||'TEST-GF3-'+Utilities.getUuid().toUpperCase();
+ if(!/^TEST-GF3-[A-Z0-9-]{1,60}$/.test(receipt))throw Error('gf3_document_id');
+ if(requestId){
+  let existing;
+  try{existing=GF3_DocumentStorage_(book,'read',receipt)[0];}
+  catch(e){if(e.message!=='gf3_document_receipt_missing')throw e;}
+  if(existing){
+   if(existing.vehicle_id!==id||existing.kind!=='車両書類')throw Error('gf3_document_receipt_conflict');
+   if(existing.state!=='完了')throw Error('gf3_document_existing_'+existing.state+':'+receipt);
+   if(previous!==existing.new_url)throw Error('gf3_document_superseded');
+   return {成功:true,種類:'車両書類',車番:String(v.data['車番']||''),氏名:String(v.data['現在使用者']||''),PDFURL:existing.new_url,取消情報:{種類:'車両書類',受付ID:receipt,VehicleID:id}};
+  }
+ }
  const transition=(expected,next)=>GF3_DocumentStorage_(book,'transition',receipt,{expected,next});
  GF3_DocumentStorage_(book,'insert',receipt,{receipt_id:receipt,vehicle_id:id,kind:'車両書類',previous_url:previous});
  transition('待機','保存中');
