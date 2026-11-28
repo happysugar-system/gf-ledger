@@ -180,7 +180,29 @@ const matchesGroup=(x,name)=>name==='すべて'||(name==='空車'?String(x['区�
 const planTypes=[['車検','車検予定日'],['12点検',' 12点検予定日'],['名義変更','名変予定日'],['整備',' 整備予定日'],['板金',' 板金予定日'],['納車予定','納車予定日'],['返却予定','返却予定日'],['代車開始予定','代車予定日'],['代車返却予定','代車返却予定日']];
 const validDriveLink=value=>{const raw=String(value||'').trim();if(!raw)return null;const id=raw.match(/^[a-zA-Z0-9_-]{25,}$/);if(id)return 'https://drive.google.com/drive/folders/'+encodeURIComponent(raw);try{const u=new URL(raw);if(u.protocol!=='https:'||!['drive.google.com','docs.google.com'].includes(u.hostname))return null;return u.href;}catch{return null;}};
 const fileLink=(k,value)=>{const url=validDriveLink(value);return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+(url?'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer">📂 Google Driveで開く ↗</a>':safe(value||'未登録（台帳にリンクがありません）'))+'</div></div>';};
-const scheduleItems=(onlyId=null)=>{const out=[];for(const x of cars){if(onlyId&&x.VehicleID!==onlyId)continue;for(const [name,k] of planTypes){const v=x[k];if(v)out.push({date:String(v),type:name,plate:x['車番'],id:x.VehicleID});}}return out.sort((a,b)=>a.date.localeCompare(b.date));};
+let fixtureSchedules=[];
+async function loadFixtureSchedules(){
+ try{fixtureSchedules=await gasCall('GF3_ReadFixtureSchedules');}
+ catch(_){fixtureSchedules=[];}
+ if(page==='schedule'||(page==='car'&&detailTab==='schedule'))render();
+}
+function scheduleItems(onlyId=null){
+ const out=[];
+ for(const x of cars){
+  if(onlyId&&x.VehicleID!==onlyId)continue;
+  const scheduled=fixtureSchedules.filter(row=>row.vehicle_id===x.VehicleID&&row.state!=='取消'&&row.state!=='取消済');
+  for(const row of scheduled){
+   out.push({date:row.schedule_date,type:row.schedule_type,plate:x['車番'],id:x.VehicleID,
+    scheduleId:row.schedule_id,eventId:row.calendar_event_id});
+  }
+  for(const [name,key] of planTypes){
+   const value=x[key];
+   if(value&&!scheduled.some(row=>row.schedule_type===name&&row.schedule_date===toDate(value)))
+    out.push({date:String(value),type:name,plate:x['車番'],id:x.VehicleID});
+  }
+ }
+ return out.sort((a,b)=>(toDate(a.date)||a.date).localeCompare(toDate(b.date)||b.date));
+}
 const scheduleRows=items=>items.length?items.map(v=>'<button class="item" data-car="'+safe(v.id)+'"><strong>'+safe(v.date)+'　'+safe(v.type)+'</strong><small>'+safe(v.plate)+'</small></button>').join(''):'<p class="muted">登録済みの予定はありません</p>';
 let actualDeliveryMonths=null,actualDeliveryError=false,actualWriteEnabled=false;
 async function loadActualDeliveryMonths(){
@@ -216,7 +238,7 @@ function monthlyDeliverySummary(){
    ||'<p class="muted">納車予定と引渡し実績はありません。</p>')+'</div>';
 }
 function nav(){const opts=[['home','🏠','ホーム'],['cars','🚗','車両'],['drivers','👤','ドライバー'],['schedule','📅','予定']];$('nav').innerHTML=opts.map(([p,i,t])=>'<button data-page="'+p+'" class="'+((page===p)||(p==='cars'&&page==='car')?'active':'')+'"><b>'+i+'</b>'+t+'</button>').join('');}
-function go(p){page=p;draft=null;if(gf3Host&&p==='schedule')loadActualDeliveryMonths();render();window.scrollTo(0,0);}
+function go(p){page=p;draft=null;if(gf3Host&&p==='schedule'){loadActualDeliveryMonths();loadFixtureSchedules();}render();window.scrollTo(0,0);}
 function openCar(id){carId=id;detailTab='basic';ledgerSection=0;draft={...car()};page='car';render();window.scrollTo(0,0);}
 function changed(){const x=car();return Object.keys(draft||{}).filter(k=>String(x[k]??'')!==String(draft[k]??''));}
 function render(){nav();let h='';
@@ -274,7 +296,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
   t.disabled=false;
   $('state').textContent='割当操作は受付2・V900005の組み合わせで検証できます。';
   return;
-}alert('【割当プレビュー・保存なし】\\n'+person['氏名']+'\\n'+vehicle['車番']+'（'+vehicle.VehicleID+'）\\n\\n名変待ち管理・車両台帳・履歴には保存されません');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\\n'+car()['車番']+'\\n'+type+'：'+day+'\\n\\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
+}alert('【割当プレビュー・保存なし】\\n'+person['氏名']+'\\n'+vehicle['車番']+'（'+vehicle.VehicleID+'）\\n\\n名変待ち管理・車両台帳・履歴には保存されません');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;if(gf3Host&&detailTab==='schedule')loadFixtureSchedules();render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\\n'+car()['車番']+'\\n'+type+'：'+day+'\\n\\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
 let assignmentSaving=false;
 document.addEventListener('click',event=>{
  const button=event.target.closest('button[data-fixture-actual]');

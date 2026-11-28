@@ -1,4 +1,4 @@
-const GF3_LEDGER_FIXTURE_FIELDS_=['VehicleID','車番','DriverID','区分/ステータス','管理区分','納車可能日','納車確定日'];
+const GF3_LEDGER_FIXTURE_FIELDS_=['VehicleID','車番','DriverID','区分/ステータス','管理区分','納車可能日','納車確定日','納車予定日','引渡し'];
 
 function GF3_SyncLedgerFixture_(book,range){
  GF3_AssertBook_(book);
@@ -10,7 +10,7 @@ function GF3_SyncLedgerFixture_(book,range){
   if(range&&(row.number<range.getRow()||row.number>range.getLastRow()||
    !GF3_LEDGER_FIXTURE_FIELDS_.some(field=>row.columns[field]+1>=range.getColumn()&&row.columns[field]+1<=range.getLastColumn())))return;
   const record={...row.data};
-  for(const field of ['納車可能日','納車確定日'])record[field]=GF3_ProgressDate_(record[field]);
+  for(const field of ['納車可能日','納車確定日','納車予定日','引渡し'])record[field]=GF3_ProgressDate_(record[field]);
   const saved=GF3_ActualStorage_(book,'ledger-sync',null,record);
   if(!saved||GF3_LEDGER_FIXTURE_FIELDS_.some(field=>saved[field]!==record[field]))
    throw Error('gf3_ledger_sync_readback');
@@ -25,15 +25,27 @@ function GF3_OnLedgerFixtureEdit(e){
 }
 
 function GF3_RefreshLedgerFixtureSync(){
- return GF3_SyncLedgerFixture_(GF3_Open_());
+ const book=GF3_Open_();
+ try{return GF3_SyncLedgerFixture_(book);}
+ finally{GF3_RefreshMonthlyDelivery_(book);}
 }
 
 function GF3_InstallLedgerFixtureSync(){
  const book=GF3_DocumentUiOwner_();
- const triggers=ScriptApp.getProjectTriggers();
- if(!triggers.some(t=>t.getHandlerFunction()==='GF3_OnLedgerFixtureEdit'&&t.getTriggerSourceId()===book.getId()))
-  ScriptApp.newTrigger('GF3_OnLedgerFixtureEdit').forSpreadsheet(book).onEdit().create();
- if(!triggers.some(t=>t.getHandlerFunction()==='GF3_RefreshLedgerFixtureSync'&&t.getEventType()===ScriptApp.EventType.CLOCK))
-  ScriptApp.newTrigger('GF3_RefreshLedgerFixtureSync').timeBased().everyMinutes(5).create();
+ const lock=LockService.getScriptLock();
+ if(!lock.tryLock(5000))throw Error('gf3_ledger_sync_busy');
+ try{
+  const triggers=ScriptApp.getProjectTriggers();
+  for(const [handler,matches,create] of [
+   ['GF3_OnLedgerFixtureEdit',t=>t.getTriggerSourceId()===book.getId()&&t.getEventType()===ScriptApp.EventType.ON_EDIT,
+    ()=>ScriptApp.newTrigger('GF3_OnLedgerFixtureEdit').forSpreadsheet(book).onEdit().create()],
+   ['GF3_RefreshLedgerFixtureSync',t=>t.getEventType()===ScriptApp.EventType.CLOCK,
+    ()=>ScriptApp.newTrigger('GF3_RefreshLedgerFixtureSync').timeBased().everyMinutes(5).create()]
+  ]){
+   const existing=triggers.filter(t=>t.getHandlerFunction()===handler&&matches(t));
+   if(existing.length===0)create();
+   for(const duplicate of existing.slice(1))ScriptApp.deleteTrigger(duplicate);
+  }
+ }finally{lock.releaseLock();}
  return GF3_RefreshLedgerFixtureSync();
 }

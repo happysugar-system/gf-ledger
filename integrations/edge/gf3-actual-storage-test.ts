@@ -8,13 +8,27 @@ Deno.serve(async req=>{
  if(p.action==="health")return reply(200,{ok:true});
  const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false}});
  const table=db.from("gf3_actual_receipts_test");
+ if(p.action==="schedule-read"){
+  const {data,error}=await db.from("gf3_schedule_test")
+   .select("schedule_id,vehicle_id,schedule_type,schedule_date,state,calendar_event_id")
+   .order("schedule_id").limit(1000);
+  return error||data.length===1000?reply(409,{ok:false}):reply(200,{ok:true,data});
+ }
  if(p.action==="ledger-sync"){
   const row=p.row;
-  const fields=["VehicleID","車番","DriverID","区分/ステータス","管理区分","納車可能日","納車確定日"];
-  if(!row||Object.keys(row).length!==fields.length||fields.some(key=>typeof row[key]!=="string"||row[key].length>100)||
+  const baseFields=["VehicleID","車番","DriverID","区分/ステータス","管理区分","納車可能日","納車確定日"];
+  const extraFields=["納車予定日","引渡し"];
+  const fields=[...baseFields,...extraFields];
+  if(!row||baseFields.some(key=>typeof row[key]!=="string")||
+   Object.keys(row).some(key=>!fields.includes(key)||typeof row[key]!=="string"||row[key].length>100)||
    row.VehicleID!=="V900005"||!["","D999902"].includes(row.DriverID))return reply(400,{ok:false});
-  const {data,error}=await db.from("gf_vehicles_test").upsert({
-   vehicle_id:row.VehicleID,vehicle_number:row["車番"],vehicle_data:row,updated_at:new Date().toISOString()
+  const replica=db.from("gf_vehicles_test");
+  const current=await replica.select("vehicle_data").eq("vehicle_id",row.VehicleID).maybeSingle();
+  if(current.error)return reply(409,{ok:false});
+  const record=Object.fromEntries(fields.map(key=>[key,row[key]??current.data?.vehicle_data?.[key]??""]));
+  if(current.data&&fields.every(key=>current.data.vehicle_data[key]===record[key]))return reply(200,{ok:true,data:record});
+  const {data,error}=await replica.upsert({
+   vehicle_id:row.VehicleID,vehicle_number:row["車番"],vehicle_data:record,updated_at:new Date().toISOString()
   },{onConflict:"vehicle_id"}).select("vehicle_data").single();
   return error?reply(409,{ok:false}):reply(200,{ok:true,data:data.vehicle_data});
  }

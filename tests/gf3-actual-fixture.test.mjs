@@ -25,6 +25,7 @@ test('GF3 journals delivery and return, retries an interrupted return, and resto
     Date,
     Utilities: { formatDate: date => date.toISOString().slice(0, 10) },
     GF3_DocumentUiOwner_: () => book,
+    GF3_RefreshMonthlyDelivery_() {},
     GF3_AssertActualWriteEnabled_() {
       if (!enabled) throw Error('gf3_actual_write_disabled');
     },

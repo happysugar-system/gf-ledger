@@ -7,7 +7,7 @@ function GF3_AssertActualWriteEnabled_(){
 function GF3_ActualStorage_(book,action,id,args){
  GF3_AssertBook_(book);
  if(book.getId()!=='1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0')throw Error('gf3_actual_book');
- if(!['health','read','insert','transition','delivery-months','ledger-sync'].includes(action))throw Error('gf3_actual_action');
+ if(!['health','read','insert','transition','delivery-months','ledger-sync','schedule-read'].includes(action))throw Error('gf3_actual_action');
  const props=PropertiesService.getScriptProperties();
  if(props.getProperty('GF3_VALIDATION_ENABLED')!=='true')throw Error('gf3_actual_disabled');
  if(['insert','transition'].includes(action))GF3_AssertActualWriteEnabled_();
@@ -27,8 +27,16 @@ function GF3_ActualStorage_(book,action,id,args){
  if(action==='read'&&result.data!==null&&(result.data.receipt_id!==id||result.data.vehicle_id!=='V900005'||result.data.driver_id!=='D999902'||result.data.application_id!=='2'))throw Error('gf3_actual_identity');
  return result.data;
 }
-function GF3_ReadActualDeliveryMonths(){
+function GF3_ReadFixtureSchedules(){
  const book=GF3_DocumentUiOwner_();
+ const rows=GF3_ActualStorage_(book,'schedule-read');
+ if(!Array.isArray(rows))throw Error('gf3_schedule_response');
+ return rows;
+}
+function GF3_ReadActualDeliveryMonths(){
+ return GF3_ActualDeliveryMonths_(GF3_DocumentUiOwner_());
+}
+function GF3_ActualDeliveryMonths_(book){
  const rows=GF3_ActualStorage_(book,'delivery-months');
  if(!Array.isArray(rows)||rows.some(row=>!/^\d{4}-\d{2}$/.test(row.month)||
    !Number.isSafeInteger(row.delivered)||row.delivered<1))throw Error('gf3_actual_months_response');

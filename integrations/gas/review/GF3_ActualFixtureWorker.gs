@@ -35,6 +35,12 @@ function GF3_ActualApply_(book,rows,from,to){
  if(JSON.stringify(GF3_ActualSnapshot_(GF3_ActualRows_(book),to))!==JSON.stringify(to))throw Error('gf3_actual_readback');
 }
 function GF3_SaveActualFixture(operation,date,id){
+ const result=GF3_SaveActualFixtureLocked_(operation,date,id);
+ try{GF3_RefreshMonthlyDelivery_(GF3_DocumentUiOwner_());}
+ catch(error){console.error('gf3_monthly_refresh_pending:'+error.message);}
+ return result;
+}
+function GF3_SaveActualFixtureLocked_(operation,date,id){
  const book=GF3_DocumentUiOwner_(),lock=LockService.getScriptLock();
  if(!['納車完了','返却完了','取消'].includes(operation))throw Error('gf3_actual_operation');
  if(!lock.tryLock(5000))throw Error('gf3_actual_busy');
