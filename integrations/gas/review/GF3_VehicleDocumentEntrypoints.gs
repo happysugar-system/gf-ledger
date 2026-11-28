@@ -1,11 +1,28 @@
-/** Validation-only source13 adapter. All Drive writes require an explicitly provisioned isolated root. */
+/** Isolated vehicle document orchestration. Failed operations retain evidence for review. */
 function GF3_VehicleDocumentSave_(id,blobs){
  const book=SpreadsheetApp.openById('1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0');
  GF3_AssertBook_(book);
  if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
  if(!/^V9\d{5}$/.test(id)||!Array.isArray(blobs)||blobs.length!==3)throw Error('gf3_document_input');
- // Do not create files until the isolated Drive root and trusted receipt reservation are connected.
- throw Error('gf3_document_drive_reservation_required');
+ const v=GF3_GF_DB同期車両情報_(book,id),field='📄 最新車両書類';
+ const cell=v.sheet.getRange(v.row,GF3_Columns_(v.sheet,[field])[field]+1);
+ if(cell.getFormula())throw Error('formula_protected');
+ const rich=cell.getRichTextValue(),previous=rich&&rich.getLinkUrl()||'';
+ if(!previous&&cell.getValue()!=='')throw Error('gf3_document_existing_link_unverified');
+ const receipt='TEST-GF3-'+Utilities.getUuid().toUpperCase();
+ const transition=(expected,next)=>GF3_DocumentStorage_(book,'transition',receipt,{expected,next});
+ GF3_DocumentStorage_(book,'insert',receipt,{receipt_id:receipt,vehicle_id:id,kind:'車両書類',previous_url:previous});
+ transition('待機','保存中');
+ try{
+ const files=GF3_PrepareVehicleDocumentFiles_(book,id,receipt,blobs);
+ GF3_DocumentStorage_(book,'attach',receipt,{fileId:files.fileId});
+ const url='https://drive.google.com/file/d/'+files.fileId+'/view';
+ GF3_LegacyProjectionApply_(book,id,'document',{'📁 車両書類フォルダ':files.parentUrl});
+ if(previous)GF3_DocumentReplacementApply_(book,id,field,previous,url);
+ else GF3_LegacyProjectionApply_(book,id,'document',{[field]:url});
+ transition('保存中','完了');
+ return {成功:true,種類:'車両書類',車番:String(v.data['車番']||''),氏名:String(v.data['現在使用者']||''),PDFURL:url,取消情報:{種類:'車両書類',受付ID:receipt,VehicleID:id,フォルダID:files.folderId}};
+ }catch(e){try{transition('保存中','要確認');}catch(ignore){}throw Error('gf3_document_review:'+receipt);}
 }
 function GF3_VehicleDocumentCancel_(id){
  const book=SpreadsheetApp.openById('1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0');
@@ -13,10 +30,14 @@ function GF3_VehicleDocumentCancel_(id){
  if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
  const row=GF3_DocumentStorage_(book,'read',id)[0];
  if(row.state==='取消済')return {成功:true};
- // Latest receipt check must be atomic before changing the ledger or Drive.
- throw Error('gf3_document_latest_receipt_guard_required');
+ const transition=(expected,next)=>GF3_DocumentStorage_(book,'transition',id,{expected,next});
+ transition('完了','取消中');
+ try{
+ GF3_DocumentCancelRestore_(book,{kind:row.kind,state:row.state,id:row.receipt_id,vehicleId:row.vehicle_id,previousUrl:row.previous_url,newUrl:row.new_url});
+ transition('取消中','取消済');
+ return {成功:true};
+ }catch(e){try{transition('取消中','要確認');}catch(ignore){}throw Error('gf3_document_cancel_review:'+id);}
 }
-
 /** Prepare a PDF and original images under the fixed isolated root only.
  * Not a public entrypoint; caller must reserve a receipt before invoking.
  */
