@@ -5,6 +5,18 @@ import vm from 'node:vm';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
+test('reassignment accepts a completed return snapshot only when all three rows match', () => {
+  const context = vm.createContext({});
+  vm.runInContext(read('integrations/gas/review/GF3_FixtureSnapshot.gs'), context);
+  const current = [{ DriverID: '', '管理区分': '通常管理' }, { 'ステータス': '名変待ち' }, { '割当VehicleID': '' }];
+  const snapshot = current.map(row => Object.fromEntries(Object.entries(row)
+    .map(([key, value]) => [key, { value, url: '', date: false }])));
+  assert.equal(context.GF3_MatchesReturnedAssignment_(current, snapshot), true);
+  assert.equal(context.GF3_MatchesReturnedAssignment_(current, null), false);
+  snapshot[2]['割当VehicleID'].value = 'V900005';
+  assert.equal(context.GF3_MatchesReturnedAssignment_(current, snapshot), false);
+});
+
 test('monthly report drops a cancelled month and retains planned deliveries from the ledger', () => {
   const context = vm.createContext({});
   for (const path of ['GF3_FixtureProgress', 'GF3_MonthlyDelivery'])

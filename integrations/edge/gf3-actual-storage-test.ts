@@ -8,6 +8,12 @@ Deno.serve(async req=>{
  if(p.action==="health")return reply(200,{ok:true});
  const db=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,{auth:{persistSession:false}});
  const table=db.from("gf3_actual_receipts_test");
+ if(p.action==="latest-return"){
+  const {data,error}=await table.select("kind,state,after_data").neq("state","取消済")
+   .order("created_at",{ascending:false}).limit(1).maybeSingle();
+  return error?reply(409,{ok:false}):reply(200,{ok:true,
+   data:data?.kind==="返却完了"&&data.state==="完了"?data.after_data.rows:null});
+ }
  if(p.action==="schedule-read"){
   const {data,error}=await db.from("gf3_schedule_test")
    .select("schedule_id,vehicle_id,schedule_type,schedule_date,state,calendar_event_id")
@@ -32,20 +38,28 @@ Deno.serve(async req=>{
   },{onConflict:"vehicle_id"}).select("vehicle_data").single();
   return error?reply(409,{ok:false}):reply(200,{ok:true,data:data.vehicle_data});
  }
- if(p.action==="delivery-months"){
+ if(p.action==="delivery-months"||p.action==="delivery-details"){
   const counts=new Map<string,number>();
+  const details=p.action==="delivery-details";
+  const delivered=[];
   const size=500;
   for(let offset=0;;offset+=size){
-   const {data,error}=await table.select("actual_date").eq("kind","納車完了").eq("state","完了")
+   const {data,error}=await table.select(details
+    ?"actual_date,vehicle_id,driver_id,receipt_id,after_data":"actual_date").eq("kind","納車完了").eq("state","完了")
     .order("receipt_id").range(offset,offset+size-1);
    if(error)return reply(409,{ok:false});
    for(const row of data){
+    if(details){
+     delivered.push({date:row.actual_date,vehicleId:row.vehicle_id,driverId:row.driver_id,
+      driverName:row.after_data?.rows?.[0]?.["現在使用者"]?.value||"",receiptId:row.receipt_id});
+     continue;
+    }
     const month=row.actual_date.slice(0,7);
     counts.set(month,(counts.get(month)||0)+1);
    }
    if(data.length<size)break;
   }
-  return reply(200,{ok:true,data:Array.from(counts,([month,delivered])=>({month,delivered}))});
+  return reply(200,{ok:true,data:details?delivered:Array.from(counts,([month,delivered])=>({month,delivered}))});
  }
  if(!/^TEST-GF3-[A-Z0-9-]{1,70}$/.test(p.id||""))return reply(400,{ok:false});
  let result;

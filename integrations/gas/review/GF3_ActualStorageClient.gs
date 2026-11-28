@@ -7,7 +7,7 @@ function GF3_AssertActualWriteEnabled_(){
 function GF3_ActualStorage_(book,action,id,args){
  GF3_AssertBook_(book);
  if(book.getId()!=='1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0')throw Error('gf3_actual_book');
- if(!['health','read','insert','transition','delivery-months','ledger-sync','schedule-read'].includes(action))throw Error('gf3_actual_action');
+ if(!['health','read','insert','transition','latest-return','delivery-months','delivery-details','ledger-sync','schedule-read'].includes(action))throw Error('gf3_actual_action');
  const props=PropertiesService.getScriptProperties();
  if(props.getProperty('GF3_VALIDATION_ENABLED')!=='true')throw Error('gf3_actual_disabled');
  if(['insert','transition'].includes(action))GF3_AssertActualWriteEnabled_();

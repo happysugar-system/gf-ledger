@@ -119,7 +119,7 @@ function GF3_SaveFixtureAssignment(receiptId,vehicleId,action){
    throw Error('gf3_assignment_identity_mismatch');
   const props=PropertiesService.getScriptProperties();
   const key='GF3_ASSIGNMENT_FIXTURE_2_V900005';
-  const saved=JSON.parse(props.getProperty(key)||'null');
+  let saved=JSON.parse(props.getProperty(key)||'null');
   const assigned=[
    {'管理区分':'車両準備中',DriverID:'D999902','現在使用者':driver.data['氏名']},
    {'ステータス':'割当済','割当VehicleID':vehicleId,'割当車番':vehicle.data['車番']},
@@ -134,7 +134,11 @@ function GF3_SaveFixtureAssignment(receiptId,vehicleId,action){
    throw Error('gf3_assignment_identity_changed');
   if(action==='assign'){
    if(saved&&matches(assigned))return {state:'assigned',replayed:true};
-   if(saved&&!matches(saved.before))throw Error('gf3_assignment_state_conflict');
+   if(saved&&!matches(saved.before)){
+    const returned=GF3_ActualStorage_(book,'latest-return');
+    if(!GF3_MatchesReturnedAssignment_(current,returned))throw Error('gf3_assignment_state_conflict');
+    saved=null;
+   }
    GF3_CheckFixtureAssignment('2',vehicleId);
    for(const [row,field,value] of [[vehicle,'DriverID','D999902'],[waiting,'割当VehicleID',vehicleId],[driver,'割当VehicleID',vehicleId]]){
     const duplicates=row.sheet.getRange(2,row.columns[field]+1,row.sheet.getLastRow()-1,1)
@@ -167,6 +171,14 @@ function GF3_SaveFixtureAssignment(receiptId,vehicleId,action){
   }
   return {state:action==='assign'?'assigned':'cancelled',replayed:false};
  }finally{lock.releaseLock();}
+}
+
+function GF3_MatchesReturnedAssignment_(current,returned){
+ return Array.isArray(returned)&&returned.length===current.length&&
+  current.every((row,i)=>Object.entries(row).every(([field,value])=>{
+   const saved=returned[i]?.[field];
+   return saved?.value===value&&!saved.url&&!saved.date;
+  }));
 }
 
 function GF3_AssignmentFixtureRow_(book,name,key,id,fields){

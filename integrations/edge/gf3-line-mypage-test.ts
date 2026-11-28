@@ -56,7 +56,8 @@ Deno.serve(async (request) => {
         delivery_available_date: fields["納車可能日"] || null,
         delivery_confirmed_date: fields["納車確定日"] || null,
         delivery_planned_date: fields["納車予定日"] || null,
-        delivered_date: delivered.data?.actual_date ?? null,
+        delivered_date: delivered.data&&fields["区分/ステータス"]==="貸出中"&&fields["引渡し"]===delivered.data.actual_date
+          ? delivered.data.actual_date : null,
       },
     });
   } catch {
