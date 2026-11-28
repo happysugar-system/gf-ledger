@@ -16,6 +16,8 @@ const required = [
   'GF3_ReadFixtureSnapshot','GF3_SaveFixtureAssignment','GF3_SaveFixtureProgress','GF3_SaveActualFixture',
   'GF3_ReadActualDeliveryMonths','GF3_RefreshMonthlyDelivery_','GF3_SaveFixturePhotos',
   'GF3_DocumentUiSave','GF3_OnLedgerFixtureEdit','GF3_RefreshLedgerFixtureSync',
+  'スマホ用車両一覧を取得する','スマホ用車両予定一覧を取得する',
+  'スマホから車両状態写真を登録する','スマホから車両写真登録を取り消す',
 ];
 for (const name of required) {
   if (definitions.get(name)!==1) throw Error('Missing or duplicate validation entrypoint: '+name);

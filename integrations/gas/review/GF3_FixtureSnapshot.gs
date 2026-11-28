@@ -12,7 +12,7 @@ function GF3_ReadFixtureSnapshot_(){
   const cols=GF3_Columns_(sheet,fields);
   const seen=new Set();
   const [head,...data]=sheet.getDataRange().getDisplayValues();
-  const extra=name==='車両台帳'?['車番','車検満了日','車検予定日',' 12点検予定日','名変予定日',
+  const extra=name==='車両台帳'?['車番','管轄','車検満了日','車検予定日',' 12点検予定日','名変予定日',
     ' 整備予定日',' 板金予定日','返却予定日','代車予定日','代車返却予定日']:[];
   extra.forEach(field=>{
    const hits=head.flatMap((header,i)=>header.trim()===field.trim()?[i]:[]);
@@ -39,6 +39,14 @@ function GF3_ReadFixtureSnapshot_(){
  return {environment:'gf3',sheets,actualWriteEnabled,monthlyReportUrl};
 }
 function GF3_ReadFixtureSnapshot(){return GF3_ReadFixtureSnapshot_();}
+
+function スマホ用車両一覧を取得する(){
+ const rows=GF3_ReadFixtureSnapshot_().sheets['車両台帳'];
+ return rows.filter(row=>row['車番']).map(row=>({VehicleID:row.VehicleID,管轄:row['管轄']||'',
+  車番:row['車番'],現在使用者:row['現在使用者'],
+  表示名:[row['管轄'],row['車番'],row['現在使用者']].filter(Boolean).join(' ｜ ')}))
+  .sort((a,b)=>a.車番.localeCompare(b.車番,'ja',{numeric:true}));
+}
 
 function GF3_ReadFixtureScreenLinks(id){
  const book=GF3_DocumentUiOwner_();

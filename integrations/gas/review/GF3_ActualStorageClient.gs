@@ -33,6 +33,12 @@ function GF3_ReadFixtureSchedules(){
  if(!Array.isArray(rows))throw Error('gf3_schedule_response');
  return rows;
 }
+function スマホ用車両予定一覧を取得する(vehicleId){
+ if(!/^V9\d{5}$/.test(vehicleId))throw Error('gf3_schedule_vehicle_denied');
+ return GF3_ReadFixtureSchedules().filter(row=>row.vehicle_id===vehicleId&&['予定','進行中'].includes(row.state))
+  .map(row=>({予定ID:row.schedule_id,VehicleID:row.vehicle_id,予定種類名:row.schedule_type,
+   予定日:row.schedule_date,状態:row.state,CalendarEventID:row.calendar_event_id||''}));
+}
 function GF3_ReadActualDeliveryMonths(){
  return GF3_ActualDeliveryMonths_(GF3_DocumentUiOwner_());
 }

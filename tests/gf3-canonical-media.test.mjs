@@ -32,7 +32,7 @@ test('photo save preserves PDF and rich Drive links and rolls back files on fail
     getFiles: () => iterate(created.filter(file => !file.trashed)),
     createFile() {
       if (++fileCalls === 3 && failNext) throw Error('simulated failure');
-      const file = { trashed: false, setTrashed(value) { this.trashed = value; } };
+      const file = { trashed: false, getId:()=>String(fileCalls), setTrashed(value) { this.trashed = value; } };
       created.push(file);
       return file;
     }
@@ -50,4 +50,37 @@ test('photo save preserves PDF and rich Drive links and rolls back files on fail
   protectedByValidation = true;
   assert.throws(() => context.GF3_CanonicalPhotoFolderCell_(row), /folder_link_conflict/);
   assert.equal(context.GF3_CanonicalDriveUrl_('https://drive.google.com.example.test/file'), '');
+});
+
+test('photo cancellation preflights the entire batch and preserves files from another folder', () => {
+  const context = vm.createContext({});
+  vm.runInContext(readFileSync(new URL('../integrations/gas/review/GF3_CanonicalMedia.gs', import.meta.url), 'utf8'), context);
+  const date='2026-12-03';
+  const folder={getId:()=> 'authorized-folder'};
+  const makeFile=parent=>({
+    trashed:false,getName:()=>date+'_1b3ef015-f01c-4b02-a295-6d7fd43fdd09_01.jpg',
+    getParents:()=>iterate([{getId:()=>parent}]),isTrashed(){return this.trashed},
+    setTrashed(value){this.trashed=value}
+  });
+  const allowed=makeFile('authorized-folder'),foreign=makeFile('different-folder');
+  assert.throws(()=>context.GF3_CancelCanonicalPhotoFiles_(folder,date,[allowed,foreign]),/file_denied/);
+  assert.equal(allowed.trashed,false);
+  context.GF3_CancelCanonicalPhotoFiles_(folder,date,[allowed]);
+  assert.equal(allowed.trashed,true);
+  assert.equal(foreign.trashed,false);
+});
+
+test('existing mobile photo API returns the original count and a scoped cancellation receipt', () => {
+  const context=vm.createContext({GF3_ProgressDate_:value=>value});
+  vm.runInContext(readFileSync(new URL('../integrations/gas/review/GF3_FixtureMedia.gs',import.meta.url),'utf8'),context);
+  context.GF3_SaveFixturePhotos=(id,date,images)=>{
+    assert.equal(id,'V900005');
+    assert.equal(date,'2026-12-03');
+    assert.equal(images[0],'data:image/jpeg;base64,dummy');
+    return {saved:1,folderUrl:'https://example.test/folder',fileIds:['test-photo-id']};
+  };
+  const result=context.スマホから車両状態写真を登録する('V900005',[{Base64:'dummy'}],'2026-12-03');
+  assert.equal(result.保存枚数,1);
+  assert.equal(result.取消情報.VehicleID,'V900005');
+  assert.equal(result.取消情報.ファイルID一覧[0],'test-photo-id');
 });

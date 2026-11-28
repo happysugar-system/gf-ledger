@@ -58,5 +58,18 @@ function GF3_SaveCanonicalPhotos_(row,parent,date,images){
   created.forEach(file=>{try{file.setTrashed(true);}catch(_){}});
   throw error;
  }
- return {saved:created.length,folderUrl:folder.getUrl(),recent:GF3_CanonicalPhotoDates_(parent)};
+ return {saved:created.length,folderUrl:folder.getUrl(),fileIds:created.map(file=>file.getId()),
+  recent:GF3_CanonicalPhotoDates_(parent)};
+}
+
+function GF3_CancelCanonicalPhotoFiles_(folder,date,files){
+ for(const file of files){
+  const parts=file.getName().split('_');
+  if(parts.length!==3||parts[0]!==date||!/^[0-9a-f-]{36}$/i.test(parts[1])||!/^\d{2}\.jpg$/.test(parts[2]))
+   throw Error('gf3_photo_file_denied');
+  const parents=file.getParents();
+  if(!parents.hasNext()||parents.next().getId()!==folder.getId()||parents.hasNext())
+   throw Error('gf3_photo_file_denied');
+ }
+ for(const file of files)if(!file.isTrashed())file.setTrashed(true);
 }

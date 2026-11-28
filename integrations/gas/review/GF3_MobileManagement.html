@@ -181,6 +181,7 @@ const planTypes=[['車検','車検予定日'],['12点検',' 12点検予定日'],
 const validDriveLink=value=>{const raw=String(value||'').trim();if(!raw)return null;const id=raw.match(/^[a-zA-Z0-9_-]{25,}$/);if(id)return 'https://drive.google.com/drive/folders/'+encodeURIComponent(raw);try{const u=new URL(raw);if(u.protocol!=='https:'||!['drive.google.com','docs.google.com'].includes(u.hostname))return null;return u.href;}catch{return null;}};
 const fileLink=(k,value)=>{const url=validDriveLink(value);return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+(url?'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer">📂 Google Driveで開く ↗</a>':safe(value||'未登録（台帳にリンクがありません）'))+'</div></div>';};
 const fixtureMedia=new Map();
+const fixturePhotoReceipts=new Map();
 async function loadFixtureMedia(id){
  try{fixtureMedia.set(id,await gasCall('GF3_ReadFixtureMedia',id));}
  catch(_){fixtureMedia.set(id,{error:true});}
@@ -196,13 +197,16 @@ function fixtureMediaView(vehicle){
   +(media?.recent||[]).map(({date,url},i)=>fileLink((i===0?'最新の撮影':'前回の撮影')+' '+date,url)).join('')
   +(media?.photoWriteEnabled?'<label for="gf3-photo-date">撮影日</label><input id="gf3-photo-date" type="date">'
    +'<label for="gf3-photo-files">車両状態写真（JPEG、最大5枚）</label><input id="gf3-photo-files" type="file" accept="image/jpeg" multiple>'
-   +'<button class="action primary" data-fixture-photo="1">車両状態写真を保存</button>':'')
+   +'<button class="action primary" data-fixture-photo="1">車両状態写真を保存</button>'
+   +(fixturePhotoReceipts.has(vehicle.VehicleID)?'<button class="action secondary" data-fixture-photo-cancel="1">今回の写真保存を取り消す</button>':''):'')
   +(editable?'<h3>フォルダ備考</h3>'+field('フォルダ備考')+'<button class="action primary" data-fixture-save="1">フォルダ備考を検証台帳に保存</button>':'')
   +'</div>';
 }
 document.addEventListener('click',event=>{
  const button=event.target.closest('button[data-fixture-photo]');
  if(gf3Host&&button)saveFixturePhotos(button);
+ const cancel=event.target.closest('button[data-fixture-photo-cancel]');
+ if(gf3Host&&cancel)cancelFixturePhotos(cancel);
 });
 async function saveFixturePhotos(button){
  if(fixtureSaving||carId!=='V900005')return;
@@ -220,16 +224,37 @@ async function saveFixturePhotos(button){
    reader.onerror=reject;
    reader.readAsDataURL(file);
   })));
-  const result=await gasCall('GF3_SaveFixturePhotos',id,date,images);
-  if(result?.saved!==files.length)throw Error('保存件数が一致しません。');
-  $('state').textContent='写真を'+result.saved+'枚保存しました。';
+  const payload=images.map(image=>({MIMEタイプ:'image/jpeg',Base64:image.split(',')[1]}));
+  const result=await gasCall('スマホから車両状態写真を登録する',id,payload,date);
+  if(result?.保存枚数!==files.length||!result.取消情報)throw Error('保存件数が一致しません。');
+  fixturePhotoReceipts.set(id,result.取消情報);
+  $('state').textContent='写真を'+result.保存枚数+'枚保存しました。';
   await loadFixtureMedia(id);
  }catch(error){$('state').textContent='写真の保存を確認できませんでした。'+(error?.message||'');}
  finally{fixtureSaving=false;button.disabled=false;}
 }
+async function cancelFixturePhotos(button){
+ const id=carId,receipt=fixturePhotoReceipts.get(id);
+ if(fixtureSaving||!receipt||!confirm('今回保存した検証写真を取り消しますか？'))return;
+ fixtureSaving=true;
+ button.disabled=true;
+ try{
+  const result=await gasCall('スマホから車両写真登録を取り消す',receipt);
+  if(result?.成功!==true)throw Error('取消結果を確認できません。');
+  fixturePhotoReceipts.delete(id);
+  $('state').textContent='写真保存を取り消しました。';
+  await loadFixtureMedia(id);
+ }catch(error){$('state').textContent='写真を取り消せませんでした。'+(error?.message||'');}
+ finally{fixtureSaving=false;button.disabled=false;}
+}
 let fixtureSchedules=[];
-async function loadFixtureSchedules(){
- try{fixtureSchedules=await gasCall('GF3_ReadFixtureSchedules');}
+async function loadFixtureSchedules(vehicleId){
+ try{
+  fixtureSchedules=vehicleId?(await gasCall('スマホ用車両予定一覧を取得する',vehicleId)).map(row=>({
+   vehicle_id:row.VehicleID,schedule_id:row.予定ID,schedule_type:row.予定種類名,
+   schedule_date:row.予定日,state:row.状態,calendar_event_id:row.CalendarEventID
+  })):await gasCall('GF3_ReadFixtureSchedules');
+ }
  catch(_){fixtureSchedules=[];}
  if(page==='schedule'||(page==='car'&&detailTab==='schedule'))render();
 }
@@ -361,7 +386,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)r
   t.disabled=false;
   $('state').textContent='割当操作は受付2・V900005の組み合わせで検証できます。';
   return;
-}alert('【割当プレビュー・保存なし】\\n'+person['氏名']+'\\n'+vehicle['車番']+'（'+vehicle.VehicleID+'）\\n\\n名変待ち管理・車両台帳・履歴には保存されません');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;if(gf3Host&&detailTab==='schedule')loadFixtureSchedules();if(gf3Host&&detailTab==='files')loadFixtureMedia(carId);render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\\n'+car()['車番']+'\\n'+type+'：'+day+'\\n\\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
+}alert('【割当プレビュー・保存なし】\\n'+person['氏名']+'\\n'+vehicle['車番']+'（'+vehicle.VehicleID+'）\\n\\n名変待ち管理・車両台帳・履歴には保存されません');return;}if(d.filter){filter=d.filter;render();return;}if(d.tab){detailTab=d.tab;if(gf3Host&&detailTab==='schedule')loadFixtureSchedules(carId);if(gf3Host&&detailTab==='files')loadFixtureMedia(carId);render();return;}if(d.section!==undefined){ledgerSection=Number(d.section);render();return;}if(d.planPreview){const type=$('planType')?.value,day=$('planDate')?.value;if(!day){alert('予定日を選択してください');return;}alert('【予定登録プレビュー・保存なし】\\n'+car()['車番']+'\\n'+type+'：'+day+'\\n\\nSupabase・スプレッドシートには保存されません');return;}if(d.preview){preview();return;}if(d.discard){draft={...car()};render();return;}if(d.info){alert(d.info+'\n現在はテスト版のため保存されません');}});
 let assignmentSaving=false;
 document.addEventListener('click',event=>{
  const button=event.target.closest('button[data-fixture-actual]');
