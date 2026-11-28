@@ -286,7 +286,14 @@ function monthlyDeliverySummary(){
 }
 function nav(){const opts=[['home','🏠','ホーム'],['cars','🚗','車両'],['drivers','👤','ドライバー'],['schedule','📅','予定']];$('nav').innerHTML=opts.map(([p,i,t])=>'<button data-page="'+p+'" class="'+((page===p)||(p==='cars'&&page==='car')?'active':'')+'"><b>'+i+'</b>'+t+'</button>').join('');}
 function go(p){page=p;draft=null;if(gf3Host&&p==='schedule'){loadActualDeliveryMonths();loadFixtureSchedules();}render();window.scrollTo(0,0);}
-function openCar(id){carId=id;detailTab='basic';ledgerSection=0;draft={...car()};page='car';render();window.scrollTo(0,0);}
+const fixtureScreenLinks=new Map();
+async function loadFixtureScreenLinks(id){
+ try{
+  fixtureScreenLinks.set(id,await gasCall('GF3_ReadFixtureScreenLinks',id));
+  if(page==='car'&&carId===id&&detailTab==='basic')render();
+ }catch(_){fixtureScreenLinks.delete(id);}
+}
+function openCar(id){carId=id;detailTab='basic';ledgerSection=0;draft={...car()};page='car';if(gf3Host)loadFixtureScreenLinks(id);render();window.scrollTo(0,0);}
 function changed(){const x=car();return Object.keys(draft||{}).filter(k=>String(x[k]??'')!==String(draft[k]??''));}
 function render(){nav();let h='';
 if(!ready){$('content').innerHTML='<div class="box">車両データを読み込んでいます…</div>';return;}
@@ -296,6 +303,11 @@ else{if(page==='cars'){const a=filterVehicles(cars,query).filter(x=>matchesGroup
 }
 
 if(page==='car'){const x=car();if(!x){go('cars');return;}h='<button class="back" data-page="cars">← 車両一覧へ</button><div class="box"><div class="row"><h2>'+safe(x['車番']||x.VehicleID)+'</h2><span class="pill">'+safe(x['区分/ステータス'])+'</span></div><div class="muted">'+safe(x.VehicleID)+' ・ '+safe(x['管理区分'])+'</div><p>👤 現在使用者：<b>'+safe(x['現在使用者']||'なし')+'</b></p></div><div class="detailtabs">'+[['basic','基本情報'],['action','貸出・返却'],['schedule','予定'],['files','写真・書類'],['history','履歴']].map(([k,t])=>'<button data-tab="'+k+'" class="'+(detailTab===k?'active':'')+'">'+t+'</button>').join('')+'</div>';
+if(gf3Host&&detailTab==='basic'){
+ const links=fixtureScreenLinks.get(x.VehicleID);
+ if(links?.vehicle)h+='<div class="box"><a target="_blank" rel="noopener noreferrer" href="'+safe(links.vehicle)+'">車両台帳の該当行</a>'
+  +(links.driver?' · <a target="_blank" rel="noopener noreferrer" href="'+safe(links.driver)+'">ドライバーマスターの該当行</a>':'')+'</div>';
+}
 if(detailTab==='basic'){h+='<div class="box"><h2>車両台帳の編集（基本・契約情報）</h2><div class="notice">Ver.9デモと同じ画面構成です。実データを表示していますが、編集内容はまだ保存されません。</div><div class="detailtabs">'+groups.map(([n],i)=>'<button data-section="'+i+'" class="'+(ledgerSection===i?'active':'')+'">'+n+'</button>').join('')+'</div>'+groups[ledgerSection][1].map(i=>field(VEHICLE_HEADERS[i])).join('')+(gf3Host&&x.VehicleID==='V900005'&&ledgerSection===0?'<button class="action primary" data-fixture-save="model">車種を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">編集を破棄</button></div>';}
 if(detailTab==='action'&&(!gf3Host||x.VehicleID!=='V900005')){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
 if(gf3Host&&detailTab==='action'&&x.VehicleID==='V900005'){

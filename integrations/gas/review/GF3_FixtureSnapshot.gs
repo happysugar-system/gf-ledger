@@ -36,6 +36,12 @@ function GF3_ReadFixtureSnapshot_(){
 }
 function GF3_ReadFixtureSnapshot(){return GF3_ReadFixtureSnapshot_();}
 
+function GF3_ReadFixtureScreenLinks(id){
+ const book=GF3_DocumentUiOwner_();
+ if(!/^V9\d{5}$/.test(id))throw Error('gf3_screen_vehicle_denied');
+ return GF3_CanonicalVehicleScreenLinks_(book,id,GF3_AssignmentFixtureRow_).links;
+}
+
 /** Round-trip a single existing fixture note through the canonical ledger. */
 function GF3_SaveFixtureFolderNote(vehicleId,expected,note){
  return GF3_SaveFixtureVehicleField_(vehicleId,'フォルダ備考',expected,note);
