@@ -3,7 +3,7 @@ function GF3_ReadFixtureSnapshot_(){
  const book=GF3_DocumentUiOwner_();
  const specs=[
   ['車両台帳','VehicleID',/^V9[0-9]{5}$/,['VehicleID','車種','区分/ステータス','管理区分','納車予定日','フォルダ備考']],
-  ['名変待ち管理','受付ID',/^TEST-[A-Z0-9-]+$/i,['受付ID','ステータス','割当VehicleID','DriverID']],
+  ['名変待ち管理','受付ID',/^[1-9][0-9]{0,3}$/,['受付ID','ステータス','割当VehicleID','DriverID','LINE受付ID']],
   ['ドライバーマスター','DriverID',/^D9[0-9]{5}$/,['DriverID','ステータス','割当VehicleID']]
  ];
  const sheets={};
@@ -19,7 +19,7 @@ function GF3_ReadFixtureSnapshot_(){
     seen.add(id);
     return Object.fromEntries(fields.map(field=>{
      const value=row[cols[field]]||'';
-     const restricted=field==='DriverID'?/^D9[0-9]{5}$/:field==='割当VehicleID'?/^V9[0-9]{5}$/:null;
+     const restricted=field==='DriverID'?/^D9[0-9]{5}$/:field==='割当VehicleID'?/^V9[0-9]{5}$/:field==='LINE受付ID'?/^TEST-[A-Z0-9-]+$/:null;
      return [field,restricted&&!restricted.test(value)?'':value];
     }));
    });
@@ -73,7 +73,7 @@ function GF3_MobileManagementDoGet_(){
 /** Read-only assignment preflight using the validated GF3 Supabase history adapter. */
 function GF3_CheckFixtureAssignment(receiptId,vehicleId){
  const book=GF3_DocumentUiOwner_();
- if(!/^TEST-[A-Z0-9-]+$/.test(receiptId)||!/^V9[0-9]{5}$/.test(vehicleId))
+ if(!/^[1-9][0-9]{0,3}$/.test(String(receiptId))||!/^V9[0-9]{5}$/.test(vehicleId))
   throw Error('gf3_assignment_fixture_denied');
  const waiting=GF3_AssertSheet_(book.getSheetByName('名変待ち管理'));
  const receipt=GFA_割当照合行_(waiting,'受付ID',receiptId,
