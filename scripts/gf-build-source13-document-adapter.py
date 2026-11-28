@@ -37,7 +37,7 @@ def patch(s):
     for i,m in enumerate(matches):
         if m.group(1) in names:
             result+=s[m.start():matches[i+1].start() if i+1<len(matches) else len(s)]+'\n'
-    actual=set(re.findall(r'^function ([^\\s(]+)\\(',result,re.M))
+    actual=set(re.findall(r'^function ([^\s(]+)\(',result,re.M))
     required=set(names)|{'スマホから免許証をまとめて登録する','スマホから車両書類をまとめて登録する','車両書類を保存する_','スマホから直前登録を取り消す'}
     if not required <= actual: raise ValueError('missing helpers: '+str(required-actual))
     return result
