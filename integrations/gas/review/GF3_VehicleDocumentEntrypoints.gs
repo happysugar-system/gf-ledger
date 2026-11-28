@@ -41,13 +41,21 @@ function GF3_VehicleDocumentCancel_(id){
  GF3_AssertBook_(book);
  if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
  const row=GF3_DocumentStorage_(book,'read',id)[0];
- if(row.state==='取消済')return {成功:true};
+ const cleanup=()=>{
+  try{return GF3_DocumentCancelDriveCleanup_(book,{
+   id:row.receipt_id,vehicleId:row.vehicle_id,kind:row.kind,
+   state:'取消済',newUrl:row.new_url
+  });}
+  catch(e){console.error('gf3_document_drive_cleanup_pending:'+id+':'+e.message);
+   return {state:'要確認',driveDeleted:false};}
+ };
+ if(row.state==='取消済')return {成功:true,driveCleanup:cleanup().state};
  const transition=(expected,next)=>GF3_DocumentStorage_(book,'transition',id,{expected,next});
  transition('完了','取消中');
  try{
  GF3_DocumentCancelRestore_(book,{kind:row.kind,state:row.state,id:row.receipt_id,vehicleId:row.vehicle_id,previousUrl:row.previous_url,newUrl:row.new_url});
  transition('取消中','取消済');
- return {成功:true};
+ return {成功:true,driveCleanup:cleanup().state};
  }catch(e){try{transition('取消中','要確認');}catch(ignore){}throw Error('gf3_document_cancel_review:'+id);}
 }
 /** Prepare a PDF and original images under the fixed isolated root only.
