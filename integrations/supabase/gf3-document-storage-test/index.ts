@@ -17,8 +17,11 @@ Deno.serve(async req=>{
  if(b.action==="insert"){
  const row=b.row||{},keys=["receipt_id","vehicle_id","driver_id","kind","previous_url","new_url","drive_file_id"];
  const url=/^https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)(?:\/view)?$/;
- if(Object.keys(row).some(k=>!keys.includes(k))||row.receipt_id!==id||!/^V9\d{5}$/.test(row.vehicle_id||"")||row.kind!=="車両書類"||(row.driver_id!=null&&!/^D9\d{5}$/.test(row.driver_id))||typeof row.previous_url!=="string"||(row.previous_url!==""&&!url.test(row.previous_url))||!url.test(row.new_url||"")||url.exec(row.new_url)?.[1]!==row.drive_file_id)return reply({error:"row"},400);
+ if(Object.keys(row).some(k=>!keys.includes(k))||row.receipt_id!==id||!/^V9\d{5}$/.test(row.vehicle_id||"")||row.kind!=="車両書類"||(row.driver_id!=null&&!/^D9\d{5}$/.test(row.driver_id))||typeof row.previous_url!=="string"||(row.previous_url!==""&&!url.test(row.previous_url))||row.new_url!=null||row.drive_file_id!=null)return reply({error:"row"},400);
  path="/rest/v1/gf3_document_receipts_test";method="POST";body=row;
+ }else if(b.action==="attach"){
+ if(typeof b.fileId!=="string"||!/^[A-Za-z0-9_-]+$/.test(b.fileId))return reply({error:"file"},400);
+ path="/rest/v1/rpc/gf3_document_attach_test";method="POST";body={p_id:id,p_file:b.fileId};
  }else if(b.action==="transition"){
  if(typeof b.expected!=="string"||typeof b.next!=="string")return reply({error:"state"},400);
  path="/rest/v1/rpc/gf3_document_transition_test";method="POST";body={p_id:id,p_expected:b.expected,p_next:b.next};
