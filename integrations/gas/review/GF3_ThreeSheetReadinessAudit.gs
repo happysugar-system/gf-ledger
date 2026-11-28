@@ -49,14 +49,38 @@ function GF3_検証3シート接続診断(){
  if(!scriptApproved||!bookApproved||!enabled){
   return {ready:false,scriptApproved,bookApproved,enabled,reason:'configuration_denied'};
  }
- const book=SpreadsheetApp.openById(target);
- const headers={};
- for(const s of book.getSheets()){
-  headers[s.getName()]=s.getRange(1,1,1,s.getLastColumn()).getDisplayValues()[0];
- }
- const audit=GF3_ThreeSheetSchemaAudit_(headers);
+ const book=GF3_DocumentUiOwner_();
+ const audit=GF3_ReadCanonicalSchemaAudit_(book);
  const migrationVerified=p.getProperty('GF3_MIGRATION_VERIFIED')==='true';
  return Object.assign({scriptApproved,bookApproved,enabled,schemaReady:audit.ready,migrationVerified},audit,{ready:audit.ready&&migrationVerified});
+}
+function GF3_ReadCanonicalSchemaAudit_(book){
+ GF3_AssertBook_(book);
+ const headers={};
+ for(const s of book.getSheets()){
+  const name=s.getName();
+  if(name==='月別納車管理'&&s.getDeveloperMetadata().some(item=>item.getKey()==='GF3_MONTHLY_PROJECTION'))continue;
+  if(!['車両台帳','名変待ち管理','ドライバーマスター'].includes(name)){
+   headers[name]=[];
+   continue;
+  }
+  headers[name]=s.getLastColumn()>0?s.getRange(1,1,1,s.getLastColumn()).getDisplayValues()[0]:[];
+ }
+ return GF3_ThreeSheetSchemaAudit_(headers);
+}
+
+function GF3_専用検証初期設定(){
+ const script='1h5czlOaSO0WeERVDxiGajVipVL4PAVyWPdaIB0kGVZsR11GMU12JwEE-';
+ const book='1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0';
+ const props=PropertiesService.getScriptProperties();
+ const email=(props.getProperty('GF3_DOCUMENT_UI_OWNER_EMAIL')||'').trim().toLowerCase();
+ const active=String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();
+ const effective=String(Session.getEffectiveUser().getEmail()||'').trim().toLowerCase();
+ if(!email||active!==email||effective!==email||
+   ScriptApp.getScriptId()!==script||SpreadsheetApp.getActiveSpreadsheet()?.getId()!==book)
+  throw Error('invalid_validation_target');
+ props.setProperties({GF3_EXPECTED_SCRIPT_ID:script,GF3_APPROVED_BOOK_ID:book,GF3_VALIDATION_ENABLED:'true'});
+ return GF3_検証3シート接続診断();
 }
 /** Call this before wiring any staff write to the three-sheet test workbook. */
 function GF3_検証3シート書込前確認(){

@@ -18,6 +18,7 @@ const required = [
   'GF3_DocumentUiSave','GF3_OnLedgerFixtureEdit','GF3_RefreshLedgerFixtureSync',
   'スマホ用車両一覧を取得する','スマホ用車両予定一覧を取得する',
   'スマホから車両状態写真を登録する','スマホから車両写真登録を取り消す',
+  'GOLD_FIRST初期セットアップ','GOLD_FIRST全シートの表示を整える','車両台帳連携トリガーを設定する',
 ];
 for (const name of required) {
   if (definitions.get(name)!==1) throw Error('Missing or duplicate validation entrypoint: '+name);

@@ -6,7 +6,7 @@ function GF3_CanonicalCellUrl_(book,sheet,row,column){
 }
 
 function GF3_UpdateCanonicalCellLink_(cell,book,url){
- if(!url||cell.getFormula())return false;
+ if(!url||cell.getFormula()||cell.getDataValidation())return false;
  const value=cell.getValue();
  if(typeof value!=='string'||!value.trim())return false;
  const rich=cell.getRichTextValue();
