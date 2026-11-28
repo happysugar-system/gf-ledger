@@ -55,3 +55,10 @@ function GF3_DocumentUiCancel_(receiptId){
     throw Error('gf3_ui_receipt_vehicle_denied');
   return GF3_VehicleDocumentCancel_(receiptId);
 }
+
+/* Public bridge names without trailing underscores: google.script.run cannot
+ * invoke server functions that end in "_". Each bridge enforces owner auth
+ * in the underlying handler. */
+function GF3_DocumentUiStatus(){return GF3_DocumentUiStatus_();}
+function GF3_DocumentUiSave(images,receiptId){return GF3_DocumentUiSave_(images,receiptId);}
+function GF3_DocumentUiCancel(receiptId){return GF3_DocumentUiCancel_(receiptId);}
