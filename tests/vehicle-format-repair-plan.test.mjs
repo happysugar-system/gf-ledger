@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {planRepair as p} from '../mobile-management/vehicle-format-repair-plan.mjs';
+const c={value:'',protected:false,merged:false,numberFormat:{type:'DATE',pattern:'yyyy/mm/dd'},validation:{condition:{type:'DATE_IS_VALID'},strict:true}};
+test('loan text repair retains original metadata',()=>{const r=p('代車貸出先',c);assert.equal(r.action,'repair');assert.deepEqual(r.before.validation,c.validation);assert.equal(r.after.validation,null);assert.equal(r.after.numberFormat.type,'TEXT');});
+test('existing values and formulas excluded',()=>{for(const x of [{value:'会社'},{value:123},{formula:'=A1'}])assert.equal(p('代車貸出先',{...c,...x}).action,'review');});
+test('unknown protection or merge excluded',()=>assert.equal(p('代車貸出先',{...c,protected:undefined}).action,'review'));
+test('unrelated rules preserved',()=>assert.equal(p('代車貸出先',{...c,validation:{condition:{type:'ONE_OF_LIST'}}}).action,'review'));
+test('date fields excluded',()=>assert.equal(p('納車予定日',c).action,'skip'));
+test('format-only repair',()=>assert.equal(p('カラー',{...c,validation:null}).action,'repair'));

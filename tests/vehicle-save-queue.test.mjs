@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {createTestQueue} from './vehicle-save-queue.mjs';
+import {test} from 'node:test';
+const p={vehicleId:'V999999',expected:{'GPS有無':false},changes:{'GPS有無':true}};
+test('normal lifecycle',()=>{const q=createTestQueue();q.enqueue('1','staff',p);const c=q.claim();q.acknowledge(c.id,c.lease,'sheet_verified');assert.equal(q.verifyReplica('1',true,false),false);assert.equal(q.verifyReplica('1',true,true),true);assert.equal(q.status('1'),'replica_verified');});
+test('duplicate request',()=>{const q=createTestQueue();q.enqueue('1','staff',p);q.enqueue('1','staff',p);q.claim();assert.equal(q.claim(),null);assert.throws(()=>q.enqueue('1','other',p));});
+test('expired lease never automatically retries',()=>{let t=0;const q=createTestQueue({now:()=>t,leaseMs:10});q.enqueue('1','staff',p);const c=q.claim();t=11;assert.equal(q.claim(),null);assert.equal(q.status('1'),'reconciliation_required');assert.throws(()=>q.acknowledge(c.id,c.lease,'sheet_verified'));});
+test('invalid lease',()=>{const q=createTestQueue();q.enqueue('1','staff',p);q.claim();assert.throws(()=>q.acknowledge('1','wrong','sheet_verified'));});
+test('reject non-test vehicle',()=>{const q=createTestQueue();assert.throws(()=>q.enqueue('1','staff',{...p,vehicleId:'V000001'}));});
+test('conflict never becomes verified',()=>{const q=createTestQueue();q.enqueue('1','staff',p);const c=q.claim();q.acknowledge(c.id,c.lease,'conflict');assert.throws(()=>q.verifyReplica('1',true,true));});

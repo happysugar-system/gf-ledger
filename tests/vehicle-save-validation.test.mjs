@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateVehiclePatch} from '../mobile-management/vehicle-save-validation.mjs';
+const patch=(expected,changes,vehicleId='V999999')=>({vehicleId,expected,changes});
+test('multiple fields',()=>{const p=patch({'GPS有無':false,'代車貸出先':''},{'GPS有無':true,'代車貸出先':'テスト'});assert.deepEqual(validateVehiclePatch(p),p)});
+test('clear text',()=>assert.equal(validateVehiclePatch(patch({'代車貸出備考':'旧'},{'代車貸出備考':''})).changes['代車貸出備考'],''));
+test('reject formula',()=>assert.throws(()=>validateVehiclePatch(patch({'代車貸出先':''},{'代車貸出先':'=1+1'}))));
+test('reject unknown field',()=>assert.throws(()=>validateVehiclePatch(patch({'車番':'a'},{'車番':'b'}))));
+test('reject production vehicle',()=>assert.throws(()=>validateVehiclePatch(patch({'GPS有無':false},{'GPS有無':true},'V000001'))));
+test('reject mismatched fields',()=>assert.throws(()=>validateVehiclePatch(patch({'代車貸出先':''},{'代車貸出備考':'a'}))));
+test('reject string boolean',()=>assert.throws(()=>validateVehiclePatch(patch({'GPS有無':false},{'GPS有無':'true'}))));
+test('reject unchanged',()=>assert.throws(()=>validateVehiclePatch(patch({'GPS有無':false},{'GPS有無':false}))));
