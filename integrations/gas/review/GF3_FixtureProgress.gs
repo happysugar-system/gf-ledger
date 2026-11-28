@@ -66,20 +66,32 @@ function GF3_SaveFixtureProgress(vehicleId,expected,next){
    return {vehicleId,status:'unchanged',fields:current.fields};
   if(JSON.stringify(current.fields)!==JSON.stringify(prior))
    throw Error('gf3_progress_changed_reload');
-  const row=current.vehicle,requests=[];
-  for(const [i,field] of GF3_PROGRESS_KEYS_.entries()){
+  const projections={'納車可能日':'納車予定日'};
+  const changed=GF3_PROGRESS_KEYS_.filter(field=>current.fields[field]!==proposed[field]);
+  const linked=changed.filter(field=>Object.hasOwn(projections,field));
+  const row=GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID',vehicleId,
+   [...GF3_PROGRESS_KEYS_,...linked.map(field=>projections[field])]);
+  const edits=changed.map(field=>({field,before:current.fields[field],value:proposed[field]}));
+  for(const field of linked){
+   const target=projections[field],before=GF3_ProgressDate_(row.data[target]);
+   if(before&&before!==current.fields[field]&&before!==proposed[field])
+    throw Error('gf3_progress_link_conflict:'+target);
+   if(before!==proposed[field])edits.push({field:target,before,value:proposed[field]});
+  }
+  const requests=[];
+  for(const {field,before,value} of edits){
+   const isDate=field!=='管理区分';
    const cell=row.sheet.getRange(row.number,row.columns[field]+1);
    if(cell.getFormula()||cell.getRichTextValue()?.getRuns().some(run=>run.getLinkUrl()))
     throw Error('gf3_progress_cell_protected:'+field);
    const displayed=field==='管理区分'?String(cell.getDisplayValue()).trim():
     GF3_ProgressDate_(cell.getDisplayValue());
-   if(displayed!==current.fields[field])throw Error('gf3_progress_cell_changed:'+field);
-   if(i>0&&!/y/i.test(cell.getNumberFormat()))
+   if(displayed!==before)throw Error('gf3_progress_cell_changed:'+field);
+   if(isDate&&value&&!/y/i.test(cell.getNumberFormat()))
     throw Error('gf3_progress_date_format_missing:'+field);
-   const value=proposed[field];
    requests.push({updateCells:{
     start:{sheetId:row.sheet.getSheetId(),rowIndex:row.number-1,columnIndex:row.columns[field]},
-    rows:[{values:[!value?{}:{userEnteredValue:i===0?{stringValue:value}:
+    rows:[{values:[!value?{}:{userEnteredValue:!isDate?{stringValue:value}:
       {numberValue:Date.parse(value+'T00:00:00Z')/86400000+25569}}]}],
     fields:'userEnteredValue'
    }});
@@ -89,6 +101,11 @@ function GF3_SaveFixtureProgress(vehicleId,expected,next){
   const actual=GF3_ProgressFixture_(book);
   if(!actual.assigned||JSON.stringify(actual.fields)!==JSON.stringify(proposed))
    throw Error('gf3_progress_readback_review_required');
+  if(linked.length){
+   const readback=GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID',vehicleId,linked.map(field=>projections[field]));
+   if(linked.some(field=>GF3_ProgressDate_(readback.data[projections[field]])!==proposed[field]))
+    throw Error('gf3_progress_projection_readback_failed');
+  }
   return {vehicleId,status:'saved',fields:actual.fields};
  }finally{lock.releaseLock();}
 }

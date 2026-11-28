@@ -36,6 +36,22 @@ const validDriveLink=value=>{const raw=String(value||'').trim();if(!raw)return n
 const fileLink=(k,value)=>{const url=validDriveLink(value);return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+(url?'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer">📂 Google Driveで開く ↗</a>':safe(value||'未登録（台帳にリンクがありません）'))+'</div></div>';};
 const scheduleItems=(onlyId=null)=>{const out=[];for(const x of cars){if(onlyId&&x.VehicleID!==onlyId)continue;for(const [name,k] of planTypes){const v=x[k];if(v)out.push({date:String(v),type:name,plate:x['車番'],id:x.VehicleID});}}return out.sort((a,b)=>a.date.localeCompare(b.date));};
 const scheduleRows=items=>items.length?items.map(v=>'<button class="item" data-car="'+safe(v.id)+'"><strong>'+safe(v.date)+'　'+safe(v.type)+'</strong><small>'+safe(v.plate)+'</small></button>').join(''):'<p class="muted">登録済みの予定はありません</p>';
+function monthlyDeliverySummary(){
+ const months=new Map();
+ for(const vehicle of cars){
+   for(const [field,type] of [['納車予定日','planned'],['引渡し','delivered']]){
+     const iso=toDate(vehicle[field]);
+     if(!iso)continue;
+     const month=iso.slice(0,7);
+     const counts=months.get(month)||{planned:0,delivered:0};
+     counts[type]++;
+     months.set(month,counts);
+   }
+ }
+ return '<div class="box"><h3>月別納車（検証台帳）</h3>'+([...months].sort(([a],[b])=>b.localeCompare(a))
+   .map(([month,counts])=>'<p>'+safe(month)+'　予定 '+counts.planned+'件 ／ 引渡し実績 '+counts.delivered+'件</p>').join('')
+   ||'<p class="muted">納車予定と引渡し実績はありません。</p>')+'</div>';
+}
 function nav(){const opts=[['home','🏠','ホーム'],['cars','🚗','車両'],['drivers','👤','ドライバー'],['schedule','📅','予定']];$('nav').innerHTML=opts.map(([p,i,t])=>'<button data-page="'+p+'" class="'+((page===p)||(p==='cars'&&page==='car')?'active':'')+'"><b>'+i+'</b>'+t+'</button>').join('');}
 function go(p){page=p;draft=null;render();window.scrollTo(0,0);}
 function openCar(id){carId=id;detailTab='basic';ledgerSection=0;draft={...car()};page='car';render();window.scrollTo(0,0);}
@@ -73,6 +89,7 @@ if(page==='drivers'&&gf3Host)h='<h2>ドライバーマスター</h2>'+drivers.ma
 else if(page==='drivers')h='<h2>👤 ドライバー</h2><div class="box"><p>ドライバーマスターとの連携は次の開発対象です。</p><p class="muted">現在は車両一覧から使用者を確認できます。ここにはサンプルの個人情報を表示しません。</p><button class="action secondary" data-page="cars">車両から使用者を確認</button></div>';
 if(page==='schedule'){h='<h2>📅 車両予定</h2><div class="box"><h3>登録済みの予定（台帳データ）</h3><p class="muted">車両を選ぶと、予定の追加画面を開けます。登録はまだ保存されません。</p>'+scheduleRows(scheduleItems())+'</div><div class="box"><h2>予定の種類</h2><p class="muted">'+planTypes.map(([name])=>name).join(' ／ ')+'</p></div>';}
 
+if(gf3Host&&page==='schedule')h+=monthlyDeliverySummary();
 $('content').innerHTML=h;
 }
 function preview(){const x=car(),diff=changed();alert('【仮編集・保存なし】\n'+(diff.length?diff.map(k=>k.trim()+': '+String(x[k]??'')+' → '+String(draft[k]??'')).join('\n'):'変更なし')+'\n\nSupabase・スプレッドシートには保存されません');}
