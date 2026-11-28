@@ -31,3 +31,5 @@ test('スタッフ権限を迂回しない',()=>{
  assert.match(html,/action:'list'/);
  assert.match(html,/if\(!response\.ok\)/);
 });
+
+// Regression suite is intentionally read-only.
