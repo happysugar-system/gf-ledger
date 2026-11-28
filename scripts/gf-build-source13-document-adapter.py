@@ -30,7 +30,7 @@ def patch(s):
 '''+s[end:]
     # Only retain explicit PDF helper functions; omit maintenance/production diagnostics.
     import re
-    names=['免許証PDFを作る_','車両書類PDFを作る_','固定向きPDFを作る_','GF_従来の固定向きPDFを作る_60','GF_JPEG情報を読む_60','GF_JPEGを直接PDFにする_60','GF_EXIFの向きを読む_60']
+    names=['免許証PDFを作る_','車両書類PDFを作る_','固定向きPDFを作る_','GF_従来の固定向きPDFを作る_60','GF_JPEG情報を読む_60','GF_JPEGを直接PDFにする_60','GF_EXIFの向きを読む_60','画像データをBlobにする_','MIMEから拡張子を取得する_','登録日時名を作る_']
     matches=list(re.finditer(r'^function ([^\s(]+)\(',s,re.M))
     first=s.index('/******************************************************\n * 画像 → PDF')
     result=s[:first]
