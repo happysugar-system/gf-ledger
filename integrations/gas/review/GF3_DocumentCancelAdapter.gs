@@ -1,7 +1,7 @@
 /** Isolated vehicle document cancellation. Receipt must be loaded from trusted server storage, never client fields. */
 function GF3_DocumentCancelRestore_(book,receipt){
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
+ if(!GF3_DocumentWriteEnabled_(book))throw Error('validation_disabled');
  if(!receipt||receipt.kind!=='車両書類'||receipt.state!=='完了'||!/^TEST-GF3-[A-Z0-9-]+$/.test(receipt.id||''))throw Error('document_receipt_invalid');
  const field='📄 最新車両書類',id=receipt.vehicleId,old=receipt.previousUrl,newUrl=receipt.newUrl;
  GF3_LegacyProjectionPlan_(id,'document',{[field]:newUrl});
