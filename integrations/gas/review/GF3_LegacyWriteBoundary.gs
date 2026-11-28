@@ -19,7 +19,8 @@ function GF3_LegacyProjectionPlan_(vehicleId,kind,fields){
 }
 function GF3_LegacyProjectionApply_(book,vehicleId,kind,fields){
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
+ if(!(kind==='document'?GF3_DocumentWriteEnabled_(book):GF3_WriteEnabled_(book)))throw Error('validation_disabled');
+ if(kind==='document'&&vehicleId!=='V900005')throw Error('gf3_document_fixture_denied');
  const plan=GF3_LegacyProjectionPlan_(vehicleId,kind,fields);
  const lock=LockService.getScriptLock();if(!lock.tryLock(1000))throw Error('projection_busy');
  try{
@@ -102,7 +103,8 @@ function GF3_DocumentReplacementPlanTest_(){
 /** Isolated ledger replacement only; no Drive mutation. */
 function GF3_DocumentReplacementApply_(book,id,field,expectedUrl,newUrl){
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('validation_disabled');
+ if(!GF3_DocumentWriteEnabled_(book))throw Error('validation_disabled');
+ if(id!=='V900005')throw Error('gf3_document_fixture_denied');
  const lock=LockService.getScriptLock();
  if(!lock.tryLock(1000))throw Error('projection_busy');
  try{
