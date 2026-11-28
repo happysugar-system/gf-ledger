@@ -52,7 +52,7 @@ if(detailTab==='basic'){h+='<div class="box"><h2>車両台帳の編集（基本�
 if(detailTab==='action'){h+='<div class="box"><h2>実績を登録</h2><p class="muted">実施日を確認して登録する画面です（現在は保存不可）。</p><div class="field"><label>実施日</label><input type="date"></div><div class="grid2">'+['貸出開始','返却完了','代車開始','代車返却'].map(t=>'<button class="action secondary" data-info="'+t+'の本番登録は未接続です">'+t+'</button>').join('')+'</div></div><div class="box"><h2>代車の貸出情報</h2>'+[46,47,48].map(i=>field(VEHICLE_HEADERS[i])).join('')+'<button class="action primary" data-preview="1">変更内容を確認（保存しない）</button></div>';}
 if(detailTab==='schedule'){h+='<div class="box"><h2>この車両の予定</h2><p>📅 車検満了日：'+safe(x['車検満了日']||'未登録')+'</p><p class="muted">引渡し予定は納車予定日として管理します。</p><div class="field"><label>予定種類</label><select id="planType">'+planTypes.map(([name])=>'<option>'+safe(name)+'</option>').join('')+'</select></div><div class="field"><label>予定日</label><input type="date" id="planDate"></div><button class="action primary" data-plan-preview="1">予定を登録（保存前確認のみ）</button><h3>車両台帳に登録されている予定日</h3>'+scheduleRows(scheduleItems(x.VehicleID))+'</div>';}
 
-if(detailTab==='files'){if(x.VehicleID==='V900005')h+=documentValidationLink();h+='<div class="box"><h2>📷 写真・書類</h2><p class="muted">車両台帳に登録済みのDriveリンクを開きます。アクセス権限が必要な場合があります。</p><h3>保存済みの写真・書類</h3>'+[57,58,61].map(i=>{const k=VEHICLE_HEADERS[i];return fileLink(k,x[k]);}).join('')+'<h3>写真・書類を追加</h3><div class="field"><label>車両状態写真を選択（複数可）</label><input type="file" accept="image/*" multiple></div><div class="field"><label>車両書類3点を選択（複数可）</label><input type="file" accept="image/*,.pdf" multiple></div><button class="action secondary" data-info="撮影・ファイル選択は可能ですが、アップロードとAI判定は未接続です">📤 写真・書類を保存（準備中）</button><h3>フォルダ備考</h3><p class="muted">備考は入力できますが、現在は保存前の確認のみです。</p>'+field('フォルダ備考')+''+(gf3Host&&x.VehicleID==='V900005'?'<button class="action primary" data-fixture-save="1">フォルダ備考を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">備考の変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">備考の変更を破棄</button></div>';}
+if(detailTab==='files'){if(x.VehicleID==='V900005')h+=documentValidationLink();h+='<div class="box"><h2>📷 写真・書類</h2><p class="muted">車両台帳に登録済みのDriveリンクを開きます。アクセス権限が必要な場合があります。</p><h3>保存済みの写真・書類</h3>'+[57,58,61].map(i=>{const k=VEHICLE_HEADERS[i];return fileLink(k,x[k]);}).join('')+'<h3>写真・書類を追加</h3><div class="field"><label>車両状態写真を選択（複数可）</label><input type="file" accept="image/*" multiple></div><div class="field"><label>車両書類3点を選択（複数可）</label><input type="file" accept="image/*,.pdf" multiple></div><button class="action secondary" data-info="撮影・ファイル選択は可能ですが、アップロードとAI判定は未接続です">📤 写真・書類を保存（準備中）</button><h3>フォルダ備考</h3><p class="muted">V900005のフォルダ備考だけ検証台帳へ保存できます。その他の操作は未接続です。</p>'+field('フォルダ備考')+''+(gf3Host&&x.VehicleID==='V900005'?'<button class="action primary" data-fixture-save="1">フォルダ備考を検証台帳に保存</button>':'')+'<button class="action primary" data-preview="1">備考の変更内容を確認（保存しない）</button><button class="action secondary" data-discard="1">備考の変更を破棄</button></div>';}
 
 if(detailTab==='history'){h+='<div class="box"><h2>操作履歴</h2><p class="muted">操作履歴の取得は未接続です。台帳の管理項目のみ表示します。</p>'+section.history.map(i=>{const k=VEHICLE_HEADERS[i];return '<div class="log"><b>'+safe(k)+'</b><div class="muted">'+safe(x[k]||'未登録')+'</div></div>';}).join('')+'</div>';}
 }
@@ -75,8 +75,11 @@ async function readFixture(){
 }
 async function saveFixtureNote(button){
   if(fixtureSaving||carId!=='V900005')return;
-  const expected=car()['フォルダ備考'];
-  const note=draft['フォルダ備考'];
+  if(!draft){$('state').textContent='編集対象を再選択してください';return;}
+  const expected=String(car()?.['フォルダ備考']??'');
+  const note=String(draft['フォルダ備考']??'');
+  if(note===expected){$('state').textContent='変更なし：保存は不要です';return;}
+  if(note.length>300||/^[\s]*[=+\-@]/.test(note)){$('state').textContent='300文字以内の備考を入力してください（先頭の記号には制限があります）';return;}
   fixtureSaving=true;
   button.disabled=true;
   try{
