@@ -7,7 +7,10 @@
 function GFA3_DB同期履歴照合_(book, receiptKey) {
   const expectedBook = '1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0';
   if (!book || book.getId() !== expectedBook) throw Error('three_sheet_book_required');
-  if (ScriptApp.getScriptId() !== '1h5czlOaSO0WeERVDxiGajVipVL4PAVyWPdaIB0kGVZsR11GMU12JwEE-' ||\n      PropertiesService.getScriptProperties().getProperty('GF3_APPROVED_BOOK_ID') !== expectedBook ||\n      PropertiesService.getScriptProperties().getProperty('GF3_VALIDATION_ENABLED') !== 'true')\n    throw Error('three_sheet_target_denied');
+  if (ScriptApp.getScriptId() !== '1h5czlOaSO0WeERVDxiGajVipVL4PAVyWPdaIB0kGVZsR11GMU12JwEE-' ||
+      PropertiesService.getScriptProperties().getProperty('GF3_APPROVED_BOOK_ID') !== expectedBook ||
+      PropertiesService.getScriptProperties().getProperty('GF3_VALIDATION_ENABLED') !== 'true')
+    throw Error('three_sheet_target_denied');
   const key = String(receiptKey || '').trim().toLowerCase();
   if (!/^[a-f0-9]{64}$/.test(key)) throw Error('history_key_invalid');
   const token = PropertiesService.getScriptProperties().getProperty('GF3_SYNC_TEST_TOKEN') || '';
