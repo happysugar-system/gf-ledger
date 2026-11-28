@@ -1,9 +1,39 @@
 /** Isolated vehicle document orchestration. Failed operations retain evidence for review. */
+/** GF3 document-only write gate; never signals 3-sheet migration completion.
+ * Requires an operator-enabled isolated gate after a dummy-data preflight.
+ */
+function GF3_DocumentWriteEnabled_(book){
+ GF3_AssertBook_(book);
+ const p=PropertiesService.getScriptProperties();
+ return p.getProperty('GF3_DOCUMENT_TEST_ENABLED')==='true' &&
+        p.getProperty('GF3_VALIDATION_ENABLED')==='true' &&
+        p.getProperty('GF3_DOCUMENT_TEST_VEHICLE_ID')==='V900005';
+}
+/** Validate a single synthetic fixture without modifying any sheet, DB or Drive. */
+function GF3_DocumentTestPreflight_(){
+ const book=SpreadsheetApp.openById('1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0');
+ GF3_AssertBook_(book);
+ const v=GF3_GF_DB同期車両情報_(book,'V900005');
+ if(!v||!v.sheet||v.sheet.getName()!=='車両台帳')throw Error('gf3_document_fixture_missing');
+ const cols=GF3_Columns_(v.sheet,['VehicleID','📄 最新車両書類','📁 車両書類フォルダ']);
+ const id=String(v.sheet.getRange(v.row,cols.VehicleID+1).getValue()||'').trim();
+ if(id!=='V900005')throw Error('gf3_document_fixture_id');
+ for(const field of ['📄 最新車両書類','📁 車両書類フォルダ']){
+  const cell=v.sheet.getRange(v.row,cols[field]+1);
+  if(cell.getFormula())throw Error('gf3_document_fixture_formula:'+field);
+  const value=cell.getValue(),rich=cell.getRichTextValue(),url=rich&&rich.getLinkUrl()||'';
+  if(value!==''&&value!==null&&!url)throw Error('gf3_document_fixture_link_unverified:'+field);
+  if(url&&!/^https:\/\/drive\.google\.com\//.test(url))throw Error('gf3_document_fixture_link_external:'+field);
+ }
+ console.log(JSON.stringify({ready:true,vehicleId:id,documentWriteEnabled:GF3_DocumentWriteEnabled_(book)}));
+ return {ready:true,vehicleId:id,documentWriteEnabled:GF3_DocumentWriteEnabled_(book)};
+}
+
 function GF3_VehicleDocumentSave_(id,blobs,requestId){
  const book=SpreadsheetApp.openById('1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0');
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
- if(!/^V9\d{5}$/.test(id)||!Array.isArray(blobs)||blobs.length!==3)throw Error('gf3_document_input');
+ if(!GF3_DocumentWriteEnabled_(book))throw Error('gf3_document_disabled');
+ if(id!=='V900005'||!Array.isArray(blobs)||blobs.length!==3)throw Error('gf3_document_input');
  const v=GF3_GF_DB同期車両情報_(book,id),field='📄 最新車両書類';
  const cell=v.sheet.getRange(v.row,GF3_Columns_(v.sheet,[field])[field]+1);
  if(cell.getFormula())throw Error('formula_protected');
@@ -39,7 +69,7 @@ function GF3_VehicleDocumentSave_(id,blobs,requestId){
 function GF3_VehicleDocumentCancel_(id){
  const book=SpreadsheetApp.openById('1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0');
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
+ if(!GF3_DocumentWriteEnabled_(book))throw Error('gf3_document_disabled');
  const row=GF3_DocumentStorage_(book,'read',id)[0];
  const cleanup=()=>{
   try{return GF3_DocumentCancelDriveCleanup_(book,{
@@ -63,8 +93,8 @@ function GF3_VehicleDocumentCancel_(id){
  */
 function GF3_PrepareVehicleDocumentFiles_(book,id,receiptId,blobs){
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
- if(!/^V9\d{5}$/.test(id)||!/^TEST-GF3-[A-Z0-9-]{1,60}$/.test(receiptId)||!Array.isArray(blobs)||blobs.length!==3)throw Error('gf3_document_input');
+ if(!GF3_DocumentWriteEnabled_(book))throw Error('gf3_document_disabled');
+ if(id!=='V900005'||!/^TEST-GF3-[A-Z0-9-]{1,60}$/.test(receiptId)||!Array.isArray(blobs)||blobs.length!==3)throw Error('gf3_document_input');
  const root=DriveApp.getFolderById('1WMPFMkP292gilphGsqbTV8God81x7AiM');
  if(root.getName()!=='GOLD FIRST GF3 検証専用書類（ダミーのみ）'||root.isTrashed())throw Error('gf3_document_root');
  const lock=LockService.getScriptLock();lock.waitLock(30000);
