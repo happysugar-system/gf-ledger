@@ -22,7 +22,7 @@ function GF3_DocumentUiOwner_(){
 /** Call from doGet only after the test-only entrypoint review. */
 function GF3_DocumentUiDoGet_(){
   GF3_DocumentUiOwner_();
-  return HtmlService.createHtmlOutputFromFile('GF3_DocumentIsolatedUI')
+  return HtmlService.createHtmlOutputFromFile('GF3_DocumentIsolatedUIView')
     .setTitle('GF3 検証用・車両書類');
 }
 function GF3_DocumentUiStatus_(){
