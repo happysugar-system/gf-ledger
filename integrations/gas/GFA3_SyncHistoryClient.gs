@@ -7,14 +7,14 @@
 function GFA3_DB同期履歴照合_(book, receiptKey) {
   const expectedBook = '1WvKxm91E98FoCpge1d_iwmb9RDRhATrSgxR2K7rjAn0';
   if (!book || book.getId() !== expectedBook) throw Error('three_sheet_book_required');
-  if (!GFA3_スタッフ受付接続診断_().targetApproved) throw Error('three_sheet_target_denied');
+  if (ScriptApp.getScriptId() !== '1h5czlOaSO0WeERVDxiGajVipVL4PAVyWPdaIB0kGVZsR11GMU12JwEE-' ||\n      PropertiesService.getScriptProperties().getProperty('GF3_APPROVED_BOOK_ID') !== expectedBook ||\n      PropertiesService.getScriptProperties().getProperty('GF3_VALIDATION_ENABLED') !== 'true')\n    throw Error('three_sheet_target_denied');
   const key = String(receiptKey || '').trim().toLowerCase();
   if (!/^[a-f0-9]{64}$/.test(key)) throw Error('history_key_invalid');
-  const token = PropertiesService.getScriptProperties().getProperty('GF_ACTUAL_TEST_TOKEN') || '';
+  const token = PropertiesService.getScriptProperties().getProperty('GF3_SYNC_TEST_TOKEN') || '';
   if (token.length < 32) throw Error('history_token_missing');
-  const response = UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf-sync-storage-test', {
+  const response = UrlFetchApp.fetch('https://tgxrnrqxafytyqfwwsag.supabase.co/functions/v1/gf3-sync-storage-test', {
     method: 'post', contentType: 'application/json',
-    headers: {'x-gf-actual-token': token},
+    headers: {'x-gf3-sync-token': token},
     payload: JSON.stringify({action:'read',kind:'history',id:key}),
     followRedirects: false, muteHttpExceptions: true
   });
