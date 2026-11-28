@@ -92,3 +92,81 @@ function GF3_CheckFixtureAssignment(receiptId,vehicleId){
   throw Error('gf3_assignment_history_mismatch');
  return {verified:true,vehicleId,receiptId};
 }
+
+/** Changes only the explicitly approved assignment fixture. */
+function GF3_SaveFixtureAssignment(receiptId,vehicleId,action){
+ const book=GF3_DocumentUiOwner_();
+ if(String(receiptId)!=='2'||vehicleId!=='V900005'||!['assign','cancel'].includes(action))
+  throw Error('gf3_assignment_fixture_denied');
+ const lock=LockService.getScriptLock();
+ if(!lock.tryLock(5000))throw Error('gf3_assignment_busy');
+ try{
+  const vehicle=GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID',vehicleId,
+   ['車番','区分/ステータス','管理区分','DriverID','現在使用者','納車可能日','納車確定日']);
+  const waiting=GF3_AssignmentFixtureRow_(book,'名変待ち管理','受付ID','2',
+   ['DriverID','ステータス','割当VehicleID','割当車番']);
+  const driver=GF3_AssignmentFixtureRow_(book,'ドライバーマスター','DriverID','D999902',
+   ['氏名','割当VehicleID','割当車番']);
+  if(waiting.data.DriverID!=='D999902'||!driver.data['氏名']||!vehicle.data['車番'])
+   throw Error('gf3_assignment_identity_mismatch');
+  const props=PropertiesService.getScriptProperties();
+  const key='GF3_ASSIGNMENT_FIXTURE_2_V900005';
+  const saved=JSON.parse(props.getProperty(key)||'null');
+  const assigned=[
+   {'管理区分':'車両準備中',DriverID:'D999902','現在使用者':driver.data['氏名']},
+   {'ステータス':'割当済','割当VehicleID':vehicleId,'割当車番':vehicle.data['車番']},
+   {'割当VehicleID':vehicleId,'割当車番':vehicle.data['車番']}
+  ];
+  const rows=[vehicle,waiting,driver];
+  const current=rows.map((row,i)=>Object.fromEntries(Object.keys(assigned[i]).map(field=>[field,row.data[field]])));
+  const matches=values=>JSON.stringify(current)===JSON.stringify(values);
+  if(vehicle.data['区分/ステータス']!=='空車'||vehicle.data['納車可能日']||vehicle.data['納車確定日'])
+   throw Error('gf3_assignment_progress_conflict');
+  if(saved&&JSON.stringify(saved.assigned)!==JSON.stringify(assigned))
+   throw Error('gf3_assignment_identity_changed');
+  if(action==='assign'){
+   if(saved&&matches(assigned))return {state:'assigned',replayed:true};
+   if(saved&&!matches(saved.before))throw Error('gf3_assignment_state_conflict');
+   GF3_CheckFixtureAssignment('2',vehicleId);
+   for(const [row,field,value] of [[vehicle,'DriverID','D999902'],[waiting,'割当VehicleID',vehicleId],[driver,'割当VehicleID',vehicleId]]){
+    const duplicates=row.sheet.getRange(2,row.columns[field]+1,row.sheet.getLastRow()-1,1)
+     .getDisplayValues().some(([other],i)=>i+2!==row.number&&other.trim()===value);
+    if(duplicates)throw Error('gf3_assignment_duplicate:'+field);
+   }
+   if(waiting.data['割当車番']||driver.data['割当車番'])throw Error('gf3_assignment_plate_conflict');
+  }else{
+   if(!saved)throw Error('gf3_assignment_no_restore_record');
+   if(matches(saved.before))return {state:'cancelled',replayed:true};
+   if(!matches(assigned))throw Error('gf3_assignment_state_conflict');
+  }
+  const changes=action==='assign'?assigned:saved.before;
+  const requests=rows.flatMap((row,i)=>Object.entries(changes[i]).map(([field,value])=>{
+   const column=row.columns[field];
+   const cell=row.sheet.getRange(row.number,column+1);
+   if(cell.getFormula()||cell.getValue()!==current[i][field]||
+      cell.getRichTextValue()?.getRuns().some(run=>run.getLinkUrl()))
+    throw Error('gf3_assignment_cell_changed:'+field);
+   return {updateCells:{start:{sheetId:row.sheet.getSheetId(),rowIndex:row.number-1,columnIndex:column},
+    rows:[{values:[value===''?{}:{userEnteredValue:{stringValue:value}}]}],fields:'userEnteredValue'}};
+  }));
+  if(action==='assign'&&!saved)props.setProperty(key,JSON.stringify({before:current,assigned}));
+  Sheets.Spreadsheets.batchUpdate({requests},book.getId());
+  SpreadsheetApp.flush();
+  for(const [i,row] of rows.entries()){
+   const actual=GF3_AssignmentFixtureRow_(book,row.sheet.getName(),row.key,row.id,Object.keys(changes[i]));
+   if(Object.entries(changes[i]).some(([field,value])=>actual.data[field]!==value))
+    throw Error('gf3_assignment_readback_failed');
+  }
+  return {state:action==='assign'?'assigned':'cancelled',replayed:false};
+ }finally{lock.releaseLock();}
+}
+
+function GF3_AssignmentFixtureRow_(book,name,key,id,fields){
+ const sheet=GF3_AssertSheet_(book.getSheetByName(name));
+ const columns=GF3_Columns_(sheet,[key,...fields]);
+ const hits=sheet.getDataRange().getDisplayValues().slice(1)
+  .flatMap((row,i)=>row[columns[key]]===id?[{row,number:i+2}]:[]);
+ if(hits.length!==1)throw Error('gf3_assignment_row_not_unique:'+name);
+ const {row,number}=hits[0];
+ return {sheet,key,id,columns,number,data:Object.fromEntries(fields.map(field=>[field,row[columns[field]]]))};
+}
