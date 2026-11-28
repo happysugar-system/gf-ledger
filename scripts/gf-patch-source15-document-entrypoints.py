@@ -51,11 +51,22 @@ def patch_mobile(source):
     start = source.index("async function 書類登録(){")
     end = source.index("async function GF_登録時の書類を送り直す_80(){", start)
     prefix, source, suffix = source[:start], source[start:end], source[end:]
-    source = replace_once(source, """async function 書類登録(){""", """async function GF3_書類受付IDを取得する(id, images) {
+    source = replace_once(source, """async function 書類登録(){""", """const GF3_書類受付キャッシュ = new Map();
+const GF3_書類受付キー = new Map();
+async function GF3_書類受付IDを取得する(id, images) {
   const bytes = new TextEncoder().encode(JSON.stringify([id, images]));
   const hash = await crypto.subtle.digest('SHA-256', bytes);
   const digest = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
-  return 'TEST-GF3-' + digest.slice(0, 60).toUpperCase();
+  const key = 'GF3-DOC-RETRY:' + digest;
+  let saved = GF3_書類受付キャッシュ.get(key) || '';
+  if (!saved) { try { saved = sessionStorage.getItem(key) || ''; } catch (ignored) {} }
+  if (!/^TEST-GF3-[A-Z0-9-]{1,60}$/.test(saved)) {
+    saved = 'TEST-GF3-' + crypto.randomUUID().replace(/-/g, '').toUpperCase();
+    try { sessionStorage.setItem(key, saved); } catch (ignored) {}
+  }
+  GF3_書類受付キャッシュ.set(key, saved);
+  GF3_書類受付キー.set(saved, key);
+  return saved;
 }
 async function 書類登録(){""")
     source = replace_once(source, """  const fs=車両書類撮影ファイル.slice();""", """  const vehicleId=selCar2;
@@ -66,6 +77,12 @@ async function 書類登録(){""")
       $('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;undo.docs=r.取消情報;""", """    const a=[];for(const f of fs)a.push(await img書類(f));
     const receiptId=await GF3_書類受付IDを取得する(vehicleId, a);
     google.script.run.withSuccessHandler(r=>{
+      const cacheKey=GF3_書類受付キー.get(receiptId);
+      if (cacheKey) {
+        GF3_書類受付キャッシュ.delete(cacheKey);
+        GF3_書類受付キー.delete(receiptId);
+        try { sessionStorage.removeItem(cacheKey); } catch (ignored) {}
+      }
       $('docsBtn').disabled=false;$('docsRepairBtn').disabled=false;undo.docs=r.取消情報;""")
     return prefix + source + suffix
 
