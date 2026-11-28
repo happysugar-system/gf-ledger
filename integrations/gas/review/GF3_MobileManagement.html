@@ -194,7 +194,7 @@ function monthlyDeliverySummary(){
      months.set(month,counts);
    }
  }
- return '<div class="box"><h3>月別納車（検証台帳）</h3>'+([...months].sort(([a],[b])=>b.localeCompare(a))
+ return '<div class="box"><h3>月別納車の参考集計（検証台帳）</h3><p class="muted">車両台帳の納車予定日・引渡しから算出する画面上の件数です。既存の「月別納車管理」シートへの反映・実績履歴との突合は未接続です。</p>'+([...months].sort(([a],[b])=>b.localeCompare(a))
    .map(([month,counts])=>'<p>'+safe(month)+'　予定 '+counts.planned+'件 ／ 引渡し実績 '+counts.delivered+'件</p>').join('')
    ||'<p class="muted">納車予定と引渡し実績はありません。</p>')+'</div>';
 }
