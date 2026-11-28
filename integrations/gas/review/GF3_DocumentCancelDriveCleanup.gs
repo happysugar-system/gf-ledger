@@ -3,7 +3,7 @@
  */
 function GF3_DocumentCancelDriveCleanup_(book,receipt){
  GF3_AssertBook_(book);
- if(!GF3_WriteEnabled_(book))throw Error('gf3_document_disabled');
+ if(!GF3_DocumentWriteEnabled_(book))throw Error('gf3_document_disabled');
  if(!receipt||receipt.state!=='取消済'||receipt.kind!=='車両書類'||
     !/^TEST-GF3-[A-Z0-9-]{1,60}$/.test(receipt.id||'')||
     !/^V9\d{5}$/.test(receipt.vehicleId||''))throw Error('gf3_cleanup_receipt');
