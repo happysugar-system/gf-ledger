@@ -56,7 +56,7 @@ $('save').onclick=async()=>{
  const files=['f1','f2','f3'].map(id=>$(id).files[0]);
  const images=await Promise.all(files.map(readFile));
  status('保存中... 同じ受付の再送では同一PDFを確認します');
- const result=await run('GF3_DocumentUiSave_',[images,receipt()]);
+ const result=await run('GF3_DocumentUiSave',[images,receipt()]);
  if(!result||result.成功!==true)throw Error('保存完了を確認できません');
  status('保存成功。受付ID: '+sessionStorage.getItem(K));
  if(/^https:\/\/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]+\/view$/.test(String(result.PDFURL||''))){
@@ -68,14 +68,14 @@ $('cancel').onclick=async()=>{
  if(!confirm('検証用書類の受付を取り消しますか？'))return;
  setBusy(true);
  try{
- const result=await run('GF3_DocumentUiCancel_',[id]);
+ const result=await run('GF3_DocumentUiCancel',[id]);
  if(!result||result.成功!==true)throw Error('取消結果を確認できません');
  status('取消成功。Drive後処理: '+String(result.driveCleanup||'未確認'));
  $('link').textContent='';
  if(result.driveCleanup==='archived'||result.driveCleanup==='完了')sessionStorage.removeItem(K);
  }catch(e){error(e);return;}setBusy(false);
 };
-run('GF3_DocumentUiStatus_',[]).then(r=>{
+run('GF3_DocumentUiStatus',[]).then(r=>{
  if(!r||r.testOnly!==true||r.vehicleId!=='V900005')throw Error('検証環境が一致しません');
  allowed=r.saveEnabled===true;
  $('state').textContent=allowed?'検証用の書き込みが許可されています':'検証用の書き込みは停止中です';
