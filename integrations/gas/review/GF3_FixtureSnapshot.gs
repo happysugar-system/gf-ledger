@@ -3,7 +3,7 @@ function GF3_ReadFixtureSnapshot_(){
  const book=GF3_DocumentUiOwner_();
  const specs=[
   ['車両台帳','VehicleID',/^V9[0-9]{5}$/,['VehicleID','車種','区分/ステータス','管理区分','納車予定日','フォルダ備考']],
-  ['名変待ち管理','受付ID',/^[1-9][0-9]{0,3}$/,['受付ID','ステータス','割当VehicleID','DriverID','LINE受付ID']],
+  ['名変待ち管理','受付ID',/^[1-9][0-9]{0,3}$/,['受付ID','ステータス','割当VehicleID','DriverID','LINE受付ID','受付識別子']],
   ['ドライバーマスター','DriverID',/^D9[0-9]{5}$/,['DriverID','ステータス','割当VehicleID']]
  ];
  const sheets={};
@@ -19,7 +19,7 @@ function GF3_ReadFixtureSnapshot_(){
     seen.add(id);
     return Object.fromEntries(fields.map(field=>{
      const value=row[cols[field]]||'';
-     const restricted=field==='DriverID'?/^D9[0-9]{5}$/:field==='割当VehicleID'?/^V9[0-9]{5}$/:field==='LINE受付ID'?/^TEST-[A-Z0-9-]+$/:null;
+     const restricted=field==='DriverID'?/^D9[0-9]{5}$/:field==='割当VehicleID'?/^V9[0-9]{5}$/:field==='LINE受付ID'?/^TEST-[A-Z0-9-]+$/:field==='受付識別子'?/^[a-f0-9]{64}$/:null;
      return [field,restricted&&!restricted.test(value)?'':value];
     }));
    });
