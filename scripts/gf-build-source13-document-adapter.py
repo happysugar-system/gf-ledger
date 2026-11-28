@@ -37,6 +37,9 @@ def patch(s):
     for i,m in enumerate(matches):
         if m.group(1) in names:
             result+=s[m.start():matches[i+1].start() if i+1<len(matches) else len(s)]+'\n'
+    actual=set(re.findall(r'^function ([^\\s(]+)\\(',result,re.M))
+    required=set(names)|{'スマホから免許証をまとめて登録する','スマホから車両書類をまとめて登録する','車両書類を保存する_','スマホから直前登録を取り消す'}
+    if not required <= actual: raise ValueError('missing helpers: '+str(required-actual))
     return result
 if __name__=='__main__':
     p=argparse.ArgumentParser()
@@ -44,4 +47,5 @@ if __name__=='__main__':
     a=p.parse_args()
     files=json.loads(a.source.read_text(encoding='utf-8-sig'))['files']
     source=next(f['source'] for f in files if f['name']=='60_書類PDF')
-    with a.output.open('x',encoding='utf-8') as f:f.write(patch(source))
+    result=patch(source)
+    with a.output.open('x',encoding='utf-8') as f:f.write(result)
