@@ -57,14 +57,14 @@ test('a deferred driver sync never turns a saved fast intake into a failed submi
     PropertiesService:{getScriptProperties:()=>({getProperty:key=>
       key==='GF_VEHICLE_TEST_RECEIVER_URL'
         ? 'https://script.google.com/macros/s/test/exec' : 's'.repeat(64)})},
-    GF_FAST_property_:key=>key==='GF_FAST_TEST_ENABLED'?'true':'',
+    GF_FAST_property_:key=>key==='GF_FAST_ISOLATED_TEST_ENABLED'?'true':'',
     GF_FAST_existingIntake_:()=>({ok:true,receipt:'TEST145-20261127123456-01234567'}),
-    GF_FAST_masterSync_:()=>{throw Error('test driver sync unavailable')},
+    GF_FAST_masterSync_:()=>events.push('unexpected synchronous driver sync'),
     HtmlService:{createHtmlOutput:html=>({html})},
     console:{warn:s=>events.push(JSON.parse(s).event),error:()=>{},log:()=>{}}
   };
-  const result=runInNewContext(source100+'\nGF_車両テスト送信_({parameter:{gf_entry:"'+request+'"}})',ctx);
+  const result=runInNewContext(source100+'\nGF_車両テスト送信_({parameter:{action:"gf_vehicle_submit_fast_test_v1",gf_entry:"'+request+'"}})',ctx);
   assert.match(result.html,/受付完了画面へ移動しています/);
   assert.doesNotMatch(result.html,/送信を完了できませんでした/);
-  assert.deepEqual(events,['gf_fast_driver_sync_deferred']);
+  assert.deepEqual(events,[]);
 });
