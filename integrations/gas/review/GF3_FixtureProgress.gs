@@ -62,22 +62,22 @@ function GF3_SaveFixtureProgress(vehicleId,expected,next){
  try{
   const current=GF3_ProgressFixture_(book);
   if(!current.assigned)throw Error('gf3_progress_assignment_required');
-  if(JSON.stringify(current.fields)===JSON.stringify(proposed))
-   return {vehicleId,status:'unchanged',fields:current.fields};
   if(JSON.stringify(current.fields)!==JSON.stringify(prior))
    throw Error('gf3_progress_changed_reload');
-  const projections={'納車可能日':'納車予定日'};
+  // The scheduled delivery date is a projection, not proof of completed handover.
+  // Always inspect it, including idempotent replay and stage-only edits.
+  const target='納車予定日';
   const changed=GF3_PROGRESS_KEYS_.filter(field=>current.fields[field]!==proposed[field]);
-  const linked=changed.filter(field=>Object.hasOwn(projections,field));
   const row=GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID',vehicleId,
-   [...GF3_PROGRESS_KEYS_,...linked.map(field=>projections[field])]);
+   [...GF3_PROGRESS_KEYS_,target]);
+  const beforeScheduled=GF3_ProgressDate_(row.data[target]);
+  const nextScheduled=proposed['納車可能日'];
+  if(beforeScheduled&&beforeScheduled!==current.fields['納車可能日']&&beforeScheduled!==nextScheduled)
+   throw Error('gf3_progress_link_conflict:'+target);
   const edits=changed.map(field=>({field,before:current.fields[field],value:proposed[field]}));
-  for(const field of linked){
-   const target=projections[field],before=GF3_ProgressDate_(row.data[target]);
-   if(before&&before!==current.fields[field]&&before!==proposed[field])
-    throw Error('gf3_progress_link_conflict:'+target);
-   if(before!==proposed[field])edits.push({field:target,before,value:proposed[field]});
-  }
+  if(beforeScheduled!==nextScheduled)
+   edits.push({field:target,before:beforeScheduled,value:nextScheduled});
+  if(!edits.length)return {vehicleId,status:'unchanged',fields:current.fields};
   const requests=[];
   for(const {field,before,value} of edits){
    const isDate=field!=='管理区分';
@@ -101,11 +101,9 @@ function GF3_SaveFixtureProgress(vehicleId,expected,next){
   const actual=GF3_ProgressFixture_(book);
   if(!actual.assigned||JSON.stringify(actual.fields)!==JSON.stringify(proposed))
    throw Error('gf3_progress_readback_review_required');
-  if(linked.length){
-   const readback=GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID',vehicleId,linked.map(field=>projections[field]));
-   if(linked.some(field=>GF3_ProgressDate_(readback.data[projections[field]])!==proposed[field]))
-    throw Error('gf3_progress_projection_readback_failed');
-  }
+  const readback=GF3_AssignmentFixtureRow_(book,'車両台帳','VehicleID',vehicleId,[target]);
+  if(GF3_ProgressDate_(readback.data[target])!==nextScheduled)
+   throw Error('gf3_progress_projection_readback_failed');
   return {vehicleId,status:'saved',fields:actual.fields};
  }finally{lock.releaseLock();}
 }
